@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.android.maps;
+package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import static android.opengl.GLES20.*;
 import android.graphics.Bitmap;

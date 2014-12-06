@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.android.maps;
+package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 public final class Polyline extends PolyOverlay {
 	Polyline(PolylineOptions options, GLMapRenderer map) 

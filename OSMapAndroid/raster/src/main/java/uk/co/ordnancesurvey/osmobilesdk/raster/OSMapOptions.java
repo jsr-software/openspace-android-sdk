@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.android.maps;
+package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 /**
  * Defines configuration OSMapOptions for a {@link OSMap}. These options can be used when adding a map to your

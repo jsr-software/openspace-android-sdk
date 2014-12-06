@@ -42,7 +42,7 @@
  * limitations under the License.
  */
 
-package uk.co.ordnancesurvey.android.maps;
+package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;

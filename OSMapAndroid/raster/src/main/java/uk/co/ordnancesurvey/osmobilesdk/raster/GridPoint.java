@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.android.maps;
+package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import java.text.ParseException;
 import java.util.Locale;

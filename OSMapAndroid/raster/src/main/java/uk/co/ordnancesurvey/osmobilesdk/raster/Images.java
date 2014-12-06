@@ -1,5 +1,5 @@
 // Image hash: 8a57819a72e0e048a9184667319930d0cf8374c3e20daba6a78adaf1f4d68f2b6b7d1a10f6214cee06483a6a7f60cb9f
-package uk.co.ordnancesurvey.android.maps;
+package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import java.io.ByteArrayInputStream;
 

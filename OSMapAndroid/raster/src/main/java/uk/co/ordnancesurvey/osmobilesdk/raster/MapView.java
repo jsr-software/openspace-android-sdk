@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.android.maps;
+package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 
 import android.content.Context;
@@ -32,25 +32,25 @@ import android.view.MotionEvent;
 import android.widget.FrameLayout;
 
 
-final class MapView extends FrameLayout {
+public final class MapView extends FrameLayout {
 	private final GLMapRenderer mMapRenderer;
 	private final OSMapPrivate mMap;
 
-	MapView(Context context, AttributeSet set) {
+	public MapView(Context context, AttributeSet set) {
 		super(context, set);
 		GLMapRenderer map = init(context, null);
 		mMapRenderer = map;
 		mMap = map;
 
 	}
-	MapView(Context context) {
+	public MapView(Context context) {
 		super(context);
 		GLMapRenderer map = init(context, null);
 		mMapRenderer = map;
 		mMap = map;
 	}
 	
-	MapView(Context context, OSMapOptions options) {
+	public MapView(Context context, OSMapOptions options) {
 		super(context);
 		GLMapRenderer map = init(context, options);
 		mMapRenderer = map;

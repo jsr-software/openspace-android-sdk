@@ -1,4 +1,4 @@
-package uk.co.ordnancesurvey.android.maps.test;
+package uk.co.ordnancesurvey.osmobilesdk.raster.test;
 
 import java.io.File;
 import java.util.EnumSet;

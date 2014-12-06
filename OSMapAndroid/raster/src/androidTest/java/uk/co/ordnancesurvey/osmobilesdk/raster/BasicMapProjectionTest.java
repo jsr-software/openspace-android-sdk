@@ -1,4 +1,4 @@
-package uk.co.ordnancesurvey.android.maps;
+package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import junit.framework.TestCase;
 

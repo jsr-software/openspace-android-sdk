@@ -1,4 +1,4 @@
-package uk.co.ordnancesurvey.android.maps;
+package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import java.io.File;
 import java.util.ArrayList;

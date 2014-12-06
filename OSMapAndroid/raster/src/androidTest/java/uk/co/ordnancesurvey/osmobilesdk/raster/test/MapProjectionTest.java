@@ -1,6 +1,6 @@
 // TEST_COORDINATES[] are © Crown copyright 2002. All rights reserved.
 
-package uk.co.ordnancesurvey.android.maps.test;
+package uk.co.ordnancesurvey.osmobilesdk.raster.test;
 
 import android.location.Location;
 import android.util.Log;

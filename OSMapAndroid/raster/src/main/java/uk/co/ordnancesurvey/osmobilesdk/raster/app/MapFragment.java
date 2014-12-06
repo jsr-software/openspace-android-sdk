@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.android.maps;
+package uk.co.ordnancesurvey.osmobilesdk.raster.app;
 
 import android.annotation.TargetApi;
 import android.app.Fragment;
@@ -29,6 +29,10 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import uk.co.ordnancesurvey.osmobilesdk.raster.MapView;
+import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
+import uk.co.ordnancesurvey.osmobilesdk.raster.OSMapOptions;
 // TODO this bit needs thinking about
 /**
  * A Map component in an app. This fragment is the simplest way to place a map in an application. It's a wrapper around a view of a map 
@@ -36,7 +40,7 @@ import android.view.ViewGroup;
  * simply with the XML below.
  * <code>
 &lt;fragment
-    class="uk.co.ordnancesurvey.android.maps.MapFragment"
+    class="uk.co.ordnancesurvey.osmobilesdk.raster.app.MapFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"/&gt;
     * </code>
@@ -56,7 +60,7 @@ import android.view.ViewGroup;
     */
 @TargetApi(11)
 public class MapFragment extends Fragment {
-	public final OSMapOptions mOptions; 
+	public final OSMapOptions mOptions;
 	public MapView mMapView;
 	
 	public MapFragment()
@@ -65,7 +69,7 @@ public class MapFragment extends Fragment {
 		mOptions = null;
 	}
 	
-	public MapFragment(OSMapOptions options) 
+	public MapFragment(OSMapOptions options)
 	{
 		super();
 		mOptions = options;

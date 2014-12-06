@@ -42,14 +42,6 @@ public class TileService {
     private static final String CLASS_TAG = TileService.class.getName();
     private static final String EMPTY_API_KEY = "";
     private static final String OSTILES = ".ostiles";
-    private static final int[] NETWORK_TYPES = {
-                ConnectivityManager.TYPE_ETHERNET,
-                ConnectivityManager.TYPE_BLUETOOTH,
-                ConnectivityManager.TYPE_WIMAX,
-                ConnectivityManager.TYPE_WIFI,
-                ConnectivityManager.TYPE_MOBILE,
-                ConnectivityManager.TYPE_DUMMY
-        };
 
     private final Context mContext;
     private final String mPackageName;
@@ -59,7 +51,6 @@ public class TileService {
     private final HashSet<MapTile> mRequests = new HashSet<>();
     private final LinkedList<MapTile> mFetches = new LinkedList<>();
     private final TileCache mTileCache;
-    private final BroadcastReceiver mNetworkReceiver;
     private final TileFetchThread mAsynchronousFetchThreads[] = new TileFetchThread[]{
             new TileFetchThread(),
             new TileFetchThread(),
@@ -68,13 +59,14 @@ public class TileService {
             //new TileFetchThread(),
     };
 
+    private final NetworkAccessMonitor mNetworkMonitor;
+
     private final TileServiceDelegate mTileServiceDelagate;
 
     private volatile OSTileSource[] mVolatileSynchronousSources = new OSTileSource[0];
     private volatile OSTileSource[] mVolatileAsynchronousSources = new OSTileSource[0];
 
     private boolean mStopThread = true;
-    private boolean mNetworkReachable;
 
     public TileService(Context context, TileServiceDelegate tileServiceDelegate) {
         if (context == null) {
@@ -100,12 +92,7 @@ public class TileService {
 
         mTileCache = TileCache.newInstance(memoryMB, diskMB, cacheDir, appVersion);
 
-        mNetworkReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                onNetworkChange();
-            }
-        };
+        mNetworkMonitor = new NetworkAccessMonitor(mContext);
     }
 
     public void start(MapConfiguration mMapConfiguration) throws FailedToLoadException {
@@ -133,8 +120,7 @@ public class TileService {
             t.start();
         }
 
-        IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-        mContext.registerReceiver(mNetworkReceiver, filter);
+        mNetworkMonitor.start();
     }
 
     public void shutDown(boolean waitForThreadsToStop) {
@@ -150,7 +136,7 @@ public class TileService {
             t.interrupt();
         }
 
-        mContext.unregisterReceiver(mNetworkReceiver);
+        mNetworkMonitor.stop();
     }
 
 
@@ -209,7 +195,7 @@ public class TileService {
         OSTileSource[] sources = synchronous ? mVolatileSynchronousSources : mVolatileAsynchronousSources;
         for (OSTileSource source : sources) {
             // Don't try to fetch if the network is down.
-            if (source.isNetwork() && !mNetworkReachable) {
+            if (source.isNetwork() && !mNetworkMonitor.hasNetworkAccess()) {
                 continue;
             }
             byte[] data = source.dataForTile(tile);
@@ -310,30 +296,30 @@ public class TileService {
         return file.getName().endsWith(OSTILES);
     }
 
-    private void onNetworkChange() {
-        ConnectivityManager connectivityManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        // We don't care about network changes, but we do care about our general connected state - i.e do we have any kind of
-        // network connection
-
-        // getActiveNetworkInfo is the obvious call to use, but is apparently pretty buggy
-        // http://code.google.com/p/android/issues/detail?id=11891
-        // http://code.google.com/p/android/issues/detail?id=11866
-        boolean reachable = false;
-        for (int testType : NETWORK_TYPES) {
-            NetworkInfo nwInfo = connectivityManager.getNetworkInfo(testType);
-            if (nwInfo != null && nwInfo.isConnectedOrConnecting()) {
-                reachable = true;
-                break;
-            }
-        }
-
-        boolean wasReachable = mNetworkReachable;
-        mNetworkReachable = reachable;
-        if (reachable && !wasReachable) {
-            // We have a network. If this is newly available, we should pump any outstanding requests.
-        }
-    }
+//    private void onNetworkChange() {
+//        ConnectivityManager connectivityManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+//
+//        // We don't care about network changes, but we do care about our general connected state - i.e do we have any kind of
+//        // network connection
+//
+//        // getActiveNetworkInfo is the obvious call to use, but is apparently pretty buggy
+//        // http://code.google.com/p/android/issues/detail?id=11891
+//        // http://code.google.com/p/android/issues/detail?id=11866
+//        boolean reachable = false;
+//        for (int testType : NETWORK_TYPES) {
+//            NetworkInfo nwInfo = connectivityManager.getNetworkInfo(testType);
+//            if (nwInfo != null && nwInfo.isConnectedOrConnecting()) {
+//                reachable = true;
+//                break;
+//            }
+//        }
+//
+//        boolean wasReachable = mNetworkReachable;
+//        mNetworkReachable = reachable;
+//        if (reachable && !wasReachable) {
+//            // We have a network. If this is newly available, we should pump any outstanding requests.
+//        }
+//    }
 
     // A non-private function so we don't get TileFetcher.access$2 in Traceview.
     void threadFunc() {
@@ -378,6 +364,69 @@ public class TileService {
         @Override
         public void run() {
             threadFunc();
+        }
+    }
+
+    /**
+     * Network Access Monitor
+     */
+    private static class NetworkAccessMonitor {
+
+        private static final int[] NETWORK_TYPES = {
+                ConnectivityManager.TYPE_ETHERNET,
+                ConnectivityManager.TYPE_BLUETOOTH,
+                ConnectivityManager.TYPE_WIMAX,
+                ConnectivityManager.TYPE_WIFI,
+                ConnectivityManager.TYPE_MOBILE,
+                ConnectivityManager.TYPE_DUMMY
+        };
+
+        private final Context mContext;
+        private final ConnectivityManager mManager;
+        private final IntentFilter mFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+        private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                updateAccessState();
+            }
+        };
+
+        private boolean mHasNetwork = true;
+
+        public NetworkAccessMonitor(Context context) {
+            mContext = context;
+            mManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+            updateAccessState();
+        }
+
+        public boolean hasNetworkAccess() {
+            return mHasNetwork;
+        }
+
+        public void start() {
+            mContext.registerReceiver(mReceiver, mFilter);
+        }
+
+        public void stop() {
+            mContext.unregisterReceiver(mReceiver);
+        }
+
+        private void updateAccessState() {
+            boolean reachable = false;
+
+            for (int type : NETWORK_TYPES) {
+                NetworkInfo nwInfo = mManager.getNetworkInfo(type);
+                if (nwInfo != null && nwInfo.isConnectedOrConnecting()) {
+                    reachable = true;
+                    break;
+                }
+            }
+
+            boolean wasReachable = mHasNetwork;
+            mHasNetwork = reachable;
+            if (reachable && !wasReachable) {
+                // TODO: We have a network. If this is newly available, we should pump any outstanding requests.
+            }
         }
     }
 }

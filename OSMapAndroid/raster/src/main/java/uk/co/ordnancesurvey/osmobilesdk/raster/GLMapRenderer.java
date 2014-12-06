@@ -487,8 +487,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         Log.v(TAG, "onPause");
 
         // TODO - should we stop the tile provider on pause? I think not, but not sure.
-//        mTileService.shutDown(true);
-
         mLocationSource.deactivate();
         mForeground = false;
     }

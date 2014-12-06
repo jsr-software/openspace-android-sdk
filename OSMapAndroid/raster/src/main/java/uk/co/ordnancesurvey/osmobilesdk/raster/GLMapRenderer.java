@@ -172,16 +172,13 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mGLImageCache = new GLImageCache();
 
         mScrollController = scrollController;
-
-        mTileFetcher = new TileFetcher(context, this);
         mLocationSource = new OSLocation(context);
 
-        mTileService = new TileService(getContext().getPackageName());
+        mTileService = new TileService(getContext(), this);
     }
 
     private final GLTileCache mGLTileCache;
     private final GLImageCache mGLImageCache;
-    private final TileFetcher mTileFetcher;
     private final MapScrollController mScrollController;
     private final MapScrollController.ScrollPosition mScrollState = new MapScrollController.ScrollPosition();
     // TODO: This is an icky default, but ensures that it's not null.
@@ -464,7 +461,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
 
     public void onDestroy() {
-        mTileFetcher.stop(false);
+        mTileService.shutDown(false);
         mLocationSource.deactivate();
     }
 
@@ -478,12 +475,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             mMyLocationEnabled = mLocationSource.isCheckingLocation();
         }
 
+        // Set initial position
         moveCamera(getPosition(), false);
 
-//        mPosition = new Position(getActivity());
         try {
-            List<OSTileSource> sources = mTileService.getTileSourcesForConfiguration(mMapConfiguration);
-            mTileFetcher.setTileSources(sources);
+            mTileService.start(mMapConfiguration);
         } catch (FailedToLoadException e) {
             throw new IllegalStateException("Unable to load offline tile sources in map configuration");
         }
@@ -554,7 +550,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             return 0;
         }
 
-        Bitmap bmp = mTileFetcher.requestBitmapForTile(tile, quota.canAsyncFetch());
+        Bitmap bmp = mTileService.requestBitmapForTile(tile, quota.canAsyncFetch());
         if (bmp == null) {
             quota.fetchFailure();
         } else {
@@ -675,7 +671,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         if (bmp != null) {
             mGLTileCache.putTextureForTile(tile, bmp);
         }
-        mTileFetcher.finishRequest(tile);
+        mTileService.finishRequest(tile);
         if (bmp != null) {
             requestRender();
         }
@@ -779,8 +775,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         // At the start of each frame, mark each tile as off-screen.
         // They are marked on-screen as part of tile drawing.
         mGLTileCache.resetTileVisibility();
-        mTileFetcher.lock();
-        mTileFetcher.clear();
+        mTileService.lock();
+        mTileService.clear();
 
         Utils.throwIfErrors();
 
@@ -893,10 +889,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         // Always redraw if we're fading.
         needRedraw |= fading;
 
-        mTileFetcher.unlock();
+        mTileService.unlock();
 
         Utils.throwIfErrors();
-
 
         // Enable alpha-blending
         glEnable(GL_BLEND);
@@ -1539,8 +1534,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     public void setMapConfiguration(MapConfiguration mapConfiguration) {
         mMapConfiguration = mapConfiguration;
         try {
-            List<OSTileSource> sources = mTileService.getTileSourcesForConfiguration(mMapConfiguration);
-            mTileFetcher.setTileSources(sources);
+            mTileService.start(mMapConfiguration);
         } catch (FailedToLoadException e) {
             throw new IllegalStateException("Unable to load offline tile sources in map configuration");
         }

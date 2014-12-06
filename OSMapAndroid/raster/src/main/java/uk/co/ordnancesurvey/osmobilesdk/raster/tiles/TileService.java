@@ -1,5 +1,7 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster.tiles;
 
+import android.content.Context;
+import android.graphics.Bitmap;
 import android.util.Log;
 
 import java.io.File;
@@ -10,7 +12,10 @@ import java.util.List;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.DBTileSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.FailedToLoadException;
+import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSTileSource;
+import uk.co.ordnancesurvey.osmobilesdk.raster.TileFetcher;
+import uk.co.ordnancesurvey.osmobilesdk.raster.TileFetcherDelegate;
 import uk.co.ordnancesurvey.osmobilesdk.raster.WMSTileSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 
@@ -21,14 +26,16 @@ public class TileService {
     private static final String OSTILES = ".ostiles";
 
     private final String mPackageName;
+    private final TileFetcher mTileFetcher;
 
     private List<OSTileSource> mSources = new ArrayList<>();
 
-    public TileService(String packageName) {
-        if (packageName == null || packageName.isEmpty()) {
-            throw new IllegalArgumentException("Null or Empty package name");
+    public TileService(Context context, TileFetcherDelegate tileFetcherDelegate) {
+        if (context == null) {
+            throw new IllegalArgumentException("Null Context");
         }
-        mPackageName = packageName;
+        mPackageName = context.getPackageName();
+        mTileFetcher = new TileFetcher(context, tileFetcherDelegate);
     }
 
     public List<OSTileSource> getTileSourcesForConfiguration(MapConfiguration mapConfiguration) throws FailedToLoadException {
@@ -96,6 +103,35 @@ public class TileService {
 
     private boolean isOSTile(File file) {
         return file.getName().endsWith(OSTILES);
+    }
+
+    public void shutDown(boolean waitForThreadsToStop) {
+        mTileFetcher.stop(waitForThreadsToStop);
+    }
+
+    public void start(MapConfiguration mMapConfiguration) throws FailedToLoadException {
+        List<OSTileSource> sources = getTileSourcesForConfiguration(mMapConfiguration);
+        mTileFetcher.setTileSources(sources);
+    }
+
+    public Bitmap requestBitmapForTile(MapTile mapTile, boolean asyncFetchOK) {
+        return mTileFetcher.requestBitmapForTile(mapTile, asyncFetchOK);
+    }
+
+    public void finishRequest(MapTile mapTile) {
+        mTileFetcher.finishRequest(mapTile);
+    }
+
+    public void lock() {
+        mTileFetcher.lock();
+    }
+
+    public void clear() {
+        mTileFetcher.clear();
+    }
+
+    public void unlock() {
+        mTileFetcher.unlock();
     }
 }
 

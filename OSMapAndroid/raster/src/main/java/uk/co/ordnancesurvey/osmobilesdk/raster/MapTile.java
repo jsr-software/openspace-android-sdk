@@ -22,7 +22,7 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
-final class MapTile {
+public final class MapTile {
 	MapLayer layer;
 	int x;
 	int y;

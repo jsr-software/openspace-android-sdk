@@ -2,5 +2,5 @@
 
 OSMapAndroid.iml
 .idea
-gen
+.gradle
 local.properties

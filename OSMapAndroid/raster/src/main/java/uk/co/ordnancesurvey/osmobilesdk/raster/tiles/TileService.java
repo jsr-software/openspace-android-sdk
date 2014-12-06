@@ -42,6 +42,14 @@ public class TileService {
     private static final String CLASS_TAG = TileService.class.getName();
     private static final String EMPTY_API_KEY = "";
     private static final String OSTILES = ".ostiles";
+    private static final int[] NETWORK_TYPES = {
+                ConnectivityManager.TYPE_ETHERNET,
+                ConnectivityManager.TYPE_BLUETOOTH,
+                ConnectivityManager.TYPE_WIMAX,
+                ConnectivityManager.TYPE_WIFI,
+                ConnectivityManager.TYPE_MOBILE,
+                ConnectivityManager.TYPE_DUMMY
+        };
 
     private final Context mContext;
     private final String mPackageName;
@@ -80,7 +88,7 @@ public class TileService {
         int memoryClass = activityManager.getMemoryClass();
         int memoryMB = memoryClass / 2;
         int diskMB = 128;
-        File cacheDir = new File(context.getCacheDir(), "uk.co.ordnancesurvey.android.maps.TILE_CACHE");
+        File cacheDir = new File(context.getCacheDir(), "uk.co.ordnancesurvey.osmobilesdk.raster.TILE_CACHE");
         int appVersion;
         try {
             appVersion = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionCode;
@@ -241,7 +249,6 @@ public class TileService {
             throw new IllegalStateException("Null MapConfiguration given");
         }
 
-        // TODO: should these be unloaded first too?
         unloadCurrentSources();
 
         final String apiKey = mapConfiguration.getApiKey();
@@ -282,7 +289,7 @@ public class TileService {
     }
 
     private Collection<OSTileSource> localTileSourcesInDirectory(File tileSource) {
-        ArrayList<OSTileSource> ret = new ArrayList<OSTileSource>();
+        ArrayList<OSTileSource> ret = new ArrayList<>();
         File[] files = tileSource.listFiles();
         if (files == null) {
             return ret;
@@ -312,9 +319,6 @@ public class TileService {
         // getActiveNetworkInfo is the obvious call to use, but is apparently pretty buggy
         // http://code.google.com/p/android/issues/detail?id=11891
         // http://code.google.com/p/android/issues/detail?id=11866
-
-        final int NETWORK_TYPES[] = getNetworkTypes();
-
         boolean reachable = false;
         for (int testType : NETWORK_TYPES) {
             NetworkInfo nwInfo = connectivityManager.getNetworkInfo(testType);
@@ -329,18 +333,6 @@ public class TileService {
         if (reachable && !wasReachable) {
             // We have a network. If this is newly available, we should pump any outstanding requests.
         }
-    }
-
-    private static int[] getNetworkTypes() {
-        final int[] NETWORK_TYPES = {
-                ConnectivityManager.TYPE_ETHERNET,
-                ConnectivityManager.TYPE_BLUETOOTH,
-                ConnectivityManager.TYPE_WIMAX,
-                ConnectivityManager.TYPE_WIFI,
-                ConnectivityManager.TYPE_MOBILE,
-                ConnectivityManager.TYPE_DUMMY
-        };
-        return NETWORK_TYPES;
     }
 
     // A non-private function so we don't get TileFetcher.access$2 in Traceview.

@@ -54,7 +54,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.microedition.khronos.egl.EGLConfig;
@@ -111,11 +110,15 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private MapConfiguration mMapConfiguration;
 
-    public GLMapRenderer(Context context, MapScrollController scrollController) {
+    public GLMapRenderer(Context context, MapScrollController scrollController, MapConfiguration mapConfiguration) {
 
         super(context);
         mContext = context;
+        if(mapConfiguration == null) {
+            throw new IllegalArgumentException("Null Map Configuration");
+        }
 
+        mMapConfiguration = mapConfiguration;
         mHandler = new Handler(context.getMainLooper());
         if (BuildConfig.DEBUG) {
             if (GLMapRenderer.class.desiredAssertionStatus()) {
@@ -227,7 +230,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             }
         }
     };
-
 
 
     // Markers
@@ -475,14 +477,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             mMyLocationEnabled = mLocationSource.isCheckingLocation();
         }
 
-        // Set initial position
-        moveCamera(getPosition(), false);
+        setInitialMapPosition();
 
-        try {
-            mTileService.start(mMapConfiguration);
-        } catch (FailedToLoadException e) {
-            throw new IllegalStateException("Unable to load offline tile sources in map configuration");
-        }
+        startTileService(mMapConfiguration);
     }
 
     public void onPause() {
@@ -490,7 +487,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         Log.v(TAG, "onPause");
 
         // TODO - should we stop the tile provider on pause? I think not, but not sure.
-        mTileService.shutDown(true);
+//        mTileService.shutDown(true);
 
         mLocationSource.deactivate();
         mForeground = false;
@@ -1533,8 +1530,12 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void setMapConfiguration(MapConfiguration mapConfiguration) {
         mMapConfiguration = mapConfiguration;
+        startTileService(mMapConfiguration);
+    }
+
+    private void startTileService(MapConfiguration mapConfiguration) {
         try {
-            mTileService.start(mMapConfiguration);
+            mTileService.start(mapConfiguration);
         } catch (FailedToLoadException e) {
             throw new IllegalStateException("Unable to load offline tile sources in map configuration");
         }
@@ -1549,6 +1550,10 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private static final long DEFAULT_NORTHINGS = 45000;
     private static final long DEFAULT_ZOOM = 50000;
 
+    private void setInitialMapPosition() {
+        moveCamera(getPosition(), false);
+    }
+
     private CameraPosition getPosition() {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
@@ -1558,7 +1563,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         boolean isValidPosition = isValidPosition(eastings, northings, zoom);
         CameraPosition position;
-        if(isValidPosition) {
+        if (isValidPosition) {
             position = new CameraPosition(new GridPoint(eastings, northings), zoom);
         } else {
             position = new CameraPosition(new GridPoint(DEFAULT_EASTINGS,
@@ -1596,7 +1601,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     /*
-	private int leaks = 0;
+    private int leaks = 0;
 	private void leakGPUMemory() {
 		long tileSizeBytes = TILE_SIZE_PIXELS * TILE_SIZE_PIXELS * 4;
 		long estGPUUsage = tileSizeBytes*NUM_TEXTURES;

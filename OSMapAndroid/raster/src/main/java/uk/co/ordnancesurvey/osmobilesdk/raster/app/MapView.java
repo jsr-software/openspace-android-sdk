@@ -36,79 +36,77 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.MapLayer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapScrollController;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMapPrivate;
-import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
-
 
 public final class MapView extends FrameLayout {
-	private final GLMapRenderer mMapRenderer;
-	private final OSMapPrivate mMap;
+    private final GLMapRenderer mMapRenderer;
+    private final OSMapPrivate mMap;
 
-	public MapView(Context context, AttributeSet set) {
-		super(context, set);
-		GLMapRenderer map = init(context, null);
-		mMapRenderer = map;
-		mMap = map;
+    public MapView(Context context, AttributeSet set) {
+        super(context, set);
+        GLMapRenderer map = init(context, null);
+        mMapRenderer = map;
+        mMap = map;
 
-	}
-	public MapView(Context context) {
-		super(context);
-		GLMapRenderer map = init(context, null);
-		mMapRenderer = map;
-		mMap = map;
-	}
-	
-	public MapView(Context context, MapConfiguration mapConfiguration) {
-		super(context);
-		GLMapRenderer map = init(context, mapConfiguration);
-		mMapRenderer = map;
-		mMap = map;		
-	}
-	
-	private GLMapRenderer init(Context context, MapConfiguration mapConfiguration) {
-		LayoutParams fill = new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, Gravity.FILL);
+    }
 
-		final MapScrollController scrollController = new MapScrollController(context, new MapScrollController.DragListener() {
-			@Override
-			public Object onDragBegin(MotionEvent e) {
-				// TODO Auto-generated method stub
-				Log.v("Drag", "Start!");
-				return mMap.longClick(e.getX(), e.getY());
-			}
+    public MapView(Context context) {
+        super(context);
+        GLMapRenderer map = init(context, null);
+        mMapRenderer = map;
+        mMap = map;
+    }
 
-			@Override
-			public void onDrag(MotionEvent e, Object dragObject) {
-				mMap.drag(e.getX(), e.getY(), dragObject);
-			}
+    public MapView(Context context, MapConfiguration mapConfiguration) {
+        super(context);
+        GLMapRenderer map = init(context, mapConfiguration);
+        mMapRenderer = map;
+        mMap = map;
+    }
 
-			@Override
-			public void onDragEnd(MotionEvent e, Object dragObject) {
-				mMap.dragEnded(e.getX(), e.getY(), dragObject);
-			}
+    private GLMapRenderer init(Context context, MapConfiguration mapConfiguration) {
+        LayoutParams fill = new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, Gravity.FILL);
 
-			@Override
-			public void onDragCancel(MotionEvent e, Object dragObject) {
-				// TODO Auto-generated method stub
-				Log.v("Drag", "Cancel!");
-			}
-		}, new MapScrollController.ScrollListener() {
-			@Override
-			public void onScrollScaleFling(MapScrollController detector) {
-				// TODO: Should this be an interface method?
-				mMapRenderer.requestRender();
-			}
+        final MapScrollController scrollController = new MapScrollController(context, new MapScrollController.DragListener() {
+            @Override
+            public Object onDragBegin(MotionEvent e) {
+                // TODO Auto-generated method stub
+                Log.v("Drag", "Start!");
+                return mMap.longClick(e.getX(), e.getY());
+            }
 
-			@Override
-			public boolean onSingleTapConfirmed(MotionEvent e) {
-				return mMap.singleClick(e.getX(), e.getY());
-			}
-		});
-		setOnTouchListener(scrollController);
+            @Override
+            public void onDrag(MotionEvent e, Object dragObject) {
+                mMap.drag(e.getX(), e.getY(), dragObject);
+            }
+
+            @Override
+            public void onDragEnd(MotionEvent e, Object dragObject) {
+                mMap.dragEnded(e.getX(), e.getY(), dragObject);
+            }
+
+            @Override
+            public void onDragCancel(MotionEvent e, Object dragObject) {
+                // TODO Auto-generated method stub
+                Log.v("Drag", "Cancel!");
+            }
+        }, new MapScrollController.ScrollListener() {
+            @Override
+            public void onScrollScaleFling(MapScrollController detector) {
+                // TODO: Should this be an interface method?
+                mMapRenderer.requestRender();
+            }
+
+            @Override
+            public boolean onSingleTapConfirmed(MotionEvent e) {
+                return mMap.singleClick(e.getX(), e.getY());
+            }
+        });
+        setOnTouchListener(scrollController);
 
 
-		GLMapRenderer map = new GLMapRenderer(context, scrollController);
-		map.setLayoutParams(fill);
-		addView(map);
-
+        GLMapRenderer map = new GLMapRenderer(context, scrollController, mapConfiguration);
+        map.setLayoutParams(fill);
+        addView(map);
 
         if (mapConfiguration == null || mapConfiguration.getDisplayedProducts() == null) {
             // If no map stack specified then use the default layers; these are available to Free and Pro
@@ -120,55 +118,53 @@ public final class MapView extends FrameLayout {
             map.setMapLayers(MapLayer.layersForProductCodes(mapConfiguration.getDisplayedProducts()));
         }
         return map;
-	}
-	
-	public OSMap getMap()
-	{
-		return mMap;
-	}
-	
+    }
 
-	/**
-	* Must be forwarded from the containing Activity/Fragment.
-	* Saving/restoring instance state is not supported yet.
-	*/
-	public final void onCreate(Bundle savedInstanceState)
-	{
-	}
-	/**
-	* Must be forwarded from the containing Activity/Fragment.
-	*/
-	public final void onDestroy()
-	{
-		mMapRenderer.onDestroy();
-	}
-	/**
-	* Must be forwarded from the containing Activity/Fragment.
-	*/
-	public final void onLowMemory()
-	{
-	}
-	/**
-	* Must be forwarded from the containing Activity/Fragment.
-	*/
-	public final void onPause()
-	{
-		mMapRenderer.onPause();
-	}
-	/**
-	* Must be forwarded from the containing Activity/Fragment.
-	*/
-	public final void onResume()
-	{
-		mMapRenderer.onResume();
-	}
-	/**
-	* Must be forwarded from the containing Activity/Fragment.
-	* Saving/restoring instance state is not supported yet.
-	*/
-	public final void onSaveInstanceState(Bundle outState)
-	{
-	}
+    public OSMap getMap() {
+        return mMap;
+    }
+
+
+    /**
+     * Must be forwarded from the containing Activity/Fragment.
+     * Saving/restoring instance state is not supported yet.
+     */
+    public final void onCreate(Bundle savedInstanceState) {
+    }
+
+    /**
+     * Must be forwarded from the containing Activity/Fragment.
+     */
+    public final void onDestroy() {
+        mMapRenderer.onDestroy();
+    }
+
+    /**
+     * Must be forwarded from the containing Activity/Fragment.
+     */
+    public final void onLowMemory() {
+    }
+
+    /**
+     * Must be forwarded from the containing Activity/Fragment.
+     */
+    public final void onPause() {
+        mMapRenderer.onPause();
+    }
+
+    /**
+     * Must be forwarded from the containing Activity/Fragment.
+     */
+    public final void onResume() {
+        mMapRenderer.onResume();
+    }
+
+    /**
+     * Must be forwarded from the containing Activity/Fragment.
+     * Saving/restoring instance state is not supported yet.
+     */
+    public final void onSaveInstanceState(Bundle outState) {
+    }
 
     public void setMapConfiguration(MapConfiguration mapConfiguration) {
         mMap.setMapConfiguration(mapConfiguration);

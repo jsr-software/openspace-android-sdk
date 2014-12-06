@@ -1,39 +1,37 @@
 package uk.co.ordnancesurvey.osmobilesdk;
 
-import android.support.v7.app.ActionBarActivity;
+import android.app.Activity;
+import android.app.Fragment;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapFragment;
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends Activity {
+
+    private static final String MAP_TAG = "map_tag";
+    private static final String[] OVERVIEW_STACK = new String[]{"CS00", "CS01", "CS02", "CS03",
+            "CS04", "CS05", "CS06", "CS07", "CS08", "CS09", "CS10"};
+
+    private Fragment mMapFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-    }
 
+        if (savedInstanceState == null) {
+            MapConfiguration.Builder builder = new MapConfiguration.Builder()
+                    .setDisplayedProducts(OVERVIEW_STACK)
+                    .setIsPro(true)
+                    .setOfflineTileSource(getExternalFilesDir(null));
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
+            mMapFragment = MapFragment.newInstance(builder.build());
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+            getFragmentManager().beginTransaction()
+                    .add(android.R.id.content, mMapFragment, MAP_TAG)
+                    .commit();
+        } else {
+            mMapFragment = getFragmentManager().findFragmentByTag(MAP_TAG);
         }
-
-        return super.onOptionsItemSelected(item);
     }
 }

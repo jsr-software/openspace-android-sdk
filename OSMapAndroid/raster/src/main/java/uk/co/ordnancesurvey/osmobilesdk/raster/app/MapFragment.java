@@ -92,8 +92,7 @@ public class MapFragment extends Fragment {
         // If overriding this method is desired, we need to store the MapView in a member field instead of assuming that it is returned by getView().
         // Subclasses can also override getView(), but that obviously causes breakage.
         Context context = getActivity();
-        mMapView = new MapView(context);
-        mMapView.setMapConfiguration(mMapConfiguration);
+        mMapView = new MapView(context, mMapConfiguration);
         return mMapView;
     }
 

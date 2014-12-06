@@ -343,5 +343,9 @@ public interface OSMap {
 	 */
 	public void setLocationSource(LocationSource source);
 
+    /**
+     * Set the {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration} for the current view
+     * @param mapConfiguration
+     */
     void setMapConfiguration(MapConfiguration mapConfiguration);
 }

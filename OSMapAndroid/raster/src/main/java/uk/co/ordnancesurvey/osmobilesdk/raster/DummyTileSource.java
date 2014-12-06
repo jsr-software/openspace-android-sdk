@@ -44,19 +44,19 @@ final class DummyTileSource extends OSTileSource {
 	}
 
 	@Override
-	boolean isNetwork()
+    public boolean isNetwork()
 	{
 		return mSynchronous;
 	}
 
 	@Override
-	boolean isSynchronous()
+    public boolean isSynchronous()
 	{
 		return mSynchronous;
 	}
 
 	@Override
-	byte[] dataForTile(MapTile tile) {
+    public byte[] dataForTile(MapTile tile) {
 		// TODO: Do we want to support this?
 		assert false : "Not supported yet!";
 		return null;

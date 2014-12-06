@@ -29,7 +29,7 @@ public final class MapTile {
 	MapTile() {
 	}
 	
-	MapTile(MapTile copy) {
+	public MapTile(MapTile copy) {
 		x = copy.x;
 		y = copy.y;
 		layer = copy.layer;

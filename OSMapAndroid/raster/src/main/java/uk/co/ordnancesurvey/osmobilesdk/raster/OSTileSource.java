@@ -41,13 +41,13 @@ public abstract class OSTileSource implements Closeable
 	 * @param tile
 	 * @return
 	 */
-	abstract byte[] dataForTile(MapTile tile);
+	public abstract byte[] dataForTile(MapTile tile);
 
 	/**
 	 * Is the tile loaded from the network? If so, we will take account of network reachability.
 	 * @return
 	 */
-	abstract boolean isNetwork();
+	public abstract boolean isNetwork();
 
 	/**
 	 * Return true if the tiles should be loaded from the GL thread instead of a background thread.
@@ -56,7 +56,7 @@ public abstract class OSTileSource implements Closeable
 	 * Regardless of what is returned, the implementation of {@link dataForTile()} must be thread-safe.
 	 * @return
 	 */
-	abstract boolean isSynchronous();
+	public abstract boolean isSynchronous();
 
 	/** Whether results should be saved in the disk cache. The default is not to. */
 	boolean shouldDiskCache() {

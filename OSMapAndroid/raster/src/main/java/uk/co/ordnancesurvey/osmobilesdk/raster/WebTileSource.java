@@ -53,7 +53,7 @@ abstract class WebTileSource extends OSTileSource {
 	abstract String uriStringForTile(MapTile tile);
 
 	@Override
-	byte[] dataForTile(MapTile tile) {
+    public byte[] dataForTile(MapTile tile) {
 		String uriString = uriStringForTile(tile);
 		if (uriString == null)
 		{
@@ -184,12 +184,12 @@ abstract class WebTileSource extends OSTileSource {
 
 
 	@Override
-	boolean isNetwork() {
+    public boolean isNetwork() {
 		return true;
 	}
 
 	@Override
-	boolean isSynchronous() {
+    public boolean isSynchronous() {
 		return false;
 	}
 

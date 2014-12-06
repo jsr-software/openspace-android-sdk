@@ -120,7 +120,7 @@ public final class DBTileSource extends OSTileSource {
     }
 
     @Override
-    byte[] dataForTile(MapTile tile) {
+    public byte[] dataForTile(MapTile tile) {
         MapLayer layer = tile.layer;
 
         ZoomLevel zl = zoomLevelForLayer(layer);
@@ -149,12 +149,12 @@ public final class DBTileSource extends OSTileSource {
     }
 
     @Override
-    boolean isNetwork() {
+    public boolean isNetwork() {
         return false;
     }
 
     @Override
-    boolean isSynchronous() {
+    public boolean isSynchronous() {
         return true;
     }
 

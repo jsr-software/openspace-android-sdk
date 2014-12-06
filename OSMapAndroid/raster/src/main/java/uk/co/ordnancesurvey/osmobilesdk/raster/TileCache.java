@@ -24,7 +24,7 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import java.io.File;
 
-final class TileCache extends CombinedLruCache<MapTile> {
+public final class TileCache extends CombinedLruCache<MapTile> {
 
     private static TileCache INSTANCE;
 

@@ -102,7 +102,7 @@ import static android.opengl.GLES20.glViewport;
  * Tiles are rendered in tile coordinates, which have the origin at the bottom left of the grid (not the screen). The units are tiles (i.e. a tile always has dimensions 1x1) and the
  * actual size of a tile is set up by modifying the projection transform.
  */
-public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileFetcherDelegate, OSMapPrivate, LocationSource.OnLocationChangedListener {
+public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMapPrivate, LocationSource.OnLocationChangedListener {
 
     private static final String TAG = GLMapRenderer.class.getSimpleName();
 
@@ -490,10 +490,10 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         Log.v(TAG, "onPause");
 
         // TODO - should we stop the tile provider on pause? I think not, but not sure.
+        mTileService.shutDown(true);
+
         mLocationSource.deactivate();
         mForeground = false;
-
-        mTileService.unloadCurrentSources();
     }
 
     GLImageCache getGLImageCache() {

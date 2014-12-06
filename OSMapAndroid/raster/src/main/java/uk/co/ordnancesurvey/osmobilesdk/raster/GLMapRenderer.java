@@ -25,6 +25,7 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 import android.annotation.TargetApi;
 import android.app.ActivityManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.graphics.Rect;
@@ -37,6 +38,7 @@ import android.opengl.Matrix;
 import android.os.Build;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
@@ -222,10 +224,14 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             if (mOnCameraChangeListener != null) {
                 ScreenProjection projection = getProjection();
                 CameraPosition position = new CameraPosition(projection.getCenter(), projection.getMetresPerPixel());
+                // Cache position;
+                storePosition(position);
                 mOnCameraChangeListener.onCameraChange(position);
             }
         }
     };
+
+
 
     // Markers
     private final LinkedList<Marker> mMarkers = new LinkedList<Marker>();
@@ -471,6 +477,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             mLocationSource.activate(this);
             mMyLocationEnabled = mLocationSource.isCheckingLocation();
         }
+
+        moveCamera(getPosition(), false);
 
 //        mPosition = new Position(getActivity());
         try {
@@ -1526,6 +1534,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         return mVolatileProjection;
     }
 
+    // MAP CONFIGURATION
     @Override
     public void setMapConfiguration(MapConfiguration mapConfiguration) {
         mMapConfiguration = mapConfiguration;
@@ -1536,6 +1545,62 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             throw new IllegalStateException("Unable to load offline tile sources in map configuration");
         }
     }
+
+    // POSITION CACHE
+    private static final String POSITION_EASTINGS = "position_eastings";
+    private static final String POSITION_NORTHINGS = "position_northings";
+    private static final String POSITION_ZOOM = "position_zoom";
+
+    private static final long DEFAULT_EASTINGS = 45000;
+    private static final long DEFAULT_NORTHINGS = 45000;
+    private static final long DEFAULT_ZOOM = 50000;
+
+    private CameraPosition getPosition() {
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+        double eastings = prefs.getFloat(POSITION_EASTINGS, DEFAULT_EASTINGS);
+        double northings = prefs.getFloat(POSITION_NORTHINGS, DEFAULT_NORTHINGS);
+        float zoom = prefs.getFloat(POSITION_ZOOM, DEFAULT_ZOOM);
+
+        boolean isValidPosition = isValidPosition(eastings, northings, zoom);
+        CameraPosition position;
+        if(isValidPosition) {
+            position = new CameraPosition(new GridPoint(eastings, northings), zoom);
+        } else {
+            position = new CameraPosition(new GridPoint(DEFAULT_EASTINGS,
+                    DEFAULT_NORTHINGS), DEFAULT_ZOOM);
+        }
+
+        return position;
+    }
+
+    private void storePosition(CameraPosition position) {
+        if (position == null) {
+            return;
+        }
+
+        boolean isValidPosition = isValidPosition(position.target.x, position.target.y,
+                position.zoom);
+        if (!isValidPosition) {
+            return;
+        }
+
+        PreferenceManager.getDefaultSharedPreferences(mContext)
+                .edit()
+                .putFloat(POSITION_EASTINGS, (float) position.target.x)
+                .putFloat(POSITION_NORTHINGS, (float) position.target.y)
+                .putFloat(POSITION_ZOOM, position.zoom)
+                .commit();
+    }
+
+    private boolean isValid(double value) {
+        return !Double.isNaN(value) && !Double.isInfinite(value);
+    }
+
+    private boolean isValidPosition(double easting, double northing, float zoom) {
+        return isValid(easting) && isValid(northing) && isValid(zoom);
+    }
+
     /*
 	private int leaks = 0;
 	private void leakGPUMemory() {

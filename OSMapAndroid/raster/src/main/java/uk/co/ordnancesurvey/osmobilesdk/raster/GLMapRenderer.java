@@ -63,6 +63,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+
 
 /**
  * There are three coordinate systems (at least) in use here.
@@ -79,8 +81,9 @@ final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Rendere
 
 	private static final String TAG = "GLMapRenderer";
 	private final Context mContext;
-	
-	public GLMapRenderer(Context context, MapScrollController scrollController) {
+    private MapConfiguration mMapConfiguration;
+
+    public GLMapRenderer(Context context, MapScrollController scrollController) {
 		
 		super(context);
 		mContext = context;
@@ -1678,6 +1681,12 @@ final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Rendere
 		}
 		return ret;
 	}
+
+    @Override
+    public void setMapConfiguration(MapConfiguration mapConfiguration) {
+        mMapConfiguration = mapConfiguration;
+        
+    }
 	/*
 	private int leaks = 0;
 	private void leakGPUMemory() {

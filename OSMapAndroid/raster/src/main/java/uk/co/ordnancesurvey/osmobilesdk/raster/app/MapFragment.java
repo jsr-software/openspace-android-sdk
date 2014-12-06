@@ -31,106 +31,103 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapView;
-import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
-import uk.co.ordnancesurvey.osmobilesdk.raster.OSMapOptions;
-// TODO this bit needs thinking about
+
 /**
- * A Map component in an app. This fragment is the simplest way to place a map in an application. It's a wrapper around a view of a map 
- * to automatically handle the necessary life cycle needs. Being a fragment, this component can be added to an activity's layout file 
+ * A Map component in an app. This fragment is the simplest way to place a map in an application. It's a wrapper around a view of a map
+ * to automatically handle the necessary life cycle needs. Being a fragment, this component can be added to an activity's layout file
  * simply with the XML below.
  * <code>
-&lt;fragment
-    class="uk.co.ordnancesurvey.osmobilesdk.raster.app.MapFragment"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"/&gt;
-    * </code>
-    * <p>
-    * An {@link OSMap} can only be acquired using {@link #getMap()} when the underlying maps system is loaded and the underlying 
-    * view in the fragment exists. This class automatically initializes the maps system and the view. If an {@link OSMap}
-    *  is not available, {@link #getMap()} will return null.
-    * <p>
-    * A view can be removed when the MapFragment's {@link #onDestroyView()} method is called. When this happens the MapFragment 
-    * is no longer valid until the view is recreated again later when MapFragment's onCreateView(LayoutInflater, ViewGroup, Bundle) 
-    * method is called.
-    * <p>
-    * Any objects obtained from the {@link OSMap} are associated with the view. It's important to not hold on to objects
-    *  (e.g. {@link Marker}) beyond the view's life. Otherwise it will cause a memory leak as the view cannot be released.
-    * <p>
-    * Use this class only if you are targeting API 11 and above. Otherwise, use SupportMapFragment.
-    */
-@TargetApi(11)
+ * &lt;fragment
+ * class="uk.co.ordnancesurvey.android.maps.MapFragment"
+ * android:layout_width="match_parent"
+ * android:layout_height="match_parent"/&gt;
+ * </code>
+ * <p/>
+ * An {@link uk.co.ordnancesurvey.osmobilesdk.raster.OSMap} can only be acquired using {@link #getMap()} when the underlying maps system is loaded and the underlying
+ * view in the fragment exists. This class automatically initializes the maps system and the view. If an {@link uk.co.ordnancesurvey.osmobilesdk.raster.OSMap}
+ * is not available, {@link #getMap()} will return null.
+ * <p/>
+ * A view can be removed when the MapFragment's {@link #onDestroyView()} method is called. When this happens the MapFragment
+ * is no longer valid until the view is recreated again later when MapFragment's onCreateView(LayoutInflater, ViewGroup, Bundle)
+ * method is called.
+ * <p/>
+ * Any objects obtained from the {@link uk.co.ordnancesurvey.osmobilesdk.raster.OSMap} are associated with the view. It's important to not hold on to objects
+ * (e.g. {@link uk.co.ordnancesurvey.osmobilesdk.raster.Marker}) beyond the view's life. Otherwise it will cause a memory leak as the view cannot be released.
+ * <p/>
+ * Use this class only if you are targeting API 11 and above. Otherwise, use SupportMapFragment.
+ */
+@TargetApi(14)
 public class MapFragment extends Fragment {
-	public final OSMapOptions mOptions;
-	public MapView mMapView;
-	
-	public MapFragment()
-	{
-		super();
-		mOptions = null;
-	}
-	
-	public MapFragment(OSMapOptions options)
-	{
-		super();
-		mOptions = options;
-	}
-	
-	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		// This method is final to prevent other methods breaking if this class becomes non-final.
-		// If overriding this method is desired, we need to store the MapView in a member field instead of assuming that it is returned by getView().
-		// Subclasses can also override getView(), but that obviously causes breakage.
-		Context context = getActivity();
-		mMapView = new MapView(context, mOptions);
-		mMapView.onCreate(savedInstanceState);
-		return mMapView;
-	}
-	
-	/**
-	 * Gets the underlying {@link OSMap} that is tied to the view wrapped by this fragment.
-	 * <p>
-	 * @return Returns the OSMap. Null if the view of the fragment is not yet ready. 
-	 * This can happen if the fragment lifecyle have not gone through onCreateView(LayoutInflater, ViewGroup, Bundle) yet. 
-	 */
-	public OSMap getMap()
-	{
-		return (mMapView == null ? null : mMapView.getMap());
-	}
-	
-	// Lifecycle methods.
-	@Override
-	public void onResume()
-	{
-		super.onResume();
-		mMapView.onResume();
-	}
-	
-	@Override
-	public void onPause() {
-		super.onPause();
-		mMapView.onPause();
-	}
-	
-	@Override
-	public void onDestroyView() {
-		// tchan: Order might matter here!
-		mMapView.onDestroy();
-		mMapView = null;
-		super.onDestroyView();
-	}
 
-	/**
-	 * Creates a map fragment, using default options.
-	 */
-	public static MapFragment newInstance()
-	{
-		return newInstance(null);
-	}
+    public static MapFragment newInstance(MapConfiguration mapConfiguration) {
+        MapFragment fragment = new MapFragment();
+        Bundle args = new Bundle();
+        args.putParcelable(CONFIGURATION, mapConfiguration);
 
-	/**
-	 * Creates a map fragment with the given options
-	 */
-	public static MapFragment newInstance(OSMapOptions options) {
-		return new MapFragment(options);
-	}
+        fragment.setArguments(args);
+
+        return fragment;
+    }
+
+    private static final String CONFIGURATION = "map_configuration";
+
+    private MapConfiguration mMapConfiguration;
+    private MapView mMapView;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        Bundle args = getArguments();
+        if (args != null && args.containsKey(CONFIGURATION)) {
+            mMapConfiguration = (MapConfiguration) args.get(CONFIGURATION);
+        }
+
+        if (mMapConfiguration == null) {
+            throw new IllegalStateException("No Map Configuration set - create using newInstance(configuration)");
+        }
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        // This method is final to prevent other methods breaking if this class becomes non-final.
+        // If overriding this method is desired, we need to store the MapView in a member field instead of assuming that it is returned by getView().
+        // Subclasses can also override getView(), but that obviously causes breakage.
+        Context context = getActivity();
+        mMapView = new MapView(context);
+        mMapView.setMapConfiguration(mMapConfiguration);
+        return mMapView;
+    }
+
+    /**
+     * Gets the underlying {@link uk.co.ordnancesurvey.osmobilesdk.raster.OSMap} that is tied to the view wrapped by this fragment.
+     * <p/>
+     *
+     * @return Returns the OSMap. Null if the view of the fragment is not yet ready.
+     * This can happen if the fragment lifecyle have not gone through onCreateView(LayoutInflater, ViewGroup, Bundle) yet.
+     */
+    public MapView getMap() {
+        return mMapView;
+    }
+
+    // Lifecycle methods.
+    @Override
+    public void onResume() {
+        super.onResume();
+        mMapView.onResume();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        mMapView.onPause();
+    }
+
+    @Override
+    public void onDestroyView() {
+        // tchan: Order might matter here!
+        mMapView.onDestroy();
+        mMapView = null;
+        super.onDestroyView();
+    }
 }

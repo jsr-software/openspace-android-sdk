@@ -31,6 +31,8 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.widget.FrameLayout;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+
 
 public final class MapView extends FrameLayout {
 	private final GLMapRenderer mMapRenderer;
@@ -50,14 +52,14 @@ public final class MapView extends FrameLayout {
 		mMap = map;
 	}
 	
-	public MapView(Context context, OSMapOptions options) {
+	public MapView(Context context, MapConfiguration mapConfiguration) {
 		super(context);
-		GLMapRenderer map = init(context, options);
+		GLMapRenderer map = init(context, mapConfiguration);
 		mMapRenderer = map;
 		mMap = map;		
 	}
 	
-	private GLMapRenderer init(Context context, OSMapOptions options) {
+	private GLMapRenderer init(Context context, MapConfiguration mapConfiguration) {
 		LayoutParams fill = new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, Gravity.FILL);
 
 		final MapScrollController scrollController = new MapScrollController(context, new MapScrollController.DragListener() {
@@ -103,22 +105,16 @@ public final class MapView extends FrameLayout {
 		addView(map);
 
 
-		if(options == null || options.getProducts() == null)
-		{
-
+        if (mapConfiguration == null || mapConfiguration.getDisplayedProducts() == null) {
             // If no map stack specified then use the default layers; these are available to Free and Pro
             // API key users.
-			map.setMapLayers(MapLayer.getDefaultLayers());
+            map.setMapLayers(MapLayer.getDefaultLayers());
 
-		}
-		else
-		{
-
+        } else {
             // Otherwise use the map stack specified by the user
-			map.setMapLayers(MapLayer.layersForProductCodes(options.getProducts()));
-
-		}
-		return map;
+            map.setMapLayers(MapLayer.layersForProductCodes(mapConfiguration.getDisplayedProducts()));
+        }
+        return map;
 	}
 	
 	public OSMap getMap()
@@ -168,4 +164,8 @@ public final class MapView extends FrameLayout {
 	public final void onSaveInstanceState(Bundle outState)
 	{
 	}
+
+    public void setMapConfiguration(MapConfiguration mapConfiguration) {
+        mMap.setMapConfiguration(mapConfiguration);
+    }
 }

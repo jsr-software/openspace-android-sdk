@@ -29,6 +29,8 @@ import android.content.Context;
 import android.location.Location;
 import android.view.View;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+
 /**
  * This is the main class of the Google Maps Android API and is the entry point for all methods related to the map. You cannot 
  * instantiate an {@link OSMap} object directly, rather, you must obtain one from the {@link MapView#getMap()} method on a 
@@ -78,7 +80,8 @@ import android.view.View;
  * </ul>
  */
 public interface OSMap {
-	/**
+
+    /**
 	 * Methods on this provider are called when it is time to show an info window for a marker, regardless of the cause 
 	 * (either a user gesture or a programmatic call to {@link Marker#showInfoWindow()}. Since there is only one info window shown at 
 	 * any one time, this provider may choose to reuse views, or it may choose to create new views on each method invocation.
@@ -355,4 +358,6 @@ public interface OSMap {
 	public OSTileSource webTileSource(String apiKey, boolean openSpacePro, String[] productsOrNull);
 	public OSTileSource localTileSource(Context context, File file) throws FailedToLoadException;
 	public Collection<OSTileSource> localTileSourcesInDirectory(Context context, File dir);
+
+    void setMapConfiguration(MapConfiguration mapConfiguration);
 }

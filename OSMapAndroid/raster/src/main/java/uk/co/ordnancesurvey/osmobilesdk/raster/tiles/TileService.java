@@ -13,9 +13,9 @@ import android.net.NetworkInfo;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.BuildConfig;
 import uk.co.ordnancesurvey.osmobilesdk.raster.DBTileSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.FailedToLoadException;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
@@ -42,9 +41,14 @@ public class TileService {
     private static final String CLASS_TAG = TileService.class.getName();
     private static final String EMPTY_API_KEY = "";
     private static final String OSTILES = ".ostiles";
+    private static final String TILE_CACHE = "uk.co.ordnancesurvey.osmobilesdk.raster.TILE_CACHE";
 
     private final Context mContext;
-    private final String mPackageName;
+    private final FilenameFilter mFileFilter = new FilenameFilter() {
+        public boolean accept(File dir, String name) {
+            return name.endsWith(OSTILES);
+        }
+    };
     private final ReentrantLock mLock = new ReentrantLock();
     private final Condition mFull = mLock.newCondition();
     private final HashSet<MapTile> mRequests = new HashSet<>();
@@ -74,24 +78,9 @@ public class TileService {
             throw new IllegalArgumentException("Null Context");
         }
         mContext = context;
-        mPackageName = mContext.getPackageName();
+
         mTileServiceDelagate = tileServiceDelegate;
-
-        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        int memoryClass = activityManager.getMemoryClass();
-        int memoryMB = memoryClass / 2;
-        int diskMB = 128;
-        File cacheDir = new File(context.getCacheDir(), "uk.co.ordnancesurvey.osmobilesdk.raster.TILE_CACHE");
-        int appVersion;
-        try {
-            appVersion = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionCode;
-        } catch (PackageManager.NameNotFoundException e) {
-            Log.e(CLASS_TAG, "Failed to get package version for " + context.getPackageName(), e);
-            assert !BuildConfig.DEBUG : "This shouldn't happen!";
-            appVersion = 1;
-        }
-
-        mTileCache = TileCache.newInstance(memoryMB, diskMB, cacheDir, appVersion);
+        mTileCache = createTileCache();
 
         mNetworkMonitor = new NetworkAccessMonitor(mContext);
     }
@@ -103,7 +92,8 @@ public class TileService {
 
         mMapConfiguration = mapConfiguration;
 
-        unloadCurrentSources();
+        unloadSources(mVolatileSynchronousSources);
+        unloadSources(mVolatileAsynchronousSources);
 
         mVolatileSynchronousSources = loadSyncTileSources();
         mVolatileAsynchronousSources = loadAsyncTileSources();
@@ -225,13 +215,14 @@ public class TileService {
     /**
      * Tile Sources
      */
-    private OSTileSource[] loadAsyncTileSources()  {
+    private OSTileSource[] loadAsyncTileSources() {
         final String apiKey = mMapConfiguration.getApiKey();
+        final String packageName = mContext.getPackageName();
         final List<OSTileSource> sources = new ArrayList<>();
 
         if (!apiKey.equals(EMPTY_API_KEY)) {
-            sources.add(new WMSTileSource(apiKey, mPackageName,
-                    mMapConfiguration.isPro(), mMapConfiguration.getDisplayedProducts()));
+            sources.add(new WMSTileSource(apiKey, packageName, mMapConfiguration.isPro(),
+                    mMapConfiguration.getDisplayedProducts()));
         }
         return sources.toArray(new OSTileSource[sources.size()]);
     }
@@ -240,26 +231,21 @@ public class TileService {
         final File offlineSource = mMapConfiguration.getOfflineSource();
         final List<OSTileSource> sources = new ArrayList<>();
 
-        if (offlineSource != null && offlineSource.exists()) {
-            if (offlineSource.isDirectory()) {
-                sources.addAll(loadSourcesFromDirectory(offlineSource));
-            } else {
-                sources.add(DBTileSource.openFile(offlineSource));
+        if (offlineSource.isDirectory()) {
+            File[] files = offlineSource.listFiles(mFileFilter);
+            if (files != null) {
+                for (File file : files) {
+                    sources.add(DBTileSource.openFile(file));
+                }
             }
+        } else {
+            sources.add(DBTileSource.openFile(offlineSource));
         }
         return sources.toArray(new OSTileSource[sources.size()]);
     }
 
-    private void unloadCurrentSources() {
-        for (OSTileSource source : mVolatileSynchronousSources) {
-            try {
-                source.close();
-            } catch (IOException e) {
-                Log.d(CLASS_TAG, "Tile unloading error", e);
-            }
-        }
-
-        for (OSTileSource source : mVolatileAsynchronousSources) {
+    private void unloadSources(OSTileSource[] sources) {
+        for (OSTileSource source : sources) {
             try {
                 source.close();
             } catch (IOException e) {
@@ -268,28 +254,32 @@ public class TileService {
         }
     }
 
-    private Collection<OSTileSource> loadSourcesFromDirectory(File tileSource) {
-        ArrayList<OSTileSource> ret = new ArrayList<>();
-        File[] files = tileSource.listFiles();
-        if (files == null) {
-            return ret;
+    /**
+     * Tile Cache
+     */
+    private TileCache createTileCache() {
+        final String packageName = mContext.getPackageName();
+
+        ActivityManager activityManager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
+        int memoryClass = activityManager.getMemoryClass();
+        int memoryMB = memoryClass / 2;
+        int diskMB = 128;
+        File cacheDir = new File(mContext.getCacheDir(), TILE_CACHE);
+        int appVersion;
+        try {
+            appVersion = mContext.getPackageManager().getPackageInfo(packageName, 0).versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(CLASS_TAG, "Failed to get package version for " + packageName, e);
+            appVersion = 1;
         }
-        for (File file : files) {
-            if (isOSTile(file)) {
-                try {
-                    ret.add(DBTileSource.openFile(file));
-                } catch (FailedToLoadException e) {
-                    Log.v(CLASS_TAG, "Failed to load " + file.getPath(), e);
-                }
-            }
-        }
-        return ret;
+
+        return TileCache.newInstance(memoryMB, diskMB, cacheDir, appVersion);
     }
 
-    private boolean isOSTile(File file) {
-        return file.getName().endsWith(OSTILES);
-    }
 
+    /**
+     * Threading for tile loading
+     */
     // A non-private function so we don't get TileFetcher.access$2 in Traceview.
     void threadFunc() {
         while (!mStopThread) {

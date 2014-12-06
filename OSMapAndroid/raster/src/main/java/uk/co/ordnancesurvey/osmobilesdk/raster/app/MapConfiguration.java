@@ -19,6 +19,9 @@ public class MapConfiguration implements Parcelable {
         }
 
         public Builder setOfflineTileSource(File offlineSource) {
+            if (offlineSource == null || !offlineSource.exists()) {
+                throw new IllegalArgumentException("Null or non-existent file");
+            }
             mOfflineSource = offlineSource;
             return this;
         }
@@ -70,7 +73,7 @@ public class MapConfiguration implements Parcelable {
     /**
      * Parcelling
      */
-    private MapConfiguration(Parcel parcel){
+    private MapConfiguration(Parcel parcel) {
         mApiKey = parcel.readString();
         mOfflineSource = (File) parcel.readSerializable();
         parcel.readStringArray(mProducts);
@@ -78,7 +81,7 @@ public class MapConfiguration implements Parcelable {
     }
 
     @Override
-    public int describeContents(){
+    public int describeContents() {
         return 0;
     }
 

@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.app;
 
 
 import android.content.Context;
@@ -31,6 +31,11 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.widget.FrameLayout;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.MapLayer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.MapScrollController;
+import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
+import uk.co.ordnancesurvey.osmobilesdk.raster.OSMapPrivate;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 
 

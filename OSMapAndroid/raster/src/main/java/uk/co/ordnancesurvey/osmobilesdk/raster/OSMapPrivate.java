@@ -22,7 +22,7 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
-interface OSMapPrivate extends OSMap {
+public interface OSMapPrivate extends OSMap {
 	boolean singleClick(float screenx, float screeny);
 	Object longClick(float screenx, float screeny);
 

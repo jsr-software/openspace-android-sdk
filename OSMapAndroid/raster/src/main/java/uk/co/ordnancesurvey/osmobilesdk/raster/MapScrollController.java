@@ -32,8 +32,8 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.Scroller;
 
-final class MapScrollController extends CombinedGestureDetector {
-	interface ScrollListener {
+public final class MapScrollController extends CombinedGestureDetector {
+	public interface ScrollListener {
 		public void onScrollScaleFling(MapScrollController detector);
 		public boolean onSingleTapConfirmed(MotionEvent e);
 	}

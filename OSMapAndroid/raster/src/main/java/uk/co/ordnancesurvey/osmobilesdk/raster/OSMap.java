@@ -33,8 +33,8 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 
 /**
  * This is the main class of the Google Maps Android API and is the entry point for all methods related to the map. You cannot 
- * instantiate an {@link OSMap} object directly, rather, you must obtain one from the {@link MapView#getMap()} method on a 
- * {@link MapFragment} or {@link MapView} that you have added to your application.
+ * instantiate an {@link OSMap} object directly, rather, you must obtain one from the {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapView#getMap()} method on a
+ * {@link MapFragment} or {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapView} that you have added to your application.
  * <p>
  * <b>Note:</b> Similar to a android.view.View View object, an {@link OSMap} can only be read and modified from the main thread. 
  * Calling {@link OSMap} methods from another thread may result in an exception.

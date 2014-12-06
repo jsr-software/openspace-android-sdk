@@ -77,7 +77,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
  * Tiles are rendered in tile coordinates, which have the origin at the bottom left of the grid (not the screen). The units are tiles (i.e. a tile always has dimensions 1x1) and the 
  * actual size of a tile is set up by modifying the projection transform.
  */
-final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileFetcherDelegate, OSMapPrivate, LocationSource.OnLocationChangedListener {
+public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileFetcherDelegate, OSMapPrivate, LocationSource.OnLocationChangedListener {
 
 	private static final String TAG = "GLMapRenderer";
 	private final Context mContext;
@@ -290,7 +290,7 @@ final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Rendere
 	};
 	DirtyArea mDirtyArea = new DirtyArea();
 
-	void setMapLayers(MapLayer[] layers) {
+	public void setMapLayers(MapLayer[] layers) {
 		layers = layers.clone();
 		Arrays.sort(layers, Collections.reverseOrder(MapLayer.COMPARE_METRES_PER_PIXEL));
 
@@ -462,7 +462,7 @@ final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Rendere
 	}
 	
 
-	void onDestroy() {		
+	public void onDestroy() {
 		mTileFetcher.stop(false);
 		mLocationSource.deactivate();
 	}

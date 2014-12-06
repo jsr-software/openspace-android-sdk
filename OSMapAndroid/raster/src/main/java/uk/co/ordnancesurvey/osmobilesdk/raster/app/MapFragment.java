@@ -30,8 +30,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.MapView;
-
 /**
  * A Map component in an app. This fragment is the simplest way to place a map in an application. It's a wrapper around a view of a map
  * to automatically handle the necessary life cycle needs. Being a fragment, this component can be added to an activity's layout file

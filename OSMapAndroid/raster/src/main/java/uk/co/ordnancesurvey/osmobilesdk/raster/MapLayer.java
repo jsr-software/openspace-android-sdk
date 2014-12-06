@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 
-final class MapLayer {
+public final class MapLayer {
 	final String productCode;
 	final String layerCode;
 	final int tileSizePixels;
@@ -50,7 +50,7 @@ final class MapLayer {
 		this(productCode, layerCode, tileSizePixels, tileSizeMetres, null, null);
 	}
 
-	static MapLayer[] layersForProductCodes(String[] productCodes) {
+	public static MapLayer[] layersForProductCodes(String[] productCodes) {
 		Arrays.sort(productCodes);
 		ArrayList<MapLayer> list = new ArrayList<MapLayer>();
 		for (MapLayer layer : ALL_LAYERS) {
@@ -65,7 +65,7 @@ final class MapLayer {
 		return ret;
 	}
 
-	static MapLayer[] getDefaultLayers() {
+	public static MapLayer[] getDefaultLayers() {
 		return layersForProductCodes(new String[] {"SV","SVR","50K","50KR","250K","250KR","MS","MSR","OV2","OV1","OV0"});
 	}
 

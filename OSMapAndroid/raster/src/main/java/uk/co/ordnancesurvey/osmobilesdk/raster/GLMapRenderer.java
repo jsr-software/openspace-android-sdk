@@ -667,17 +667,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         });
     }
 
-
-//    public void tileReadyCallback(final MapTile tile, final Bitmap bmp) {
-//        if (bmp != null) {
-//            mGLTileCache.putTextureForTile(tile, bmp);
-//        }
-//        mTileService.finishRequest(tile);
-//        if (bmp != null) {
-//            requestRender();
-//        }
-//    }
-
     private void roundToPixelBoundary() {
         // OS-56: A better pixel-aligned-drawing algorithm.
         float originalMPP = mScrollState.metresPerPixel;

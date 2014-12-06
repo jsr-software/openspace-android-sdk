@@ -47,7 +47,6 @@ public class TileService {
     private final String mPackageName;
     private final ReentrantLock mLock = new ReentrantLock();
     private final Condition mFull = mLock.newCondition();
-    private final List<OSTileSource> mSources = new ArrayList<>();
     private final HashSet<MapTile> mRequests = new HashSet<>();
     private final LinkedList<MapTile> mFetches = new LinkedList<>();
     private final TileCache mTileCache;
@@ -65,6 +64,8 @@ public class TileService {
 
     private volatile OSTileSource[] mVolatileSynchronousSources = new OSTileSource[0];
     private volatile OSTileSource[] mVolatileAsynchronousSources = new OSTileSource[0];
+
+    private MapConfiguration mMapConfiguration;
 
     private boolean mStopThread = true;
 
@@ -95,17 +96,17 @@ public class TileService {
         mNetworkMonitor = new NetworkAccessMonitor(mContext);
     }
 
-    public void start(MapConfiguration mMapConfiguration) throws FailedToLoadException {
-        List<OSTileSource> sources = getTileSourcesForConfiguration(mMapConfiguration);
-        ArrayList<OSTileSource> synchronousSources = new ArrayList<>(sources.size());
-        ArrayList<OSTileSource> asynchronousSources = new ArrayList<>(sources.size());
-        for (OSTileSource source : sources) {
-            boolean synchronous = source.isSynchronous();
-            ArrayList<OSTileSource> sourceList = (synchronous ? synchronousSources : asynchronousSources);
-            sourceList.add(source);
+    public void start(MapConfiguration mapConfiguration) throws FailedToLoadException {
+        if (mapConfiguration == null) {
+            throw new IllegalStateException("Null MapConfiguration given");
         }
-        mVolatileSynchronousSources = synchronousSources.toArray(new OSTileSource[0]);
-        mVolatileAsynchronousSources = asynchronousSources.toArray(new OSTileSource[0]);
+
+        mMapConfiguration = mapConfiguration;
+
+        unloadCurrentSources();
+
+        mVolatileSynchronousSources = loadSyncTileSources();
+        mVolatileAsynchronousSources = loadAsyncTileSources();
 
         if (!mStopThread) {
             assert false : "Threads already started!";
@@ -221,40 +222,36 @@ public class TileService {
         }
     }
 
-    private List<OSTileSource> getTileSourcesForConfiguration(MapConfiguration mapConfiguration) throws FailedToLoadException {
-        if (mapConfiguration == null) {
-            throw new IllegalStateException("Null MapConfiguration given");
-        }
-
-        unloadCurrentSources();
-
-        final String apiKey = mapConfiguration.getApiKey();
+    /**
+     * Tile Sources
+     */
+    private OSTileSource[] loadAsyncTileSources()  {
+        final String apiKey = mMapConfiguration.getApiKey();
+        final List<OSTileSource> sources = new ArrayList<>();
 
         if (!apiKey.equals(EMPTY_API_KEY)) {
-            mSources.add(new WMSTileSource(apiKey, mPackageName,
-                    mapConfiguration.isPro(), mapConfiguration.getDisplayedProducts()));
+            sources.add(new WMSTileSource(apiKey, mPackageName,
+                    mMapConfiguration.isPro(), mMapConfiguration.getDisplayedProducts()));
         }
+        return sources.toArray(new OSTileSource[sources.size()]);
+    }
 
-        File offlineSource = mapConfiguration.getOfflineSource();
+    private OSTileSource[] loadSyncTileSources() throws FailedToLoadException {
+        final File offlineSource = mMapConfiguration.getOfflineSource();
+        final List<OSTileSource> sources = new ArrayList<>();
 
         if (offlineSource != null && offlineSource.exists()) {
             if (offlineSource.isDirectory()) {
-                mSources.addAll(localTileSourcesInDirectory(offlineSource));
+                sources.addAll(loadSourcesFromDirectory(offlineSource));
             } else {
-                mSources.add(DBTileSource.openFile(offlineSource));
+                sources.add(DBTileSource.openFile(offlineSource));
             }
         }
-
-        return mSources;
+        return sources.toArray(new OSTileSource[sources.size()]);
     }
 
     private void unloadCurrentSources() {
-        if (mSources == null || mSources.isEmpty()) {
-            Log.d(CLASS_TAG, "Nothing to unload");
-            return;
-        }
-
-        for (OSTileSource source : mSources) {
+        for (OSTileSource source : mVolatileSynchronousSources) {
             try {
                 source.close();
             } catch (IOException e) {
@@ -262,10 +259,16 @@ public class TileService {
             }
         }
 
-        mSources.clear();
+        for (OSTileSource source : mVolatileAsynchronousSources) {
+            try {
+                source.close();
+            } catch (IOException e) {
+                Log.d(CLASS_TAG, "Tile unloading error", e);
+            }
+        }
     }
 
-    private Collection<OSTileSource> localTileSourcesInDirectory(File tileSource) {
+    private Collection<OSTileSource> loadSourcesFromDirectory(File tileSource) {
         ArrayList<OSTileSource> ret = new ArrayList<>();
         File[] files = tileSource.listFiles();
         if (files == null) {

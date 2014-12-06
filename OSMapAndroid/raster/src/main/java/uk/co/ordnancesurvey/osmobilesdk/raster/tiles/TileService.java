@@ -139,6 +139,18 @@ public class TileService {
         mNetworkMonitor.stop();
     }
 
+    public void resetTileRequests() {
+        if (!mLock.isHeldByCurrentThread()) {
+            mLock.lock();
+        }
+
+        if (mFetches.size() == mRequests.size()) {
+            mRequests.clear();
+        } else {
+            mRequests.removeAll(mFetches);
+        }
+        mFetches.clear();
+    }
 
     public Bitmap requestBitmapForTile(MapTile mapTile, boolean asyncFetchOK) {
         assert mLock.isHeldByCurrentThread();
@@ -163,27 +175,6 @@ public class TileService {
     public void finishRequest(MapTile mapTile) {
         mRequests.remove(mapTile);
     }
-
-    public void lock() {
-        assert !mLock.isHeldByCurrentThread() : "This lock shouldn't need to be recursive";
-        mLock.lock();
-    }
-
-    public void clear() {
-        assert mLock.isHeldByCurrentThread();
-        if (mFetches.size() == mRequests.size()) {
-            mRequests.clear();
-        } else {
-            mRequests.removeAll(mFetches);
-        }
-        mFetches.clear();
-    }
-
-    public void unlock() {
-        assert mLock.isHeldByCurrentThread();
-        mLock.unlock();
-    }
-
 
     private Bitmap bitmapForTile(MapTile tile, boolean synchronous) {
         if (synchronous) {
@@ -296,31 +287,6 @@ public class TileService {
         return file.getName().endsWith(OSTILES);
     }
 
-//    private void onNetworkChange() {
-//        ConnectivityManager connectivityManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-//
-//        // We don't care about network changes, but we do care about our general connected state - i.e do we have any kind of
-//        // network connection
-//
-//        // getActiveNetworkInfo is the obvious call to use, but is apparently pretty buggy
-//        // http://code.google.com/p/android/issues/detail?id=11891
-//        // http://code.google.com/p/android/issues/detail?id=11866
-//        boolean reachable = false;
-//        for (int testType : NETWORK_TYPES) {
-//            NetworkInfo nwInfo = connectivityManager.getNetworkInfo(testType);
-//            if (nwInfo != null && nwInfo.isConnectedOrConnecting()) {
-//                reachable = true;
-//                break;
-//            }
-//        }
-//
-//        boolean wasReachable = mNetworkReachable;
-//        mNetworkReachable = reachable;
-//        if (reachable && !wasReachable) {
-//            // We have a network. If this is newly available, we should pump any outstanding requests.
-//        }
-//    }
-
     // A non-private function so we don't get TileFetcher.access$2 in Traceview.
     void threadFunc() {
         while (!mStopThread) {
@@ -430,4 +396,3 @@ public class TileService {
         }
     }
 }
-

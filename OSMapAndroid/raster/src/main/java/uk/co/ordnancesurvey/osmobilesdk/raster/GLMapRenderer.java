@@ -656,21 +656,27 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     public void tileReadyAsyncCallback(final MapTile tile, final Bitmap bmp) {
         queueEvent(new Runnable() {
             public void run() {
-                tileReadyCallback(tile, bmp);
+                if (bmp != null) {
+                    mGLTileCache.putTextureForTile(tile, bmp);
+                }
+                mTileService.finishRequest(tile);
+                if (bmp != null) {
+                    requestRender();
+                }
             }
         });
     }
 
 
-    public void tileReadyCallback(final MapTile tile, final Bitmap bmp) {
-        if (bmp != null) {
-            mGLTileCache.putTextureForTile(tile, bmp);
-        }
-        mTileService.finishRequest(tile);
-        if (bmp != null) {
-            requestRender();
-        }
-    }
+//    public void tileReadyCallback(final MapTile tile, final Bitmap bmp) {
+//        if (bmp != null) {
+//            mGLTileCache.putTextureForTile(tile, bmp);
+//        }
+//        mTileService.finishRequest(tile);
+//        if (bmp != null) {
+//            requestRender();
+//        }
+//    }
 
     private void roundToPixelBoundary() {
         // OS-56: A better pixel-aligned-drawing algorithm.
@@ -770,8 +776,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         // At the start of each frame, mark each tile as off-screen.
         // They are marked on-screen as part of tile drawing.
         mGLTileCache.resetTileVisibility();
-        mTileService.lock();
-        mTileService.clear();
+        mTileService.resetTileRequests();
 
         Utils.throwIfErrors();
 
@@ -884,7 +889,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         // Always redraw if we're fading.
         needRedraw |= fading;
 
-        mTileService.unlock();
+        mTileService.resetTileRequests();
 
         Utils.throwIfErrors();
 

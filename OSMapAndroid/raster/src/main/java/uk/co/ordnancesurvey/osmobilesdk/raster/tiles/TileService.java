@@ -1,6 +1,5 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster.tiles;
 
-import android.content.Context;
 import android.util.Log;
 
 import java.io.File;
@@ -19,15 +18,17 @@ public class TileService {
 
     private static final String CLASS_TAG = TileService.class.getName();
     private static final String EMPTY_API_KEY = "";
+    private static final String OSTILES = ".ostiles";
 
-    private final Context mContext;
     private final String mPackageName;
 
     private List<OSTileSource> mSources = new ArrayList<>();
 
-    public TileService(Context context) {
-        mContext = context;
-        mPackageName = mContext.getPackageName();
+    public TileService(String packageName) {
+        if (packageName == null || packageName.isEmpty()) {
+            throw new IllegalArgumentException("Null or Empty package name");
+        }
+        mPackageName = packageName;
     }
 
     public List<OSTileSource> getTileSourcesForConfiguration(MapConfiguration mapConfiguration) throws FailedToLoadException {
@@ -40,18 +41,18 @@ public class TileService {
 
         final String apiKey = mapConfiguration.getApiKey();
 
-        if(!apiKey.equals(EMPTY_API_KEY)){
+        if (!apiKey.equals(EMPTY_API_KEY)) {
             mSources.add(new WMSTileSource(apiKey, mPackageName,
                     mapConfiguration.isPro(), mapConfiguration.getDisplayedProducts()));
         }
 
         File offlineSource = mapConfiguration.getOfflineSource();
 
-        if(offlineSource != null && offlineSource.exists()) {
-            if(offlineSource.isDirectory()) {
-                mSources.addAll(localTileSourcesInDirectory(mContext, offlineSource));
+        if (offlineSource != null && offlineSource.exists()) {
+            if (offlineSource.isDirectory()) {
+                mSources.addAll(localTileSourcesInDirectory(offlineSource));
             } else {
-                mSources.add(DBTileSource.openFile(mContext, offlineSource));
+                mSources.add(DBTileSource.openFile(offlineSource));
             }
         }
 
@@ -75,23 +76,26 @@ public class TileService {
         mSources.clear();
     }
 
-    private Collection<OSTileSource> localTileSourcesInDirectory(Context context, File dir) {
+    private Collection<OSTileSource> localTileSourcesInDirectory(File tileSource) {
         ArrayList<OSTileSource> ret = new ArrayList<OSTileSource>();
-        File[] files = dir.listFiles();
+        File[] files = tileSource.listFiles();
         if (files == null) {
             return ret;
         }
-        for (File f : files) {
-            if (!f.getName().endsWith(".ostiles")) {
-                continue;
-            }
-            try {
-                ret.add(DBTileSource.openFile(context, f));
-            } catch (FailedToLoadException e) {
-                Log.v(CLASS_TAG, "Failed to load " + f.getPath(), e);
+        for (File file : files) {
+            if (isOSTile(file)) {
+                try {
+                    ret.add(DBTileSource.openFile(file));
+                } catch (FailedToLoadException e) {
+                    Log.v(CLASS_TAG, "Failed to load " + file.getPath(), e);
+                }
             }
         }
         return ret;
+    }
+
+    private boolean isOSTile(File file) {
+        return file.getName().endsWith(OSTILES);
     }
 }
 

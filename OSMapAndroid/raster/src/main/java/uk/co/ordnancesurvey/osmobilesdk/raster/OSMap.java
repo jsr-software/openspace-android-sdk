@@ -22,10 +22,6 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
-import java.io.File;
-import java.util.Collection;
-
-import android.content.Context;
 import android.location.Location;
 import android.view.View;
 
@@ -34,7 +30,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 /**
  * This is the main class of the Google Maps Android API and is the entry point for all methods related to the map. You cannot 
  * instantiate an {@link OSMap} object directly, rather, you must obtain one from the {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapView#getMap()} method on a
- * {@link MapFragment} or {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapView} that you have added to your application.
+ * {@link .MapFragment} or {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapView} that you have added to your application.
  * <p>
  * <b>Note:</b> Similar to a android.view.View View object, an {@link OSMap} can only be read and modified from the main thread. 
  * Calling {@link OSMap} methods from another thread may result in an exception.
@@ -346,18 +342,6 @@ public interface OSMap {
 	 * @param source A location source to use in the my-location layer. Set to null to use the default location source.
 	 */
 	public void setLocationSource(LocationSource source);
-	
-	public void setTileSources(Collection<OSTileSource> tileSources);
-	
-	/**
-	 * @param apiKey
-	 * @param openSpacePro
-	 * @param productsOrNull only fetch products in this list. If null, then this parameter is ignored
-	 * @return
-	 */
-	public OSTileSource webTileSource(String apiKey, boolean openSpacePro, String[] productsOrNull);
-	public OSTileSource localTileSource(Context context, File file) throws FailedToLoadException;
-	public Collection<OSTileSource> localTileSourcesInDirectory(Context context, File dir);
 
     void setMapConfiguration(MapConfiguration mapConfiguration);
 }

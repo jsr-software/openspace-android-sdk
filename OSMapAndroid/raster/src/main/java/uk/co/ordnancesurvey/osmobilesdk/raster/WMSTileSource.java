@@ -25,7 +25,7 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 import android.net.Uri;
 import android.util.Log;
 
-final class WMSTileSource extends WebTileSource {
+public final class WMSTileSource extends WebTileSource {
 
 
 	private final static String TAG = WMSTileSource.class.getSimpleName();

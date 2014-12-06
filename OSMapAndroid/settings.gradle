@@ -1,1 +1,1 @@
-include ':raster'
+include ':raster', ':app'

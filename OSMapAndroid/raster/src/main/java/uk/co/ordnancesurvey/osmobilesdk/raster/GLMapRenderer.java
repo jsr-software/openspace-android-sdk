@@ -465,7 +465,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
 
     public void onDestroy() {
-        mTileService.shutDown(false);
+        mTileService.shutDown();
         mLocationSource.deactivate();
     }
 
@@ -547,7 +547,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             return 0;
         }
 
-        Bitmap bmp = mTileService.requestBitmapForTile(tile, quota.canAsyncFetch());
+        Bitmap bmp = mTileService.requestBitmapForTile(tile);
         if (bmp == null) {
             quota.fetchFailure();
         } else {
@@ -662,7 +662,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
                 if (bmp != null) {
                     mGLTileCache.putTextureForTile(tile, bmp);
                 }
-                mTileService.finishRequest(tile);
+//                mTileService.finishRequest(tile);
                 if (bmp != null) {
                     requestRender();
                 }

@@ -1,29 +1,22 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster.tiles;
 
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.util.Log;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 
+import rx.Observable;
+import rx.Subscriber;
 import rx.Subscription;
-import rx.android.observables.AndroidObservable;
-import rx.functions.Action1;
-import rx.functions.Func1;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
 import uk.co.ordnancesurvey.osmobilesdk.raster.DBTileSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.FailedToLoadException;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
@@ -34,44 +27,38 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.WMSTileSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.network.NetworkStateMonitor;
 
-/**
- * This class is NOT threadsafe. It is designed to be used from a single thread.
- * Do not call clear() or requestBitmapForTile() without first calling lock() and subsequently calling unlock()
- */
 public class TileService {
 
     private static final String CLASS_TAG = TileService.class.getName();
     private static final String EMPTY_API_KEY = "";
     private static final String OSTILES = ".ostiles";
+    private static final int AVAILABLE_CORES = Runtime.getRuntime().availableProcessors();
 
     private final Context mContext;
+    private final LinkedList<MapTile> mRequests = new LinkedList<>();
+    private final List<Subscription> mCurrentSubscriptions = new ArrayList<>();
+    private final TileCache mTileCache;
+    private final TileServiceDelegate mTileServiceDelegate;
+    private final NetworkStateMonitor mNetworkMonitor;
     private final FilenameFilter mFileFilter = new FilenameFilter() {
         public boolean accept(File dir, String name) {
             return name.endsWith(OSTILES);
         }
     };
-    private final ReentrantLock mLock = new ReentrantLock();
-    private final Condition mFull = mLock.newCondition();
-    private final HashSet<MapTile> mRequests = new HashSet<>();
-    private final LinkedList<MapTile> mFetches = new LinkedList<>();
-    private final TileCache mTileCache;
-    private final TileFetchThread mAsynchronousFetchThreads[] = new TileFetchThread[]{
-            new TileFetchThread(),
-            new TileFetchThread(),
-            //new TileFetchThread(),
-            //new TileFetchThread(),
-            //new TileFetchThread(),
-    };
-
-    private final NetworkStateMonitor mNetworkMonitor;
-    private final TileServiceDelegate mTileServiceDelegate;
+    Observable<TileFetch> mFetchObservable =  Observable.create(new Observable.OnSubscribe<TileFetch>() {
+        @Override
+        public void call(Subscriber<? super TileFetch> subscriber) {
+            TileFetch fetch = fetchTile();
+            if (fetch != null) {
+                subscriber.onNext(fetch);
+            }
+        }
+    });
 
     private volatile OSTileSource[] mVolatileSynchronousSources = new OSTileSource[0];
     private volatile OSTileSource[] mVolatileAsynchronousSources = new OSTileSource[0];
 
     private MapConfiguration mMapConfiguration;
-
-    private boolean mStopThread = true;
 
     public TileService(Context context, NetworkStateMonitor networkStateMonitor,
                        TileServiceDelegate tileServiceDelegate) {
@@ -99,123 +86,39 @@ public class TileService {
         mVolatileSynchronousSources = loadSyncTileSources();
         mVolatileAsynchronousSources = loadAsyncTileSources();
 
-        if (!mStopThread) {
-            assert false : "Threads already started!";
-            return;
-        }
-
-        joinAll();
-
-        mStopThread = false;
-        // TODO: Can threads be restarted like this?
-        for (TileFetchThread t : mAsynchronousFetchThreads) {
-            t.start();
-        }
+        mCurrentSubscriptions.clear();
 
         mNetworkMonitor.start();
     }
 
-    public void shutDown(boolean waitForThreadsToStop) {
-        if (mStopThread) {
-            assert false : "Threads already stopped";
-            if (waitForThreadsToStop) {
-                joinAll();
-            }
-            return;
-        }
-        mStopThread = true;
-        for (TileFetchThread t : mAsynchronousFetchThreads) {
-            t.interrupt();
+    public void shutDown() {
+        for (Subscription subscription : mCurrentSubscriptions) {
+            subscription.unsubscribe();
         }
 
+        mCurrentSubscriptions.clear();
         mNetworkMonitor.stop();
     }
 
     public void resetTileRequests() {
-        if (!mLock.isHeldByCurrentThread()) {
-            mLock.lock();
-        }
-
-        if (mFetches.size() == mRequests.size()) {
-            mRequests.clear();
-        } else {
-            mRequests.removeAll(mFetches);
-        }
-        mFetches.clear();
+        mRequests.clear();
     }
 
-    public Bitmap requestBitmapForTile(MapTile mapTile, boolean asyncFetchOK) {
-        assert mLock.isHeldByCurrentThread();
-        // Attempt a synchronous response.
-        Bitmap bmp = bitmapForTile(mapTile, true);
-        if (!asyncFetchOK || bmp != null || mTileServiceDelegate == null) {
-            return bmp;
-        }
+    public Bitmap requestBitmapForTile(MapTile mapTile) {
+        Bitmap bitmap = getTileBitmapSync(mapTile);
 
-        // Copy the tile!
-        mapTile = new MapTile(mapTile);
-
-        if (mRequests.add(mapTile)) {
-            mFetches.add(mapTile);
-            if (mFetches.size() == 1) {
-                mFull.signal();
-            }
+        if (bitmap != null) {
+            mRequests.remove(mapTile);
+            return bitmap;
         }
+        Log.d(CLASS_TAG, "Tile requested");
+
+        Subscription subscription = requestTile(mapTile);
+        mCurrentSubscriptions.add(subscription);
+
         return null;
     }
 
-    public void finishRequest(MapTile mapTile) {
-        mRequests.remove(mapTile);
-    }
-
-    private Bitmap bitmapForTile(MapTile tile, boolean synchronous) {
-        if (synchronous) {
-            byte[] data = mTileCache.get(tile);
-            if (data != null) {
-                return BitmapFactory.decodeByteArray(data, 0, data.length);
-            }
-        }
-        OSTileSource[] sources = synchronous ? mVolatileSynchronousSources : mVolatileAsynchronousSources;
-        for (OSTileSource source : sources) {
-            // Don't try to fetch if the network is down.
-            if (source.isNetwork() && !mNetworkMonitor.hasNetworkAccess()) {
-                continue;
-            }
-            byte[] data = source.dataForTile(tile);
-            if (data == null) {
-                continue;
-            }
-            mTileCache.putAsync(new MapTile(tile), data);
-            return BitmapFactory.decodeByteArray(data, 0, data.length);
-        }
-        // TODO how are we handling errors?
-        return null;
-    }
-
-    private void joinAll() {
-        assert mStopThread : "Threads should be stopped when we join.";
-
-        boolean interrupted = false;
-        for (TileFetchThread t : mAsynchronousFetchThreads) {
-            // Loosely modeled after android.os.SystemClock.sleep():
-            //   https://github.com/android/platform_frameworks_base/blob/android-4.2.2_r1/core/java/android/os/SystemClock.java#L108
-            for (; ; ) {
-                try {
-                    t.join();
-                    break;
-                } catch (InterruptedException e) {
-                    interrupted = true;
-                }
-            }
-        }
-        if (interrupted) {
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    /**
-     * Tile Sources
-     */
     private OSTileSource[] loadAsyncTileSources() {
         final String apiKey = mMapConfiguration.getApiKey();
         final String packageName = mContext.getPackageName();
@@ -255,52 +158,87 @@ public class TileService {
         }
     }
 
-    /**
-     * Threading for tile loading
-     */
-    // A non-private function so we don't get TileFetcher.access$2 in Traceview.
-    void threadFunc() {
-        while (!mStopThread) {
-            // Pull an object off the stack, or wait till an object is added.
-            // Wait until the queue is not empty.
-            MapTile tile = null;
+    private Subscription requestTile(MapTile mapTile) {
+        mRequests.add(mapTile);
+        return mFetchObservable
+                .observeOn(Schedulers.newThread())
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Subscriber<TileFetch>() {
+                    @Override
+                    public void onCompleted() {
+                        Log.d(CLASS_TAG, "Completed");
+                    }
 
-            mLock.lock();
-            try {
-                while (tile == null) {
-                    tile = mFetches.pollFirst();
-                    if (tile == null) {
-                        try {
-                            mFull.await();
-                        } catch (InterruptedException e) {
-                            if (mStopThread) {
-                                return;
-                            }
+                    @Override
+                    public void onError(Throwable e) {
+                        Log.e(CLASS_TAG, "Loading error", e);
+                    }
+
+                    @Override
+                    public void onNext(TileFetch tileFetch) {
+                        Log.d(CLASS_TAG, "Tile fetched");
+                        mRequests.remove(tileFetch.mapTile);
+                        if (mTileServiceDelegate != null) {
+                            mTileServiceDelegate.tileReadyAsyncCallback(tileFetch.mapTile,
+                                    tileFetch.bitmap);
                         }
                     }
-                }
-            } finally {
-                mLock.unlock();
-            }
-
-            Bitmap bmp = bitmapForTile(tile, false);
-            mTileServiceDelegate.tileReadyAsyncCallback(tile, bmp);
-        }
+                });
     }
 
-    static final AtomicLong sThreadNum = new AtomicLong();
-
-    private class TileFetchThread extends Thread {
-        public TileFetchThread() {
-            // tchan: Do not lower the priority, or scrolling can make tiles load very slowly.
-            //this.setPriority(Thread.MIN_PRIORITY);
-
-            this.setName("TileFetchThread-" + sThreadNum.incrementAndGet());
+    private TileFetch fetchTile() {
+        // Pull an object off the stack, or wait till an object is added.
+        // Wait until the queue is not empty.
+        if (mRequests.isEmpty()) {
+            Log.d(CLASS_TAG, "No Requests");
+            return null;
         }
 
-        @Override
-        public void run() {
-            threadFunc();
+        TileFetch fetch = new TileFetch();
+        MapTile tile = mRequests.get(0);
+
+        fetch.mapTile = tile;
+        fetch.bitmap = getTileBitmap(tile);
+        return fetch;
+    }
+
+    private Bitmap getTileBitmap(MapTile mapTile) {
+        Bitmap bitmap = getTileBitmapSync(mapTile);
+
+        if (bitmap == null) {
+            bitmap = getTileBitmapAsync(mapTile);
         }
+        return bitmap;
+    }
+
+    private Bitmap getTileBitmapSync(MapTile mapTile) {
+        byte[] data = mTileCache.get(mapTile);
+        if (data != null) {
+            return BitmapFactory.decodeByteArray(data, 0, data.length);
+        }
+        return null;
+    }
+
+    private Bitmap getTileBitmapAsync(MapTile tile) {
+
+        for (OSTileSource source : mVolatileAsynchronousSources) {
+            // Don't try to fetch if the network is down.
+            if (source.isNetwork() && !mNetworkMonitor.hasNetworkAccess()) {
+                continue;
+            }
+            byte[] data = source.dataForTile(tile);
+            if (data == null) {
+                continue;
+            }
+            mTileCache.putAsync(new MapTile(tile), data);
+            return BitmapFactory.decodeByteArray(data, 0, data.length);
+        }
+        // TODO how are we handling errors?
+        return null;
+    }
+
+    private static class TileFetch {
+        MapTile mapTile;
+        Bitmap bitmap;
     }
 }

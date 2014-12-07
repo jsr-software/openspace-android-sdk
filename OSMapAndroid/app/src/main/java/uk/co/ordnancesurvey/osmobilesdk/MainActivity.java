@@ -10,8 +10,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapFragment;
 public class MainActivity extends Activity {
 
     private static final String MAP_TAG = "map_tag";
-    private static final String[] OVERVIEW_STACK = new String[]{"CS00", "CS01", "CS02", "CS03",
-            "CS04", "CS05", "CS06", "CS07", "CS08", "CS09", "CS10"};
+    private static final String[] OVERVIEW_STACK = new String[] {"CS00", "CS02", "CS04", "CS05"};
 
     private Fragment mMapFragment;
 

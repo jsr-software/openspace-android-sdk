@@ -330,10 +330,6 @@ public class TileService {
     }
 
     /**
-     * Tile Fetcher
-     */
-
-    /**
      * Network Access Monitor
      */
     private static class NetworkAccessMonitor {

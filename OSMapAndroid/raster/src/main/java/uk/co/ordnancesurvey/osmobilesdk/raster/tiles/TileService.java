@@ -1,7 +1,6 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster.tiles;
 
 import android.app.ActivityManager;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -23,6 +22,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+import rx.Subscription;
+import rx.android.observables.AndroidObservable;
+import rx.functions.Action1;
+import rx.functions.Func1;
 import uk.co.ordnancesurvey.osmobilesdk.raster.DBTileSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.FailedToLoadException;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
@@ -327,6 +330,10 @@ public class TileService {
     }
 
     /**
+     * Tile Fetcher
+     */
+
+    /**
      * Network Access Monitor
      */
     private static class NetworkAccessMonitor {
@@ -342,20 +349,14 @@ public class TileService {
 
         private final Context mContext;
         private final ConnectivityManager mManager;
-        private final IntentFilter mFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-        private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                updateAccessState();
-            }
-        };
+        private Subscription mNetworkSubscription;
 
         private boolean mHasNetwork = true;
 
         public NetworkAccessMonitor(Context context) {
             mContext = context;
             mManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-            updateAccessState();
+            mHasNetwork = getAccessState();
         }
 
         public boolean hasNetworkAccess() {
@@ -363,14 +364,30 @@ public class TileService {
         }
 
         public void start() {
-            mContext.registerReceiver(mReceiver, mFilter);
+            IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+            mNetworkSubscription = AndroidObservable.fromBroadcast(mContext, filter)
+                    .map(new Func1<Intent, Boolean>() {
+                        @Override
+                        public Boolean call(Intent intent) {
+                            return getAccessState();
+                        }
+                    })
+                    .subscribe(new Action1<Boolean>() {
+                        @Override
+                        public void call(Boolean hasNetwork) {
+                            mHasNetwork = hasNetwork;
+                        }
+                    });
         }
 
         public void stop() {
-            mContext.unregisterReceiver(mReceiver);
+            if(mNetworkSubscription != null && !mNetworkSubscription.isUnsubscribed()) {
+                mNetworkSubscription.unsubscribe();
+            }
+            mNetworkSubscription = null;
         }
 
-        private void updateAccessState() {
+        private boolean getAccessState() {
             boolean reachable = false;
 
             for (int type : NETWORK_TYPES) {
@@ -380,12 +397,7 @@ public class TileService {
                     break;
                 }
             }
-
-            boolean wasReachable = mHasNetwork;
-            mHasNetwork = reachable;
-            if (reachable && !wasReachable) {
-                // TODO: We have a network. If this is newly available, we should pump any outstanding requests.
-            }
+            return reachable;
         }
     }
 }

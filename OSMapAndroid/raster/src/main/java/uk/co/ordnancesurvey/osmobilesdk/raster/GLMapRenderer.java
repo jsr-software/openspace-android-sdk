@@ -220,12 +220,13 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final Handler mHandler;
     private final Runnable mCameraChangeRunnable = new Runnable() {
         public void run() {
+            ScreenProjection projection = getProjection();
+            CameraPosition position = new CameraPosition(projection.getCenter(), projection.getMetresPerPixel());
+            // Cache position;
+            storePosition(position);
+            // TODO: move the position code
             // This listener is set on the main thread, so no problem using it like this.
             if (mOnCameraChangeListener != null) {
-                ScreenProjection projection = getProjection();
-                CameraPosition position = new CameraPosition(projection.getCenter(), projection.getMetresPerPixel());
-                // Cache position;
-                storePosition(position);
                 mOnCameraChangeListener.onCameraChange(position);
             }
         }
@@ -653,6 +654,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     }
 
+    @Override
     public void tileReadyAsyncCallback(final MapTile tile, final Bitmap bmp) {
         queueEvent(new Runnable() {
             public void run() {
@@ -937,6 +939,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
                     mHandler.removeCallbacks(mCameraChangeRunnable);
                     mHandler.post(mCameraChangeRunnable);
                 }
+                // TODO: put position storing code here!
                 lastx = mScrollState.x;
                 lasty = mScrollState.y;
                 lastMPP = mScrollState.metresPerPixel;

@@ -1,10 +1,8 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster.tiles;
 
-import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
@@ -44,7 +42,6 @@ public class TileService {
     private static final String CLASS_TAG = TileService.class.getName();
     private static final String EMPTY_API_KEY = "";
     private static final String OSTILES = ".ostiles";
-    private static final String TILE_CACHE = "uk.co.ordnancesurvey.osmobilesdk.raster.TILE_CACHE";
 
     private final Context mContext;
     private final FilenameFilter mFileFilter = new FilenameFilter() {
@@ -67,7 +64,7 @@ public class TileService {
 
     private final NetworkAccessMonitor mNetworkMonitor;
 
-    private final TileServiceDelegate mTileServiceDelagate;
+    private final TileServiceDelegate mTileServiceDelegate;
 
     private volatile OSTileSource[] mVolatileSynchronousSources = new OSTileSource[0];
     private volatile OSTileSource[] mVolatileAsynchronousSources = new OSTileSource[0];
@@ -82,9 +79,9 @@ public class TileService {
         }
         mContext = context;
 
-        mTileServiceDelagate = tileServiceDelegate;
-        mTileCache = createTileCache();
+        mTileServiceDelegate = tileServiceDelegate;
 
+        mTileCache = TileCache.newInstance(mContext);
         mNetworkMonitor = new NetworkAccessMonitor(mContext);
     }
 
@@ -150,7 +147,7 @@ public class TileService {
         assert mLock.isHeldByCurrentThread();
         // Attempt a synchronous response.
         Bitmap bmp = bitmapForTile(mapTile, true);
-        if (!asyncFetchOK || bmp != null || mTileServiceDelagate == null) {
+        if (!asyncFetchOK || bmp != null || mTileServiceDelegate == null) {
             return bmp;
         }
 
@@ -258,29 +255,6 @@ public class TileService {
     }
 
     /**
-     * Tile Cache
-     */
-    private TileCache createTileCache() {
-        final String packageName = mContext.getPackageName();
-
-        ActivityManager activityManager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
-        int memoryClass = activityManager.getMemoryClass();
-        int memoryMB = memoryClass / 2;
-        int diskMB = 128;
-        File cacheDir = new File(mContext.getCacheDir(), TILE_CACHE);
-        int appVersion;
-        try {
-            appVersion = mContext.getPackageManager().getPackageInfo(packageName, 0).versionCode;
-        } catch (PackageManager.NameNotFoundException e) {
-            Log.e(CLASS_TAG, "Failed to get package version for " + packageName, e);
-            appVersion = 1;
-        }
-
-        return TileCache.newInstance(memoryMB, diskMB, cacheDir, appVersion);
-    }
-
-
-    /**
      * Threading for tile loading
      */
     // A non-private function so we don't get TileFetcher.access$2 in Traceview.
@@ -309,7 +283,7 @@ public class TileService {
             }
 
             Bitmap bmp = bitmapForTile(tile, false);
-            mTileServiceDelagate.tileReadyAsyncCallback(tile, bmp);
+            mTileServiceDelegate.tileReadyAsyncCallback(tile, bmp);
         }
     }
 

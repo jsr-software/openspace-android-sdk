@@ -22,17 +22,26 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import android.app.ActivityManager;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.util.Log;
+
 import java.io.File;
 
 public final class TileCache extends CombinedLruCache<MapTile> {
 
+    private static final String CLASS_TAG = TileCache.class.getName();
+    private static final String TILE_CACHE = "uk.co.ordnancesurvey.osmobilesdk.raster.TILE_CACHE";
+
+    private static final int DISK_MB = 128;
+
     private static TileCache INSTANCE;
 
-    private static int memoryMB;
-    private static int diskMB;
-    private static File dir;
-    private static int appVersion;
-
+    private static int sMemoryMB;
+    private static int sDiskMB;
+    private static File sDir;
+    private static int sAppVersion;
 
     private TileCache(int memoryMB, int diskMB, File dir, int appVersion) {
         super(memoryMB, diskMB, dir, appVersion);
@@ -43,26 +52,49 @@ public final class TileCache extends CombinedLruCache<MapTile> {
         return key.layer.productCode + "_" + key.x + "_" + key.y;
     }
 
-    public static synchronized TileCache newInstance(int memoryMB, int diskMB, File dir, int appVersion) {
-        if (INSTANCE != null &&
-            memoryMB == TileCache.memoryMB &&
-            diskMB == TileCache.diskMB &&
-            appVersion == TileCache.appVersion &&
-            dir.equals(TileCache.dir)) {
+    public static synchronized TileCache newInstance(Context context) {
 
+        final int memoryMB = getMemoryMB(context);
+        final int appVersion = getAppVersion(context);
+        final File cacheDir = new File(context.getCacheDir(), TILE_CACHE);
+
+        if (isSameCacheInstance(memoryMB, appVersion, cacheDir)) {
             return INSTANCE;
         }
 
-        INSTANCE = new TileCache(memoryMB, diskMB, dir, appVersion);
+        INSTANCE = new TileCache(memoryMB, DISK_MB, cacheDir, appVersion);
 
-        // used to identify same instance
-        TileCache.memoryMB = memoryMB;
-        TileCache.diskMB = diskMB;
-        TileCache.dir = dir;
-        TileCache.appVersion = appVersion;
+        TileCache.sMemoryMB = memoryMB;
+        TileCache.sDiskMB = DISK_MB;
+        TileCache.sDir = cacheDir;
+        TileCache.sAppVersion = appVersion;
 
         return INSTANCE;
     }
 
+    public static int getMemoryMB(Context context) {
+        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        int memoryClass = activityManager.getMemoryClass();
+        return memoryClass / 2;
+    }
 
+    private static int getAppVersion(Context context) {
+        final String packageName = context.getPackageName();
+        int appVersion;
+        try {
+            appVersion = context.getPackageManager().getPackageInfo(packageName, 0).versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(CLASS_TAG, "Failed to get package version for " + packageName, e);
+            appVersion = 1;
+        }
+        return appVersion;
+    }
+
+    private static boolean isSameCacheInstance(int memoryMB, int appVersion, File cacheDir) {
+        return INSTANCE != null &&
+                memoryMB == TileCache.sMemoryMB &&
+                DISK_MB == TileCache.sDiskMB &&
+                appVersion == TileCache.sAppVersion &&
+                cacheDir.equals(TileCache.sDir);
+    }
 }

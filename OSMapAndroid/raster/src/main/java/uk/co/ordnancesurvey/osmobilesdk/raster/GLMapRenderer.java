@@ -60,6 +60,7 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+import uk.co.ordnancesurvey.osmobilesdk.raster.network.NetworkStateMonitor;
 import uk.co.ordnancesurvey.osmobilesdk.raster.tiles.TileService;
 
 import static android.opengl.GLES20.GL_BACK;
@@ -177,7 +178,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mScrollController = scrollController;
         mLocationSource = new OSLocation(context);
 
-        mTileService = new TileService(getContext(), this);
+        mTileService = new TileService(getContext(), new NetworkStateMonitor(mContext), this);
     }
 
     private final GLTileCache mGLTileCache;

@@ -48,7 +48,7 @@ public final class TileCache extends CombinedLruCache<MapTile> {
     }
 
     @Override
-    String stringForKey(MapTile key) {
+    public String stringForKey(MapTile key) {
         return key.layer.productCode + "_" + key.x + "_" + key.y;
     }
 
@@ -72,7 +72,7 @@ public final class TileCache extends CombinedLruCache<MapTile> {
         return INSTANCE;
     }
 
-    public static int getMemoryMB(Context context) {
+    private static int getMemoryMB(Context context) {
         ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         int memoryClass = activityManager.getMemoryClass();
         return memoryClass / 2;

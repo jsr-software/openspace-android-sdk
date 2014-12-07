@@ -32,6 +32,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.TileCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.TileServiceDelegate;
 import uk.co.ordnancesurvey.osmobilesdk.raster.WMSTileSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+import uk.co.ordnancesurvey.osmobilesdk.raster.network.NetworkStateMonitor;
 
 /**
  * This class is NOT threadsafe. It is designed to be used from a single thread.
@@ -62,8 +63,7 @@ public class TileService {
             //new TileFetchThread(),
     };
 
-    private final NetworkAccessMonitor mNetworkMonitor;
-
+    private final NetworkStateMonitor mNetworkMonitor;
     private final TileServiceDelegate mTileServiceDelegate;
 
     private volatile OSTileSource[] mVolatileSynchronousSources = new OSTileSource[0];
@@ -73,7 +73,8 @@ public class TileService {
 
     private boolean mStopThread = true;
 
-    public TileService(Context context, TileServiceDelegate tileServiceDelegate) {
+    public TileService(Context context, NetworkStateMonitor networkStateMonitor,
+                       TileServiceDelegate tileServiceDelegate) {
         if (context == null) {
             throw new IllegalArgumentException("Null Context");
         }
@@ -82,7 +83,7 @@ public class TileService {
         mTileServiceDelegate = tileServiceDelegate;
 
         mTileCache = TileCache.newInstance(mContext);
-        mNetworkMonitor = new NetworkAccessMonitor(mContext);
+        mNetworkMonitor = networkStateMonitor;
     }
 
     public void start(MapConfiguration mapConfiguration) throws FailedToLoadException {
@@ -300,74 +301,6 @@ public class TileService {
         @Override
         public void run() {
             threadFunc();
-        }
-    }
-
-    /**
-     * Network Access Monitor
-     */
-    private static class NetworkAccessMonitor {
-
-        private static final int[] NETWORK_TYPES = {
-                ConnectivityManager.TYPE_ETHERNET,
-                ConnectivityManager.TYPE_BLUETOOTH,
-                ConnectivityManager.TYPE_WIMAX,
-                ConnectivityManager.TYPE_WIFI,
-                ConnectivityManager.TYPE_MOBILE,
-                ConnectivityManager.TYPE_DUMMY
-        };
-
-        private final Context mContext;
-        private final ConnectivityManager mManager;
-        private Subscription mNetworkSubscription;
-
-        private boolean mHasNetwork = true;
-
-        public NetworkAccessMonitor(Context context) {
-            mContext = context;
-            mManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-            mHasNetwork = getAccessState();
-        }
-
-        public boolean hasNetworkAccess() {
-            return mHasNetwork;
-        }
-
-        public void start() {
-            IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-            mNetworkSubscription = AndroidObservable.fromBroadcast(mContext, filter)
-                    .map(new Func1<Intent, Boolean>() {
-                        @Override
-                        public Boolean call(Intent intent) {
-                            return getAccessState();
-                        }
-                    })
-                    .subscribe(new Action1<Boolean>() {
-                        @Override
-                        public void call(Boolean hasNetwork) {
-                            mHasNetwork = hasNetwork;
-                        }
-                    });
-        }
-
-        public void stop() {
-            if(mNetworkSubscription != null && !mNetworkSubscription.isUnsubscribed()) {
-                mNetworkSubscription.unsubscribe();
-            }
-            mNetworkSubscription = null;
-        }
-
-        private boolean getAccessState() {
-            boolean reachable = false;
-
-            for (int type : NETWORK_TYPES) {
-                NetworkInfo nwInfo = mManager.getNetworkInfo(type);
-                if (nwInfo != null && nwInfo.isConnectedOrConnecting()) {
-                    reachable = true;
-                    break;
-                }
-            }
-            return reachable;
         }
     }
 }

@@ -23,44 +23,48 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 public final class MapTile {
-	MapLayer layer;
-	int x;
-	int y;
-	MapTile() {
-	}
-	
-	public MapTile(MapTile copy) {
-		x = copy.x;
-		y = copy.y;
-		layer = copy.layer;
-	}
-	void set(int xx,int yy,MapLayer l) {
-		x = xx;
-		y = yy;
-		layer = l;
-	}
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) {
-			return true;
-		}
-		if (o == null) {
-			// This is expected of anything overriding Object.equals()
-			return false;
-		}
+    MapLayer layer;
+    int x;
+    int y;
 
-		try {
-			MapTile other = (MapTile)o;
-			assert this.getClass() == o.getClass();
-			return layer == other.layer && x == other.x && y == other.y;
-		} catch (ClassCastException e) {
-			assert this.getClass() != o.getClass();
-			assert !super.equals(o) : "Object.equals() compares object identity so it should never be true here.";
-			return false;
-		}
-	}
-	@Override
-	public int hashCode() {
-		return layer.hashCode() ^ (x*8191+y);
-	}
+    MapTile() {
+    }
+
+    public MapTile(MapTile copy) {
+        x = copy.x;
+        y = copy.y;
+        layer = copy.layer;
+    }
+
+    void set(int xx, int yy, MapLayer l) {
+        x = xx;
+        y = yy;
+        layer = l;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null) {
+            // This is expected of anything overriding Object.equals()
+            return false;
+        }
+
+        try {
+            MapTile other = (MapTile) o;
+            assert this.getClass() == o.getClass();
+            return layer == other.layer && x == other.x && y == other.y;
+        } catch (ClassCastException e) {
+            assert this.getClass() != o.getClass();
+            assert !super.equals(o) : "Object.equals() compares object identity so it should never be true here.";
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return layer.hashCode() ^ (x * 8191 + y);
+    }
 }

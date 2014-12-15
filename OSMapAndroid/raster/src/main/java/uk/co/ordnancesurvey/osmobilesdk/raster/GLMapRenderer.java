@@ -102,7 +102,7 @@ import static android.opengl.GLES20.glViewport;
  * Tiles are rendered in tile coordinates, which have the origin at the bottom left of the grid (not the screen). The units are tiles (i.e. a tile always has dimensions 1x1) and the
  * actual size of a tile is set up by modifying the projection transform.
  */
-public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMapPrivate, LocationSource.OnLocationChangedListener {
+public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMapPrivate {
 
     private static final String TAG = GLMapRenderer.class.getSimpleName();
 
@@ -176,7 +176,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mGLImageCache = new GLImageCache();
 
         mScrollController = scrollController;
-        mLocationSource = new OSLocation(context);
 
         mTileService = new TileService(getContext(), new NetworkStateMonitor(mContext), this);
     }
@@ -258,12 +257,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private long debugPreviousFrameUptimeMillis;
     private long debugPreviousFrameNanoTime;
     private boolean mMyLocationEnabled;
-    private LocationSource mLocationSource;
     private GridPoint mCurrentGridPoint = null;
     private Location mCurrentLocation = null;
-    private LocationOverlay mLocationOverlay = null;
     private boolean mForeground;
-    private OnMyLocationChangeListener mMyLocationChangeListener;
 
     // Avoid issuing too many location callbacks
     private double lastx;
@@ -357,47 +353,10 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mOnInfoWindowClickListener = listener;
     }
 
-    public void setMyLocationEnabled(boolean enabled) {
-        if (mForeground) {
-            if (enabled) {
-                mLocationSource.activate(this);
-            } else {
-                mLocationOverlay = null;
-                mLocationSource.deactivate();
-
-                requestRender();
-            }
-            mMyLocationEnabled = mLocationSource.isCheckingLocation();
-        } else {
-            mMyLocationEnabled = enabled;
-        }
-    }
-
-    public final boolean isMyLocationEnabled() {
-        return mMyLocationEnabled;
-    }
-
-    @Override
-    public void setOnMyLocationChangeListener(OnMyLocationChangeListener listener) {
-        mMyLocationChangeListener = listener;
-    }
-
     // Called on main thread, and used on main thread
     @Override
     public void setOnCameraChangeListener(OnCameraChangeListener listener) {
         mOnCameraChangeListener = listener;
-    }
-
-
-    @Override
-    public Location getMyLocation() {
-        return mCurrentLocation;
-    }
-
-
-    @Override
-    public GridPoint getMyGridPoint() {
-        return mCurrentGridPoint;
     }
 
     @Override
@@ -405,79 +364,15 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mScrollController.zoomToCenterScale(null, camera.target, camera.zoom, animated);
     }
 
-    @Override
-    public void setLocationSource(LocationSource locationSource) {
-        if (mMyLocationEnabled) {
-            mLocationOverlay = null;
-            mLocationSource.deactivate();
-        }
-        mLocationSource = locationSource;
-        if (mLocationSource == null) {
-            mMyLocationEnabled = false;
-        }
-        if (mMyLocationEnabled) {
-            mLocationSource.activate(this);
-            mMyLocationEnabled = mLocationSource.isCheckingLocation();
-        }
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-        LocationOverlay overlay = mLocationOverlay;
-        if (overlay == null) {
-            overlay = new LocationOverlay(this);
-        }
-
-        // Need to convert the WGS84 Lat/Long to an actual grid ref.
-        MapProjection proj = MapProjection.getDefault();
-        mCurrentLocation = new Location(location);
-        mCurrentGridPoint = proj.toGridPoint(location.getLatitude(), location.getLongitude());
-
-        // Correct for display orientation
-        Display display = ((WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
-        int rotation = 0;
-        switch (display.getRotation()) {
-            case 1:
-                rotation = -90;
-                break;
-            case 2:
-                rotation = 180;
-                break;
-            case 3:
-                rotation = 90;
-                break;
-            default:
-                break;
-
-        }
-        location.setBearing(location.getBearing() - rotation);
-
-        overlay.setLocation(location);
-
-        // tchan: Not currently necessary, since the above methods call requestRender().
-        //requestRender();
-        mLocationOverlay = overlay;
-
-        if (mMyLocationChangeListener != null) {
-            mMyLocationChangeListener.onMyLocationChange(mCurrentGridPoint);
-        }
-    }
-
 
     public void onDestroy() {
         mTileService.shutDown();
-        mLocationSource.deactivate();
     }
 
     public void onResume() {
         super.onResume();
         Log.v(TAG, "onResume");
         mForeground = true;
-
-        if (mMyLocationEnabled) {
-            mLocationSource.activate(this);
-            mMyLocationEnabled = mLocationSource.isCheckingLocation();
-        }
 
         setInitialMapPosition();
 
@@ -487,14 +382,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     public void onPause() {
         super.onPause();
         Log.v(TAG, "onPause");
-
-        // TODO - should we stop the tile provider on pause? I think not, but not sure.
-        mLocationSource.deactivate();
         mForeground = false;
-    }
-
-    GLImageCache getGLImageCache() {
-        return mGLImageCache;
     }
 
     // Round the metres per pixel down to 1,2,5,
@@ -916,17 +804,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
         Utils.throwIfErrors();
 
-        // Draw location overlays. Read the ivars once to give some semblance of thread safety.
-        LocationOverlay overlay = mLocationOverlay;
-        if (overlay != null) {
-            overlay.glDraw(mMVPOrthoMatrix, rTempMatrix, rTempPoint, rTempFloatBuffer, metresPerPixel);
-        }
-        Utils.throwIfErrors();
-
         setProgram(shaderProgram);
 
         drawMarkers(projection);
-
 
         if (needRedraw) {
             requestRender();
@@ -980,7 +860,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
                 }
             }
         }
-
 
         // TODO do we need to handle stacked markers where one marker declines the touch?
         Marker marker = findMarker(projection, screenLocation);

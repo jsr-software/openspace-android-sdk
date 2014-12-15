@@ -20,9 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
-
-import java.util.List;
+package uk.co.ordnancesurvey.osmobilesdk.locations;
 
 import android.annotation.TargetApi;
 import android.app.AlertDialog;

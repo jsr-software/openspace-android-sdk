@@ -22,7 +22,6 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
-import android.location.Location;
 import android.view.View;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
@@ -179,18 +178,6 @@ public interface OSMap {
 		 */
 		public abstract void onMarkerDragStart(Marker marker);
 	}
-
-	/**
-	 * Callback interface for when the My Location dot (which signifies the user's location) changes location.
-	 */
-	interface OnMyLocationChangeListener
-	{
-		/**
-		 * Called when the Location of the My Location dot has changed (be it gridpoint or accuracy).
-		 * @param location The current location of the My Location dot.
-		 */
-		public abstract void onMyLocationChange(GridPoint location);
-	}
 	
 	/**
 	 * Callback interface for click/tap events on a marker's info window.
@@ -293,36 +280,6 @@ public interface OSMap {
 	 * @param listener	The callback that's invoked on marker drag events. To unset the callback, use null.
 	 */
 	public void setOnMarkerDragListener(OnMarkerDragListener listener);
-
-	/**
-	 * Gets the status of the my-location layer.
-	 * @return True if the my-location layer is enabled, false otherwise.
-	 */
-	public boolean isMyLocationEnabled();
-	
-	/**
-	 * Enables or disables the my-location layer.
-	 * While enabled, the my-location layer continuously draws an indication of a user's current location, 
-	 * @param enabled	True to enable; false to disable.
-	 */
-	public void setMyLocationEnabled(boolean enabled);
-	
-	/**
-	 * Returns the currently displayed user location, or null if there is no location data available.
-	 * @return The currently displayed Location user location.
-	 */
-	public Location getMyLocation();
-	/**
-	 * Convenience method to get current user location as a {@link GridPoint}
-	 * @return The current user location as a {@link GridPoint}
-	 */
-	public GridPoint getMyGridPoint();
-	
-	/**
-	 * Sets a callback that's invoked when the my location dot changes location.
-	 * @param listener The callback that's invoked when the my location dot changes.
-	 */
-	public void setOnMyLocationChangeListener(OnMyLocationChangeListener listener);
 	
 	/* 
 	 * Repositions the camera. The move may be animated.
@@ -336,12 +293,6 @@ public interface OSMap {
 	 * @param listener	The callback that's invoked when the camera changes. To unset the callback, use null.
 	 */
 	public void setOnCameraChangeListener(OnCameraChangeListener listener);
-
-	/**
-	 * Replaces the location source of the my-location layer
-	 * @param source A location source to use in the my-location layer. Set to null to use the default location source.
-	 */
-	public void setLocationSource(LocationSource source);
 
     /**
      * Set the {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration} for the current view

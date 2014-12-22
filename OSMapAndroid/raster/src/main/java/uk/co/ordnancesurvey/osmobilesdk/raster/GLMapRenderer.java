@@ -61,6 +61,7 @@ import javax.microedition.khronos.opengles.GL10;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BngUtil;
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.network.NetworkStateMonitor;
 import uk.co.ordnancesurvey.osmobilesdk.raster.tiles.TileService;
@@ -304,12 +305,12 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         void reset() {
             ScreenProjection projection = mVolatileProjection;
-            GridRect visible = projection.getVisibleMapRect();
+            BoundingBox visible = projection.getVisibleBounds();
             // Set to full visible area.
-            maxX = visible.maxX;
-            minX = visible.minX;
-            maxY = visible.maxY;
-            minY = visible.minY;
+            maxX = visible.getMaxX();
+            minX = visible.getMinX();
+            maxY = visible.getMaxY();
+            minY = visible.getMinY();
             mDidDraw = false;
         }
     }
@@ -1100,7 +1101,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         return findMarker(projection, screenLocation, true);
     }
 
-    private <T> Marker processMarker(Marker marker, GridRect checkRect, MarkerCallable<T> callable, T params) {
+    private <T> Marker processMarker(Marker marker, BoundingBox boundingBox, MarkerCallable<T> callable, T params) {
         // Check bounds
         if (marker == null) {
             return null;
@@ -1109,7 +1110,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         Point gp = marker.getPoint();
 
         // Skip invisible or out of visible area markers
-        if (!marker.isVisible() || !checkRect.contains(gp)) {
+        if (!marker.isVisible() || !boundingBox.contains(gp)) {
             return null;
         }
 
@@ -1122,14 +1123,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private <T> Marker iterateVisibleMarkers(boolean bottomUp, ScreenProjection projection, MarkerCallable<T> callable, T params) {
         Marker ret = null;
-
         // Look at more markers than are nominally visible, in case their bitmap covers the relevant area.
-
         // We extend to four times the actual screen area.
-
         // TODO can we do something more intelligent than this... like remember the maximum bitmap size for markers, plus take
         // account of anchors?
-        GridRect checkRect = projection.getExpandedVisibleMapRect();
+        BoundingBox boundingBox = projection.getExpandedVisibleBounds();
 
         mMarkersLock.readLock().lock();
         {
@@ -1138,18 +1136,18 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
                 iter = mMarkers.iterator();
             } else {
                 iter = mMarkers.descendingIterator();
-                ret = processMarker(mExpandedMarker, checkRect, callable, params);
+                ret = processMarker(mExpandedMarker, boundingBox, callable, params);
             }
             Marker marker = null;
 
             while (ret == null && iter.hasNext()) {
                 marker = iter.next();
                 // processMarker returns non-null if iteration should stop.
-                ret = processMarker(marker, checkRect, callable, params);
+                ret = processMarker(marker, boundingBox, callable, params);
             }
 
             if (ret == null && bottomUp) {
-                ret = processMarker(mExpandedMarker, checkRect, callable, params);
+                ret = processMarker(mExpandedMarker, boundingBox, callable, params);
             }
 
         }
@@ -1206,13 +1204,13 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         ScreenProjection projection = mVolatileProjection;
         float metresPerPixel = projection.getMetresPerPixel();
 
-        GridRect visibleMapRect = projection.getVisibleMapRect();
+        BoundingBox visibleBounds = projection.getVisibleBounds();
 
         float mapTileSize = layer.tileSizeMetres;
         float screenTileSize = mapTileSize / metresPerPixel;
 
-        double mapTopLeftX = visibleMapRect.minX;
-        double mapTopLeftY = visibleMapRect.maxY;
+        double mapTopLeftX = visibleBounds.getMinX();
+        double mapTopLeftY = visibleBounds.getMaxY();
 
         // Draw only the dirty area.
         Rect tileRect = rTempTileRect;

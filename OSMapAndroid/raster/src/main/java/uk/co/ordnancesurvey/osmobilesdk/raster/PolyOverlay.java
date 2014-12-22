@@ -39,6 +39,7 @@ import java.util.List;
 import android.graphics.PointF;
 import android.opengl.Matrix;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
 
 abstract class PolyOverlay extends ShapeOverlay {
@@ -336,33 +337,31 @@ abstract class PolyOverlay extends ShapeOverlay {
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, (writePoints-1) * vertexStep/2);
 	}
 
-	void glSetMatrix(int shaderOverlayUniformMVP, float[] orthoMatrix, float[] mvpTempMatrix, ScreenProjection projection, PolyPoints points, float metresPerPixel) {
-		GridRect gridRect = projection.getVisibleMapRect();
-		double topLeftX = gridRect.minX;
-		double topLeftY = gridRect.maxY;
+	void glSetMatrix(int shaderOverlayUniformMVP, float[] orthoMatrix, float[] mvpTempMatrix,
+                     ScreenProjection projection, PolyPoints points, float metresPerPixel) {
+        BoundingBox visibleBounds = projection.getVisibleBounds();
+        double topLeftX = visibleBounds.getMinX();
+        double topLeftY = visibleBounds.getMaxY();
 
-		float tx = (float)(points.mVertexCentre.getX()-topLeftX);
-		float ty = (float)(points.mVertexCentre.getY()-topLeftY);
+        float tx = (float) (points.mVertexCentre.getX() - topLeftX);
+        float ty = (float) (points.mVertexCentre.getY() - topLeftY);
 
-		// Convert from metres to pixels.
-		// Translate by the appropriate number of metres
-		Matrix.scaleM(mvpTempMatrix, 0, orthoMatrix, 0, 1/metresPerPixel, -1/metresPerPixel, 1);
-		Matrix.translateM(mvpTempMatrix, 0, tx, ty, 0);
-		Utils.throwIfErrors();
-		if(mPixelCoordinates)
-		{
-			Matrix.scaleM(mvpTempMatrix, 0, orthoMatrix, 0, metresPerPixel, metresPerPixel, 1);
-		}
-		if(mRotation != 0)
-		{	
-			// mRotation is clockwise, so change the sign because rotateM is counter clockwise.
-			Matrix.rotateM(mvpTempMatrix, 0, -mRotation, 0, 0, 1);
-		}
+        // Convert from metres to pixels.
+        // Translate by the appropriate number of metres
+        Matrix.scaleM(mvpTempMatrix, 0, orthoMatrix, 0, 1 / metresPerPixel, -1 / metresPerPixel, 1);
+        Matrix.translateM(mvpTempMatrix, 0, tx, ty, 0);
+        Utils.throwIfErrors();
+        if (mPixelCoordinates) {
+            Matrix.scaleM(mvpTempMatrix, 0, orthoMatrix, 0, metresPerPixel, metresPerPixel, 1);
+        }
+        if (mRotation != 0) {
+            // mRotation is clockwise, so change the sign because rotateM is counter clockwise.
+            Matrix.rotateM(mvpTempMatrix, 0, -mRotation, 0, 0, 1);
+        }
 
-
-		glUniformMatrix4fv(shaderOverlayUniformMVP, 1, false, mvpTempMatrix, 0);
-		Utils.throwIfErrors();
-	}
+        glUniformMatrix4fv(shaderOverlayUniformMVP, 1, false, mvpTempMatrix, 0);
+        Utils.throwIfErrors();
+    }
 
 	final static class PolyPoints {
 		private final Point[] mArray;

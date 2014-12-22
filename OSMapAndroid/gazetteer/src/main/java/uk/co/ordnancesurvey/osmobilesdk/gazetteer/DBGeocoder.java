@@ -314,189 +314,162 @@ final class DBGeocoder {
 	}
 	
 	
-	List<RoadWrapper> _locateRoad(String s, GridRect rect, int start, int numResults)
+	List<RoadWrapper> _locateRoad(String s, BoundingBox boundingBox, int start, int numResults)
 	{
-		if(rect == null || rect.isNull())
+		if(boundingBox == null || boundingBox.isNull())
 		{
 			return _locateRoad(s, null, null, start, numResults);
 		}
 		ArrayList<String> extraArgs = new ArrayList<String>(4);
-		extraArgs.add(String.valueOf(rect.minX));
-		extraArgs.add(String.valueOf(rect.maxX));
-		extraArgs.add(String.valueOf(rect.minY));
-		extraArgs.add(String.valueOf(rect.maxY));
+		extraArgs.add(String.valueOf(boundingBox.getMinX()));
+		extraArgs.add(String.valueOf(boundingBox.getMaxX()));
+		extraArgs.add(String.valueOf(boundingBox.getMinY()));
+		extraArgs.add(String.valueOf(boundingBox.getMaxY()));
 		
 		return _locateRoad(s, " and center_x between ? and  ? and center_y between ? and  ?",
 				extraArgs, start, numResults);
 	}
-	
-	List<Placemark> _doGazetteerSearch(String s, GridRect rect, int start, int numResults, boolean exact)
-	{
-		ArrayList<Placemark> placemarks = new ArrayList<Placemark>(10);
-		String ss = s.toLowerCase(Locale.ENGLISH);
-		// Strip apostrophes
-		ss = ss.replaceAll("'", "");
-		
+
+    List<Placemark> _doGazetteerSearch(String s, BoundingBox boundingBox, int start, int numResults, boolean exact) {
+        ArrayList<Placemark> placemarks = new ArrayList<Placemark>(10);
+        String ss = s.toLowerCase(Locale.ENGLISH);
+        // Strip apostrophes
+        ss = ss.replaceAll("'", "");
+
         // Construct the search. We want an exact search on all but the last word..
-		String[] words = ss.split("\\s+");
-		String exactWords = null;
-		int wordCount = 0;
-		String lastWord = null;
-		
-		for(int i = words.length -1; i >= 0; i--)
-		{
-			String word = words[i];
-			// probably an unnecessary check
-			if(word.length() == 0)
-			{
-				continue;
-			}
-			if(lastWord == null && !exact)
-			{
-				lastWord = word;
-				continue;
-			}
-			word = "'" + word + "'";
-			if(exactWords != null)
-			{
-				exactWords = exactWords +"," + word;
-			}
-			else
-			{
-				exactWords = word;
-			}
-			wordCount++;
-		}
-		
-		String query = "select seq,def_nam,full_county,east1000,north1000 from features left outer join counties on features.co_code = counties.co_code ";
-		if(wordCount > 0)
-		{
-			query = query + "where seq in (select feature_id from matches where word_id in (select word_id from words where word in (" 
-								+ exactWords  
-								+ ")) group by feature_id having count(word_id) = " + wordCount + " ";
-		}
-		Cursor result;
-		int argi = 0;
-		String[] args = null;
-		if(lastWord != null)
-		{             
-			// Handle the lastWord, normally matched with a prefix.
-			String preQuery = "select word_id from words where word >= ? and word < ? ORDER BY word_id LIMIT 1";
-			String lastWordPlusOne = stringPlusOne(lastWord);
-			String[] preargs = new String[2];
-			preargs[0] = lastWord;
-			preargs[1] = lastWordPlusOne;		
-			result = mDB.rawQuery(preQuery,  preargs);
-			if(!result.moveToFirst())
-			{
-				result.close();
-				return null;
-			}
-			int firstId = result.getInt(0);
-			result.close();
-			String preQuery2 = "select word_id from words where word >= ? and word < ? ORDER BY word_id DESC LIMIT 1";
-			preargs[0] = lastWord;
-			preargs[1] = lastWordPlusOne;
-			result = mDB.rawQuery(preQuery2, preargs);
-			if(!result.moveToFirst())
-			{
-				result.close();
-				return null;
-			}
-			int lastId = result.getInt(0);
-			result.close();
-			
-			args = new String[2];
-			args[argi++] = String.valueOf(firstId);
-			args[argi++] = String.valueOf(lastId);
-			if(wordCount > 0)
-			{
-				query += "intersect select distinct feature_id from matches where word_id between ? and ? @)";				
-			}
-			else
-			{
+        String[] words = ss.split("\\s+");
+        String exactWords = null;
+        int wordCount = 0;
+        String lastWord = null;
+
+        for (int i = words.length - 1; i >= 0; i--) {
+            String word = words[i];
+            // probably an unnecessary check
+            if (word.length() == 0) {
+                continue;
+            }
+            if (lastWord == null && !exact) {
+                lastWord = word;
+                continue;
+            }
+            word = "'" + word + "'";
+            if (exactWords != null) {
+                exactWords = exactWords + "," + word;
+            } else {
+                exactWords = word;
+            }
+            wordCount++;
+        }
+
+        String query = "select seq,def_nam,full_county,east1000,north1000 from features left outer join counties on features.co_code = counties.co_code ";
+        if (wordCount > 0) {
+            query = query + "where seq in (select feature_id from matches where word_id in (select word_id from words where word in ("
+                    + exactWords
+                    + ")) group by feature_id having count(word_id) = " + wordCount + " ";
+        }
+        Cursor result;
+        int argi = 0;
+        String[] args = null;
+        if (lastWord != null) {
+            // Handle the lastWord, normally matched with a prefix.
+            String preQuery = "select word_id from words where word >= ? and word < ? ORDER BY word_id LIMIT 1";
+            String lastWordPlusOne = stringPlusOne(lastWord);
+            String[] preargs = new String[2];
+            preargs[0] = lastWord;
+            preargs[1] = lastWordPlusOne;
+            result = mDB.rawQuery(preQuery, preargs);
+            if (!result.moveToFirst()) {
+                result.close();
+                return null;
+            }
+            int firstId = result.getInt(0);
+            result.close();
+            String preQuery2 = "select word_id from words where word >= ? and word < ? ORDER BY word_id DESC LIMIT 1";
+            preargs[0] = lastWord;
+            preargs[1] = lastWordPlusOne;
+            result = mDB.rawQuery(preQuery2, preargs);
+            if (!result.moveToFirst()) {
+                result.close();
+                return null;
+            }
+            int lastId = result.getInt(0);
+            result.close();
+
+            args = new String[2];
+            args[argi++] = String.valueOf(firstId);
+            args[argi++] = String.valueOf(lastId);
+            if (wordCount > 0) {
+                query += "intersect select distinct feature_id from matches where word_id between ? and ? @)";
+            } else {
                 // Only look for the first two features as an optimisation.
-				int numTowns = mFeatureIndexes[2];
-				if((lastId - firstId) > numTowns)
-				{
+                int numTowns = mFeatureIndexes[2];
+                if ((lastId - firstId) > numTowns) {
                     // Optimisation - limit the set of returned results to towns. Indexing on feature id products
                     // a smaller set, so do that... The + on word_id forces indexing on feature_id
-					query += "where seq in (select distinct feature_id from matches where +word_id between ? and ? and feature_id < ? order by feature_id @)";
+                    query += "where seq in (select distinct feature_id from matches where +word_id between ? and ? and feature_id < ? order by feature_id @)";
                     args = Arrays.copyOf(args, args.length + 1);
                     args[argi++] = Integer.toString(numTowns);
-				}
-				else
-				{
-					query +=  "where seq in (select distinct feature_id from matches where word_id between ? and ? order by feature_id @)";
-				}
-			}
-		}
-		else
-		{
-			query = query + ")";
-		}
-		String limitSubClause = "";
-		if(rect != null && !rect.isNull())
-		{
-			query = query + " and north1000 between ? and  ? and east1000 between ? and ?";
-			if(args != null)
-			{
-				args = Arrays.copyOf(args, args.length + 4);
-			}
-			else
-			{
-				args = new String[4];
-			}
-			args[argi++] = String.valueOf(rect.minY / 1000);
-			args[argi++] = String.valueOf(rect.maxY / 1000);
-			args[argi++] = String.valueOf(rect.minX / 1000);
-			args[argi++] = String.valueOf(rect.maxX / 1000);
-		}
-		if(start > -1)
-		{
-			query = query + " limit " + numResults + " offset " + start;
-			
-			if(rect == null || rect.isNull())
-			{
+                } else {
+                    query += "where seq in (select distinct feature_id from matches where word_id between ? and ? order by feature_id @)";
+                }
+            }
+        } else {
+            query = query + ")";
+        }
+        String limitSubClause = "";
+        if (boundingBox != null && !boundingBox.isNull()) {
+            query = query + " and north1000 between ? and  ? and east1000 between ? and ?";
+            if (args != null) {
+                args = Arrays.copyOf(args, args.length + 4);
+            } else {
+                args = new String[4];
+            }
+            args[argi++] = String.valueOf(boundingBox.getMinY() / 1000);
+            args[argi++] = String.valueOf(boundingBox.getMaxY() / 1000);
+            args[argi++] = String.valueOf(boundingBox.getMinX() / 1000);
+            args[argi++] = String.valueOf(boundingBox.getMaxX() / 1000);
+        }
+        if (start > -1) {
+            query = query + " limit " + numResults + " offset " + start;
+
+            if (boundingBox == null || boundingBox.isNull()) {
                 // With no geographic rect and no offset, it's safe to add a limit clause to the prefix.
                 // It is important to order by feature_id to ensure that the order of results is the same as if we searched
                 // the entire set of matches. 
-				limitSubClause = " limit " + (start + numResults);
-			}
-		}
-		
-		if(lastWord != null)
-		{
-			query = query.replaceAll("@", limitSubClause);
-		}
-		
-		result = mDB.rawQuery(query, args);
-		
-		while(result.moveToNext())
-		{
-            // Build a placemark for this result.
-			final int SEQ = 0;
-			final int DEF_NAME = 1;
-			final int FULL_COUNTY = 2;
-			final int EAST1000 = 3;
-			final int NORTH1000 = 4;
-			
-			int seq =  result.getInt(SEQ);
-			String name = result.getString(DEF_NAME);
-			String type = featureCodeForSeq(seq);
-			String county = result.getString(FULL_COUNTY);
-
-			int x = result.getInt(EAST1000) * 1000 + 500;
-			int y = result.getInt(NORTH1000) * 1000 + 500;
-			Point gp = new Point(x,y, Point.BNG);
-			Placemark placemark = new Placemark(name, type, county, gp);
-			placemarks.add(placemark);
+                limitSubClause = " limit " + (start + numResults);
+            }
         }
-		result.close();
-		return placemarks;
-	}
-	
-	private Integer partIdForPart(String part)
+
+        if (lastWord != null) {
+            query = query.replaceAll("@", limitSubClause);
+        }
+
+        result = mDB.rawQuery(query, args);
+
+        while (result.moveToNext()) {
+            // Build a placemark for this result.
+            final int SEQ = 0;
+            final int DEF_NAME = 1;
+            final int FULL_COUNTY = 2;
+            final int EAST1000 = 3;
+            final int NORTH1000 = 4;
+
+            int seq = result.getInt(SEQ);
+            String name = result.getString(DEF_NAME);
+            String type = featureCodeForSeq(seq);
+            String county = result.getString(FULL_COUNTY);
+
+            int x = result.getInt(EAST1000) * 1000 + 500;
+            int y = result.getInt(NORTH1000) * 1000 + 500;
+            Point gp = new Point(x, y, Point.BNG);
+            Placemark placemark = new Placemark(name, type, county, gp);
+            placemarks.add(placemark);
+        }
+        result.close();
+        return placemarks;
+    }
+
+    private Integer partIdForPart(String part)
 	{
 		if(part == null)
 		{
@@ -516,207 +489,175 @@ final class DBGeocoder {
 		result.close();
 		return partId;
 	}
-	
 
-/*
- Postcode search will match as follows:
- A postcode area (e.g. CB) will not match any results
- A postcode district (e.g. CB12) will return up to two results,.
- One result will be returned for a matching district.
- One result will be returned for a matching sector (i.e. CB1 2)
- A postcode sector specified with a space (e.g. CB1 2) will return up to one result for the matching sector
- A postcode unit (e.g. CB4 1BH) will return up to one result, for the matching unit
- A partially specified postcode unit (e.g. CB4 1B) will return a result for each unit in the database
- that matches the partial specification (i.e. CB4 1BS, CB 1BHT, ...)
-*/
-	List<Placemark> _doPostcodeSearch(String s, GridRect rect, int start, int numResults)
-	{
-	    // Normalize the search term
-		String ss = s.toUpperCase(Locale.ENGLISH);
-		if(ss.length() == 0)
-		{
-			return null;
-		}
-		
-		// Is there a space
-		int space = ss.indexOf(" ");
-		String part1 = null;
-		String part2 = null;
-		String part1alt = null;
-		String part2alt = null;
-		
-		if(space != -1)
-		{
-			// Split on the space
-			part1 = ss.substring(0, space);
-			part2 = ss.substring(space);
-			part1 = part1.replaceAll("\\s", "");
-			part2 = part2.replaceAll("\\s", "");			
-		}
-		else
-		{
-	        // No space entered:
-	        // for DDL (split between 1 and 2), or DDD (split between 2 and 3). The ambiguous cases
-	        // are D - this could be something like CB4, or the start of CB41. Treat as CB4, because we
-	        // only allow exact matches on part1 anyway.
-	        // the final ambiguous case is CB41. Is this CB4 1, or CB41. The only logical thing we can do
-	        // is search for both - or maybe require the user to enter a space?
-	        // Searching for both is problematic if a range is specified.We need to search for part1 CB41, any part 2,
-	        // and part 1 CB4, part 2 1xx. Well, it's doable.
-	        
-	        // These rules can be simplified.
-	        // If the string entered is 2 characters long then it's all part1.
-	        // If the string is 5 or more characters long, then split before the final digit.
-	        // If the string is 3 or 4 characters long, we will have two things to search for...
-			
-			String digits = "0123456789";
-			int len = ss.length();
-			if(len <= 2)
-			{
-				part1 = ss;
-			}
-			else if(len >= 5)
-			{
-				// Split on last digit
-				for(int c = len - 1; c > 0; c--)
-				{
-					char test = ss.charAt(c);
-					// A mathematical comparison would be faster
-					if(digits.indexOf(test) != -1)
-					{
-						// This is the last digit.
-						part1 = ss.substring(0, c);
-						part2 = ss.substring(c);
-						break;
-					}
-				}
-			}
-			else
-			{
-	            // This is the complicated case, something like DD.
-	            // We assume that both the last two characters are digits (no point checking otherwise).
-	            // We have to combine two searches!
-				part1 = ss;
-				part1alt = ss.substring(0,  len - 1);
-				
-				// Spit on first digit.
-				for(int c = 0; c < len - 1; c++)
-				{
-					char test = part1alt.charAt(c);
-					if(digits.indexOf(test) != -1)
-					{
-						part2alt = ss.substring(len -1);
-					}
-				}
-				if(part2alt == null)
-				{
-					part1alt = null;
-				}
-			}
-		}
-		
-		if(part1 != null && part1.length() == 0)
-		{
-			part1 = null;
-		}
-		if(part2 != null && part2.length() == 0)
-		{
-			part2 = null;
-		}
-		if(part1alt != null && part1alt.length() == 0)
-		{
-			part1alt = null;
-		}
-		
-		ArrayList<Placemark> placemarks = new ArrayList<Placemark>(10);
-		Integer part1_id = partIdForPart(part1);
-		if(part1_id != null)
-		{
-			String query  = "select * from postcodes left outer join parts on postcodes.part2_id = parts.id where (part1_id = ?";
-			String[] args = new String[1];
-			int argi = 0;
-			args[argi++] = part1_id.toString();
-			
+
+    /*
+     Postcode search will match as follows:
+     A postcode area (e.g. CB) will not match any results
+     A postcode district (e.g. CB12) will return up to two results,.
+     One result will be returned for a matching district.
+     One result will be returned for a matching sector (i.e. CB1 2)
+     A postcode sector specified with a space (e.g. CB1 2) will return up to one result for the matching sector
+     A postcode unit (e.g. CB4 1BH) will return up to one result, for the matching unit
+     A partially specified postcode unit (e.g. CB4 1B) will return a result for each unit in the database
+     that matches the partial specification (i.e. CB4 1BS, CB 1BHT, ...)
+    */
+    List<Placemark> _doPostcodeSearch(String s, BoundingBox boundingBox, int start, int numResults) {
+        // Normalize the search term
+        String ss = s.toUpperCase(Locale.ENGLISH);
+        if (ss.length() == 0) {
+            return null;
+        }
+
+        // Is there a space
+        int space = ss.indexOf(" ");
+        String part1 = null;
+        String part2 = null;
+        String part1alt = null;
+        String part2alt = null;
+
+        if (space != -1) {
+            // Split on the space
+            part1 = ss.substring(0, space);
+            part2 = ss.substring(space);
+            part1 = part1.replaceAll("\\s", "");
+            part2 = part2.replaceAll("\\s", "");
+        } else {
+            // No space entered:
+            // for DDL (split between 1 and 2), or DDD (split between 2 and 3). The ambiguous cases
+            // are D - this could be something like CB4, or the start of CB41. Treat as CB4, because we
+            // only allow exact matches on part1 anyway.
+            // the final ambiguous case is CB41. Is this CB4 1, or CB41. The only logical thing we can do
+            // is search for both - or maybe require the user to enter a space?
+            // Searching for both is problematic if a range is specified.We need to search for part1 CB41, any part 2,
+            // and part 1 CB4, part 2 1xx. Well, it's doable.
+
+            // These rules can be simplified.
+            // If the string entered is 2 characters long then it's all part1.
+            // If the string is 5 or more characters long, then split before the final digit.
+            // If the string is 3 or 4 characters long, we will have two things to search for...
+
+            String digits = "0123456789";
+            int len = ss.length();
+            if (len <= 2) {
+                part1 = ss;
+            } else if (len >= 5) {
+                // Split on last digit
+                for (int c = len - 1; c > 0; c--) {
+                    char test = ss.charAt(c);
+                    // A mathematical comparison would be faster
+                    if (digits.indexOf(test) != -1) {
+                        // This is the last digit.
+                        part1 = ss.substring(0, c);
+                        part2 = ss.substring(c);
+                        break;
+                    }
+                }
+            } else {
+                // This is the complicated case, something like DD.
+                // We assume that both the last two characters are digits (no point checking otherwise).
+                // We have to combine two searches!
+                part1 = ss;
+                part1alt = ss.substring(0, len - 1);
+
+                // Spit on first digit.
+                for (int c = 0; c < len - 1; c++) {
+                    char test = part1alt.charAt(c);
+                    if (digits.indexOf(test) != -1) {
+                        part2alt = ss.substring(len - 1);
+                    }
+                }
+                if (part2alt == null) {
+                    part1alt = null;
+                }
+            }
+        }
+
+        if (part1 != null && part1.length() == 0) {
+            part1 = null;
+        }
+        if (part2 != null && part2.length() == 0) {
+            part2 = null;
+        }
+        if (part1alt != null && part1alt.length() == 0) {
+            part1alt = null;
+        }
+
+        ArrayList<Placemark> placemarks = new ArrayList<Placemark>(10);
+        Integer part1_id = partIdForPart(part1);
+        if (part1_id != null) {
+            String query = "select * from postcodes left outer join parts on postcodes.part2_id = parts.id where (part1_id = ?";
+            String[] args = new String[1];
+            int argi = 0;
+            args[argi++] = part1_id.toString();
+
             // In addition we do an exact match on part2, unless part2 is 2 characters in which case we do a prefix search.
-			if(part2 == null)
-			{
-				query = query + " and part2_id is null)";
-			}
-			
-			if(part1alt != null)
-			{
-				Integer part1_alt_id = partIdForPart(part1alt);
-				if(part1_alt_id != null)
-				{
-					query = query + " or (part1_id = ?";
-					args = Arrays.copyOf(args, args.length + 1);
-					args[argi++] = part1_alt_id.toString();
-					part2 = part2alt;
-				}
-			}
-			
-			if(part2 != null && part2.length() == 2)
-			{
-                // With a prefix match on part2 if one was specified.
-				query = query + " and part2_id in (select id from parts where part >= ? and part < ?))";
-				args = Arrays.copyOf(args, args.length + 2);
-				args[argi++] = part2;
-				args[argi++] = stringPlusOne(part2);
-			}
-			else if(part2 != null) 
-			{
-				query = query + " and part2_id in (select id from parts where part = ?))";
-				args = Arrays.copyOf(args, args.length + 1);
-				args[argi++] = part2;
-			}
-			
-			if(rect != null && !rect.isNull())
-			{
-				query = query + " and easting between ? and  ? and northing between ? and ?";
-				args = Arrays.copyOf(args, args.length + 4);
-				args[argi++] = String.valueOf(rect.minX);
-				args[argi++] = String.valueOf(rect.maxX);
-				args[argi++] = String.valueOf(rect.minY);
-				args[argi++] = String.valueOf(rect.maxY);
-			}
-			
-			if(start != -1)
-			{
-				query = query + " limit "+ numResults + " offset " + start;
-			}
-			
-			Cursor result = mDB.rawQuery(query,  args);
-			while(result.moveToNext())
-			{
-				part2 = result.getString(result.getColumnIndex("part"));
-				int partid = result.getInt(result.getColumnIndex("part1_id"));
-				String name;
-				if(partid == part1_id.intValue())
-				{
-					name = part1;
-				}
-				else
-				{
-					name = part1alt;
-				}
-				if(part2 != null)
-				{
-					name = name + " " + part2;
-				}
-				int x = result.getInt(result.getColumnIndex("easting"));
-				int y = result.getInt(result.getColumnIndex("northing"));
-				
-				Point gp = new Point(x,y, Point.BNG);
-				Placemark p = new Placemark(name,  null, null, gp);
-				placemarks.add(p);
-			}
-			result.close();
-		}
-		return placemarks;
-	}
-	
+            if (part2 == null) {
+                query = query + " and part2_id is null)";
+            }
 
-	/*
+            if (part1alt != null) {
+                Integer part1_alt_id = partIdForPart(part1alt);
+                if (part1_alt_id != null) {
+                    query = query + " or (part1_id = ?";
+                    args = Arrays.copyOf(args, args.length + 1);
+                    args[argi++] = part1_alt_id.toString();
+                    part2 = part2alt;
+                }
+            }
+
+            if (part2 != null && part2.length() == 2) {
+                // With a prefix match on part2 if one was specified.
+                query = query + " and part2_id in (select id from parts where part >= ? and part < ?))";
+                args = Arrays.copyOf(args, args.length + 2);
+                args[argi++] = part2;
+                args[argi++] = stringPlusOne(part2);
+            } else if (part2 != null) {
+                query = query + " and part2_id in (select id from parts where part = ?))";
+                args = Arrays.copyOf(args, args.length + 1);
+                args[argi++] = part2;
+            }
+
+            if (boundingBox != null && !boundingBox.isNull()) {
+                query = query + " and easting between ? and  ? and northing between ? and ?";
+                args = Arrays.copyOf(args, args.length + 4);
+                args[argi++] = String.valueOf(boundingBox.getMinX());
+                args[argi++] = String.valueOf(boundingBox.getMaxX());
+                args[argi++] = String.valueOf(boundingBox.getMinY());
+                args[argi++] = String.valueOf(boundingBox.getMaxY());
+            }
+
+            if (start != -1) {
+                query = query + " limit " + numResults + " offset " + start;
+            }
+
+            Cursor result = mDB.rawQuery(query, args);
+            while (result.moveToNext()) {
+                part2 = result.getString(result.getColumnIndex("part"));
+                int partid = result.getInt(result.getColumnIndex("part1_id"));
+                String name;
+                if (partid == part1_id.intValue()) {
+                    name = part1;
+                } else {
+                    name = part1alt;
+                }
+                if (part2 != null) {
+                    name = name + " " + part2;
+                }
+                int x = result.getInt(result.getColumnIndex("easting"));
+                int y = result.getInt(result.getColumnIndex("northing"));
+
+                Point gp = new Point(x, y, Point.BNG);
+                Placemark p = new Placemark(name, null, null, gp);
+                placemarks.add(p);
+            }
+            result.close();
+        }
+        return placemarks;
+    }
+
+
+    /*
  Road search looks for roads where the search term is a prefix of the road name. Common suffixes are separated out
  for efficiency. Consequently
  "Hig Street" will match "High Street"
@@ -736,12 +677,12 @@ final class DBGeocoder {
  precedence feature code (i.e. preferably Cities, failing that Towns, and so forth). We then look for roads
  near those features. The set of roads is ordered by distance from the nearest feature, and we trim the set to
  those closer that twice the minimum distance.
-	 */
-	List<Road> _doLocator(String s, GridRect rect, int start, int numResults)
+     */
+	List<Road> _doLocator(String s, BoundingBox boundingBox, int start, int numResults)
 	{
 		{
 			// If there's an exact match on the road name, return that.
-			List<RoadWrapper> roads = _locateRoad(s, rect, start, numResults);
+			List<RoadWrapper> roads = _locateRoad(s, boundingBox, start, numResults);
 			if(roads.size() > 0)
 			{
 				return RoadWrapper.unwrap(roads);
@@ -790,7 +731,7 @@ final class DBGeocoder {
 			roadName = TextUtils.join(" ", w1);
 			placeName = TextUtils.join(" ", w2);
 			
-			places = _doGazetteerSearch(placeName, rect, -1, 0, true);
+			places = _doGazetteerSearch(placeName, boundingBox, -1, 0, true);
 			if(places.size() > 0)
 			{
 				break;
@@ -841,10 +782,10 @@ final class DBGeocoder {
 			}
 			
 			Point gp = place.mPoint;
-			GridRect placeRect = GridRect.fromCentreXYWH(gp.getX(), gp.getY(), size, size);
-			if(rect != null && !rect.isNull())
+			BoundingBox placeRect = BoundingBox.fromCentreXYWH(gp.getX(), gp.getY(), size, size);
+			if(boundingBox != null && !boundingBox.isNull())
 			{
-				placeRect = placeRect.intersect(rect);
+				placeRect = placeRect.intersect(boundingBox);
 			}
 			
 			List<RoadWrapper> placeRoads = _locateRoad(roadName, placeRect, -1, 0);
@@ -883,20 +824,21 @@ final class DBGeocoder {
 		return results;
 	}
 
-	public List<? extends Placemark> geocodeString(String ss, Geocoder.GeocodeType geocodeType, GridRect boundingRect, int start, int numResults) {
-		ss = ss.trim();
-		switch (geocodeType)
-		{
-		case Gazetteer:
-			return _doGazetteerSearch(ss, boundingRect, start, numResults, false);
-		case Postcode:
-			return _doPostcodeSearch(ss, boundingRect, start, numResults);
-		case Road:
-			return _doLocator(ss, boundingRect, start, numResults);
-		default:
-			throw new IllegalArgumentException("Unsupported geocode type " + geocodeType);
-		}
-	}
+    public List<? extends Placemark> geocodeString(String ss, Geocoder.GeocodeType geocodeType,
+                                                   BoundingBox boundingBox, int start,
+                                                   int numResults) {
+        ss = ss.trim();
+        switch (geocodeType) {
+            case Gazetteer:
+                return _doGazetteerSearch(ss, boundingBox, start, numResults, false);
+            case Postcode:
+                return _doPostcodeSearch(ss, boundingBox, start, numResults);
+            case Road:
+                return _doLocator(ss, boundingBox, start, numResults);
+            default:
+                throw new IllegalArgumentException("Unsupported geocode type " + geocodeType);
+        }
+    }
 
 	public void close()
 	{

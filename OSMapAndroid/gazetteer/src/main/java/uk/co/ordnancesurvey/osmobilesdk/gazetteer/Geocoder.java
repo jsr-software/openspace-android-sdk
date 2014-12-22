@@ -163,72 +163,69 @@ public class Geocoder {
 		}
 	}
 
-	private List<? extends Placemark> geocodeString(String s, GeocodeType geocodeType, GridRect boundingRect, int start, int numResults) throws GeocodeException
-	{
-		switch (geocodeType)
-		{
-		case OnlineGazetteer:
-		case OnlinePostcode:
-			if (mWebGeocoder != null)
-			{
-				return mWebGeocoder.geocodeString(s, geocodeType, boundingRect, start, numResults);
-			}
-			return null;
-		case Gazetteer:
-		case Postcode:
-		case Road:
-			if (mDBGeocoder != null)
-			{
-				return mDBGeocoder.geocodeString(s, geocodeType, boundingRect, start, numResults);
-			}
-			return null;
-		case GridReference:
-			try {
-				Point gp = BngUtil.convertBngGridReference(s.trim());
-				String gpStr = BngUtil.toBngGridReferenceString(gp, DEFAULT_REFERENCE_LENGTH);
-				Placemark result = new Placemark(gpStr, null, null, gp);
+    private List<? extends Placemark> geocodeString(String s, GeocodeType geocodeType,
+                                                    BoundingBox boundingBox, int start,
+                                                    int numResults) throws GeocodeException {
+        switch (geocodeType) {
+            case OnlineGazetteer:
+            case OnlinePostcode:
+                if (mWebGeocoder != null) {
+                    return mWebGeocoder.geocodeString(s, geocodeType, boundingBox, start, numResults);
+                }
+                return null;
+            case Gazetteer:
+            case Postcode:
+            case Road:
+                if (mDBGeocoder != null) {
+                    return mDBGeocoder.geocodeString(s, geocodeType, boundingBox, start, numResults);
+                }
+                return null;
+            case GridReference:
+                try {
+                    Point gp = BngUtil.convertBngGridReference(s.trim());
+                    String gpStr = BngUtil.toBngGridReferenceString(gp, DEFAULT_REFERENCE_LENGTH);
+                    Placemark result = new Placemark(gpStr, null, null, gp);
 
-				return Arrays.asList(result);
-			} catch (ParseException e) {
-				// Parse failed. Oh well!
-				return null;
-			}
-		}
-		throw new AssertionError();
-	}
+                    return Arrays.asList(result);
+                } catch (ParseException e) {
+                    // Parse failed. Oh well!
+                    return null;
+                }
+        }
+        throw new AssertionError();
+    }
 
 /**
     @param geocodeTypes   types of search to execute
-    @param boundingRect  limiting rectangle for search. To search the entire area, specify  null. This parameter is ignored for online searches
-    @param start, numResults  specifies number (and offset) of results to return. This will be applied individually to each 
-        type of search, so a range of {0,100} may return more than 100 results on combined gazetteer/road searches. 
+    @param boundingBox  limiting rectangle for search. To search the entire area, specify  null.
+                         This parameter is ignored for online searches
+    @param start, numResults  specifies number (and offset) of results to return. This will be
+                  applied individually to each
+        type of search, so a range of {0,100} may return more than 100 results on combined
+                  gazetteer/road searches.
         The range is ignored for postcode and grid reference searches. 
  		To return ALL results, set numResults to 0.
  */
-	public Result geocodeString(String s, EnumSet<GeocodeType> geocodeTypes, GridRect boundingRect, int start, int numResults)
-	{
-		//Log.v(TAG, "Starting search");
-		ArrayList<Placemark> placemarks = new ArrayList<Placemark>();
-		ArrayList<GeocodeException> exceptions = new ArrayList<GeocodeException>();
+public Result geocodeString(String s, EnumSet<GeocodeType> geocodeTypes,
+                            BoundingBox boundingBox, int start, int numResults) {
+    //Log.v(TAG, "Starting search");
+    ArrayList<Placemark> placemarks = new ArrayList<Placemark>();
+    ArrayList<GeocodeException> exceptions = new ArrayList<GeocodeException>();
 
-		for (GeocodeType t : geocodeTypes)
-		{
-			try
-			{
-				Collection<? extends Placemark> results = geocodeString(s, t, boundingRect, start, numResults);
-				if (results != null)
-				{
-					placemarks.addAll(results);
-				}
-			}
-			catch (GeocodeException e)
-			{
-				exceptions.add(e);
-			}
-		}
+    for (GeocodeType t : geocodeTypes) {
+        try {
+            Collection<? extends Placemark> results = geocodeString(s, t, boundingBox,
+                    start, numResults);
+            if (results != null) {
+                placemarks.addAll(results);
+            }
+        } catch (GeocodeException e) {
+            exceptions.add(e);
+        }
+    }
 
-		return new Result(placemarks, exceptions);
-	}
+    return new Result(placemarks, exceptions);
+}
 
 	public final static class Result
 	{

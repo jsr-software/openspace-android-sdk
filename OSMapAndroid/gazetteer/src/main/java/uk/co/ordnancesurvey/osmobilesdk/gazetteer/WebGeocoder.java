@@ -182,46 +182,45 @@ final class WebGeocoder {
 		return null;
 	}
 
-	public List<? extends Placemark> geocodeString(String s, Geocoder.GeocodeType geocodeType, GridRect boundingRect, int start, int numResults) throws Geocoder.GeocodeException
-	{
-		switch (geocodeType)
-		{
-		case OnlineGazetteer:
-		case OnlinePostcode:
-			break;
-		default:
-			throw new IllegalArgumentException();
-		}
+    public List<? extends Placemark> geocodeString(String s, Geocoder.GeocodeType geocodeType,
+                                                   BoundingBox boundingBox, int start,
+                                                   int numResults) throws Geocoder.GeocodeException {
+        switch (geocodeType) {
+            case OnlineGazetteer:
+            case OnlinePostcode:
+                break;
+            default:
+                throw new IllegalArgumentException();
+        }
 
-		URL url = URLForQuery(s, geocodeType);
-		HttpURLConnection connection = null;
-		try {
-			// This is supposed to do no network I/O - but can still throw IOException
-			connection = (HttpURLConnection)url.openConnection();
-			InputStream is = connection.getInputStream();
-			int statusCode = connection.getResponseCode();
-			if (statusCode != 200)
-			{
-				throw new Geocoder.GeocodeNetworkException("Expected HTTP status 200, got " + statusCode);
-			}
-			// The example in the docs do not appear to close the stream:
-			//   http://developer.android.com/reference/java/net/HttpURLConnection.html
-			String data = new String(Helpers.readAllNoClose(is), "UTF-8");
-			return processData(s, data);
-		} catch(IOException e) {
-			// Possible failures:
-			//   openConnection()
-			//   getInputStream()
-			//   getResponseCode()
-			//   readAllNoClose()
-			throw new Geocoder.GeocodeNetworkException(e);
-		} catch (JSONException e) {
-			throw new Geocoder.GeocodeNetworkException(e);
-		} finally {
-			if (connection != null) {
-				connection.disconnect();
-			}
-		}
+        URL url = URLForQuery(s, geocodeType);
+        HttpURLConnection connection = null;
+        try {
+            // This is supposed to do no network I/O - but can still throw IOException
+            connection = (HttpURLConnection) url.openConnection();
+            InputStream is = connection.getInputStream();
+            int statusCode = connection.getResponseCode();
+            if (statusCode != 200) {
+                throw new Geocoder.GeocodeNetworkException("Expected HTTP status 200, got " + statusCode);
+            }
+            // The example in the docs do not appear to close the stream:
+            //   http://developer.android.com/reference/java/net/HttpURLConnection.html
+            String data = new String(Helpers.readAllNoClose(is), "UTF-8");
+            return processData(s, data);
+        } catch (IOException e) {
+            // Possible failures:
+            //   openConnection()
+            //   getInputStream()
+            //   getResponseCode()
+            //   readAllNoClose()
+            throw new Geocoder.GeocodeNetworkException(e);
+        } catch (JSONException e) {
+            throw new Geocoder.GeocodeNetworkException(e);
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
 
-	}
+    }
 }

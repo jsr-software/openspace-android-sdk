@@ -26,11 +26,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 abstract class PolyOptions extends ShapeOptions {
-	ArrayList<GridPoint> mPoints = new ArrayList<GridPoint>();
+	ArrayList<Point> mPoints = new ArrayList<Point>();
 	boolean mPixelCoordinates;
 	
-	public List<GridPoint> getPoints()
+	public List<Point> getPoints()
 	{
 		return Collections.unmodifiableList(mPoints);
 	}

@@ -22,6 +22,9 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BngUtil;
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 /**
  * Represents a rectangular region on the OS Map.
  */
@@ -42,7 +45,7 @@ public final class GridRect {
 	/**
 	 * The bounds of OS National Grid
 	 */
-	static final GridRect GridRectBounds = new GridRect(0, 0, GridPoint.GRID_WIDTH, GridPoint.GRID_HEIGHT);
+	static final GridRect GridRectBounds = new GridRect(0, 0, BngUtil.GRID_WIDTH, BngUtil.GRID_HEIGHT);
 
 	/**
 	 * Construct a GridRect
@@ -85,14 +88,14 @@ public final class GridRect {
 	static GridRect clippedToGridBounds(double x0, double y0, double x1, double y1) {
 		x0 = Math.max(0, x0);
 		y0 = Math.max(0, y0);
-		x1 = Math.min(GridPoint.GRID_WIDTH, x1);
-		y1 = Math.min(GridPoint.GRID_HEIGHT, y1);
+		x1 = Math.min(BngUtil.GRID_WIDTH, x1);
+		y1 = Math.min(BngUtil.GRID_HEIGHT, y1);
 		return new GridRect(x0, y0, x1, y1);
 	}
 
 	GridRect clippedToGridBounds() {
 		// TODO: Is this actually worth it? The extra alloc could be optimized away by a sufficiently clever JIT.
-		if (0 <= minX && maxX <= GridPoint.GRID_WIDTH && 0 <= minY && maxY <= GridPoint.GRID_HEIGHT) {
+		if (0 <= minX && maxX <= BngUtil.GRID_WIDTH && 0 <= minY && maxY <= BngUtil.GRID_HEIGHT) {
 			return this;
 		}
 		return clippedToGridBounds(minX, minY, maxX, maxY);
@@ -103,13 +106,13 @@ public final class GridRect {
 		return (minX <= x && x < maxX) && (minY <= y && y < maxY);
 	}
 	
-	boolean contains(GridPoint gp)
+	boolean contains(Point gp)
 	{
 		if(gp == null)
 		{
 			return false;
 		}
-		return contains(gp.x, gp.y);
+		return contains(gp.getX(), gp.getY());
 	}
 	
 	// Assumes normalized rects.
@@ -128,43 +131,43 @@ public final class GridRect {
 	}
 
 	/**
-	 * Returns a {@link GridPoint} corresponding to the SW corner (may allocate an object).
-	 * @return {@link GridPoint} for the SW corner
+	 * Returns a {@link Point} corresponding to the SW corner (may allocate an object).
+	 * @return {@link Point} for the SW corner
 	 */
-	public GridPoint sw() {
-		return new GridPoint(minX, minY);
+	public Point sw() {
+		return new Point(minX, minY, Point.BNG);
 	}
 
 	/**
-	 * Returns a {@link GridPoint} corresponding to the NE corner (may allocate an object).
-	 * @return {@link GridPoint} for the NE corner
+	 * Returns a {@link Point} corresponding to the NE corner (may allocate an object).
+	 * @return {@link Point} for the NE corner
 	 */
-	public GridPoint ne() {
-		return new GridPoint(maxX, maxY);
+	public Point ne() {
+		return new Point(maxX, maxY, Point.BNG);
 	}
 
 	/**
-	 * Returns a {@link GridPoint} corresponding to the NW corner (may allocate an object).
-	 * @return {@link GridPoint} for the NW corner
+	 * Returns a {@link Point} corresponding to the NW corner (may allocate an object).
+	 * @return {@link Point} for the NW corner
 	 */
-	public GridPoint nw() {
-		return new GridPoint(minX, maxY);
+	public Point nw() {
+		return new Point(minX, maxY, Point.BNG);
 	}
 
 	/**
-	 * Returns a {@link GridPoint} corresponding to the SE corner (may allocate an object).
-	 * @return {@link GridPoint} for the SE corner
+	 * Returns a {@link Point} corresponding to the SE corner (may allocate an object).
+	 * @return {@link Point} for the SE corner
 	 */
-	public GridPoint se() {
-		return new GridPoint(maxX, minY);
+	public Point se() {
+		return new Point(maxX, minY, Point.BNG);
 	}
 
 	/**
-	 * Returns a {@link GridPoint} corresponding to the approximate center (may allocate an object).
-	 * @return {@link GridPoint} for the center
+	 * Returns a {@link Point} corresponding to the approximate center (may allocate an object).
+	 * @return {@link Point} for the center
 	 */
-	public GridPoint center() {
-		return new GridPoint((minX+maxX)/2,(minY+maxY)/2);
+	public Point center() {
+		return new Point((minX+maxX)/2,(minY+maxY)/2, Point.BNG);
 	}
 
 	boolean isNull() {

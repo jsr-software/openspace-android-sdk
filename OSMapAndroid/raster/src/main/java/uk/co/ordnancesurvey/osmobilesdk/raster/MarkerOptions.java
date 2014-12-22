@@ -22,11 +22,13 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 /**
  * Defines MarkerOptions for a marker.
  */
 public final class MarkerOptions {
-	private GridPoint mGridPoint;
+	private Point mPoint;
 	private BitmapDescriptor mBitmapDescriptor = BitmapDescriptorFactory.defaultMarker();
 	// Default anchor is middle of bottom
 	private float mU = 0.5f;
@@ -97,15 +99,15 @@ The anchor point is specified in the continuous space [0.0, 1.0] x [0.0, 1.0], w
 	 * Sets the location for the marker.
 	 * @return the object for which the method was called, with the new position set.
 	 */
-	public MarkerOptions gridPoint(GridPoint gp)
+	public MarkerOptions Point(Point gp)
 	{
-		mGridPoint = gp;
+		mPoint = gp;
 		return this;
 	}
 	
-	public GridPoint getGridPoint()
+	public Point getPoint()
 	{
-		return mGridPoint;
+		return mPoint;
 	}
 
 	/**

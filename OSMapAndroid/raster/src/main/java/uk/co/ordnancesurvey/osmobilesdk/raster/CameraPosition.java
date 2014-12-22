@@ -22,6 +22,8 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 /**
  * An immutable class that aggregates all camera position parameters.
  */
@@ -33,15 +35,15 @@ public final class CameraPosition {
 	/**
 	 * Grid reference for the centre of the displayed map
 	 */
-	public final GridPoint target;
+	public final Point target;
 	
 	/**
 	 * Constructs a CameraPosition
 	 * 
-	 * @param target The target location for the center of the screen, as a {@link GridPoint}
+	 * @param target The target location for the center of the screen, as a {@link Point}
 	 * @param zoom The zoom level, in metres per pixel
 	 */
-	public CameraPosition(GridPoint target, float zoom) 
+	public CameraPosition(Point target, float zoom)
 	{
 		this.target = target;
 		this.zoom = zoom;

@@ -22,25 +22,27 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 public final class PolylineOptions extends PolyOptions {
-	public PolylineOptions add(GridPoint gp)
+	public PolylineOptions add(Point gp)
 	{
 		mPoints.add(gp);
 		return this;
 	}
 
-	public PolylineOptions add(GridPoint... points)
+	public PolylineOptions add(Point... points)
 	{
-		for(GridPoint gp : points)
+		for(Point gp : points)
 		{
 			mPoints.add(gp);
 		}
 		return this;
 	}
 
-	public PolylineOptions addAll(Iterable<GridPoint> points)
+	public PolylineOptions addAll(Iterable<Point> points)
 	{
-		for (GridPoint gp : points)
+		for (Point gp : points)
 		{
 			mPoints.add(gp);
 		}

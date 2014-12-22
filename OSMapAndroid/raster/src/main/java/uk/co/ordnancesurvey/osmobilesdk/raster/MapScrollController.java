@@ -32,6 +32,9 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.Scroller;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BngUtil;
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 public final class MapScrollController extends CombinedGestureDetector {
 	public interface ScrollListener {
 		public void onScrollScaleFling(MapScrollController detector);
@@ -51,7 +54,7 @@ public final class MapScrollController extends CombinedGestureDetector {
 
 	private final Zoomer mZoomer;
 	private float mZoomFocusOffsetX, mZoomFocusOffsetY;
-	private GridPoint mZoomStartCenter, mZoomFinalCenter;
+	private Point mZoomStartCenter, mZoomFinalCenter;
 
 	// Array of zoom scales. Should only be used by zoomInStep() and zoomOutStep().
 	private volatile float[] mZoomScales = new float[0];
@@ -109,7 +112,7 @@ public final class MapScrollController extends CombinedGestureDetector {
 		synchronized (this) {
 			mWidthPx = width;
 			mHeightPx = height;
-			mMaximumMPP = Math.min(GridPoint.GRID_WIDTH/(float)width, GridPoint.GRID_HEIGHT/(float)height);
+			mMaximumMPP = Math.min(BngUtil.GRID_WIDTH/(float)width, BngUtil.GRID_HEIGHT/(float)height);
 		}
 		// This should not be necessary since the map needs to re-render on a size change.
 		//listener.onScrollScaleFling(this);
@@ -138,7 +141,7 @@ public final class MapScrollController extends CombinedGestureDetector {
 		zoomToScale(e, scale, 0, 0);
 	}
 
-	public void zoomToCenterScale(MotionEvent e, GridPoint p, float scale, boolean animated) {
+	public void zoomToCenterScale(MotionEvent e, Point p, float scale, boolean animated) {
 		synchronized (this) {
 			if (BuildConfig.DEBUG && e != null) {
 				statLastEventTime = e.getEventTime();
@@ -146,14 +149,14 @@ public final class MapScrollController extends CombinedGestureDetector {
 			mScroller.forceFinished(true);
 			mZoomer.forceFinished(true);
 
-			mZoomStartCenter = new GridPoint(mX, mY);
+			mZoomStartCenter = new Point(mX, mY, Point.BNG);
 			mZoomFinalCenter = p;
 			mZoomer.startZoom(mScale, scale, animated ? durationForZoom(mScale, scale, mZoomStartCenter, mZoomFinalCenter) : 0);
 		}
 		listener.onScrollScaleFling(this);
 	}
 
-	private int durationForZoom(float startScale, float finalScale, GridPoint startCenter, GridPoint finalCenter) {
+	private int durationForZoom(float startScale, float finalScale, Point startCenter, Point finalCenter) {
 		final int ZOOM_MIN_DURATION = 250;
 		final int ZOOM_MAX_DURATION = 2500;
 		double absLogDiff = Math.abs(Math.log(finalScale/(double)startScale));
@@ -243,7 +246,7 @@ public final class MapScrollController extends CombinedGestureDetector {
 		// TODO: Do we want this to be overridable?
 		//return listener.onDoubleTap(e, offsetX, offsetY);
 		if (TEST_ZOOMING) {
-			zoomToCenterScale(e, new GridPoint(437500, 115500), 0.875f, true);
+			zoomToCenterScale(e, new Point(437500, 115500, Point.BNG), 0.875f, true);
 			return true;
 		}
 		return zoomInStep(e, offsetX, offsetY);
@@ -254,7 +257,7 @@ public final class MapScrollController extends CombinedGestureDetector {
 		// TODO: Do we want this to be overridable?
 		//listener.onTwoFingerTap(e);
 		if (TEST_ZOOMING) {
-			zoomToCenterScale(e, new GridPoint(223222, 727687), 448, true);
+			zoomToCenterScale(e, new Point(223222, 727687, Point.BNG), 448, true);
 			return;
 		}
 		zoomOutStep(e);
@@ -335,8 +338,8 @@ public final class MapScrollController extends CombinedGestureDetector {
 
 					if (mZoomStartCenter != null && mZoomFinalCenter != null) {
 						double p = mZoomer.getProgress();
-						x = (1-p)*mZoomStartCenter.x + p*mZoomFinalCenter.x;
-						y = (1-p)*mZoomStartCenter.y + p*mZoomFinalCenter.y;
+						x = (1-p)*mZoomStartCenter.getX() + p*mZoomFinalCenter.getX();
+						y = (1-p)*mZoomStartCenter.getY() + p*mZoomFinalCenter.getY();
 					} else {
 						x += mZoomFocusOffsetX*(dScale-1)*scale;
 						y -= mZoomFocusOffsetY*(dScale-1)*scale;
@@ -354,8 +357,8 @@ public final class MapScrollController extends CombinedGestureDetector {
 				{
 					scale = mMaximumMPP;
 				}
-				x = clipScaled(x, GridPoint.GRID_WIDTH,  mWidthPx,  scale);
-				y = clipScaled(y, GridPoint.GRID_HEIGHT, mHeightPx, scale);
+				x = clipScaled(x, BngUtil.GRID_WIDTH,  mWidthPx,  scale);
+				y = clipScaled(y, BngUtil.GRID_HEIGHT, mHeightPx, scale);
 				mScale = scale;
 				mX = x;
 				mY = y;

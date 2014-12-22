@@ -22,42 +22,29 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
-/**
- * Encapsulates the conversion of Latitude/Longitude in WGS-84 to a {@link GridPoint}.
- * @author bblaukopf
- *
- */
-public abstract class MapProjection {
-	MapProjection(){
-		//"package-private" constructor
-	}
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
 
-	private static final MapProjection DEFAULT_PROJECTION = new BasicMapProjection();
-	
+/**
+ * Encapsulates the conversion between a {@link .Point} in WGS84 to a {@link Point} in BNG.
+ */
+public interface MapProjection {
+
 	/**
 	 * Get the default Map Projection
-	 * @return a {@link BasicMapProjection}
 	 */
-	public static MapProjection getDefault() {
-		return DEFAULT_PROJECTION;
-	}
+	public MapProjection getDefault();
 
 	/**
-	 * Converts a WGS84 latitude/longitude to the corresponding GridPoint.
-	 * Accuracy depends on the projection used.
-	 * @param latitude
-	 * @param longitude
-	 * @return newly created GridPoint
+	 * Converts a WGS84 latitude/longitude to the corresponding BNG Point.
+	 * @param point - the Point using WGS84 projection
+	 * @return newly created Point
 	 */
-	public abstract GridPoint toGridPoint(double latitude, double longitude);
+	public abstract Point toBng(Point point);
 
-	/**
-	* Converts a GridPoint to the corresponding WGS84 latitude/longitude.
-	* Results are returned in a caller-provided array, where the first element
-	* contains the latitude and the second (double[1]) contains the longitude.
-	* Accuracy depends on the projection used.
-	* @param gp The GridPoint to convert.
-	* @param latLngOut Must be an array of length >= 2.
-	*/
-	public abstract void fromGridPoint(GridPoint gp, double[] latLngOut);
+    /**
+     * Converts a BNG {@link .Point} to the corresponding WGS84 Point.
+     * @param point - the Point using BNG projection
+     * @return newly created Point
+     */
+    public abstract Point toWGS84(Point point);
 }

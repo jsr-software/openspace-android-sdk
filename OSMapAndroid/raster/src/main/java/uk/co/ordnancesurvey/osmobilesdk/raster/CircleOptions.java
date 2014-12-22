@@ -22,8 +22,10 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 public final class CircleOptions extends ShapeOptions {
-	private GridPoint mCenter;
+	private Point mCenter;
 	private double mRadius;
 
 	/**
@@ -97,7 +99,7 @@ public final class CircleOptions extends ShapeOptions {
 	}
 
 	/**
-	 * Sets the center using a {@link GridPoint}.
+	 * Sets the center using a {@link Point}.
 	 * <p>
 	 * The center must not be null.
 	 * <p>
@@ -105,7 +107,7 @@ public final class CircleOptions extends ShapeOptions {
 	 * @param center The center of the circle.
 	 * @return this CircleOptions object
 	 */
-	public CircleOptions center(GridPoint center)
+	public CircleOptions center(Point center)
 	{
 		mCenter = center;
 		return this;
@@ -128,10 +130,10 @@ public final class CircleOptions extends ShapeOptions {
 
 
 	/**
-	 * Returns the center as a {@link GridPoint}
-	 * @return The geographic center as a {@link GridPoint}.
+	 * Returns the center as a {@link Point}
+	 * @return The geographic center as a {@link Point}.
 	 */
-	public GridPoint getCenter() {
+	public Point getCenter() {
 		return mCenter;
 	}
 

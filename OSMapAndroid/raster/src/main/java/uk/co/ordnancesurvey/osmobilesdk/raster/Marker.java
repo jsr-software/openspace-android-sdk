@@ -29,6 +29,8 @@ import android.graphics.RectF;
 import android.opengl.Matrix;
 import android.view.View;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_TRIANGLE_STRIP;
 import static android.opengl.GLES20.glDrawArrays;
@@ -48,7 +50,7 @@ import static android.opengl.GLES20.glVertexAttribPointer;
  * <br>The point on the image that will be placed at the LatLng position of the marker.
  * This defaults to 50% from the left of the image and at the bottom of the image.
  * <p><b>Position</b>
- * <br>The {@link GridPoint} value for the marker's position on the map. You can change this
+ * <br>The {@link Point} value for the marker's position on the map. You can change this
  * value at any time if you want to move the marker.
  * <p><b>Title</b>
  * <br>A text string that's displayed in an info window when the user taps the marker.
@@ -72,7 +74,7 @@ import static android.opengl.GLES20.glVertexAttribPointer;
  * OSMap map = ... // get a map.
  * // Add a marker at Scafell Pike
  * Marker marker = map.addMarker(new MarkerOptions()
- * .position(GridPoint.parse("NY2154807223"))
+ * .position(Point.parse("NY2154807223"))
  * .title("Scafell Pike")
  * .snippet("Highest Mountain in England"));
  * </code></pre>
@@ -81,7 +83,7 @@ import static android.opengl.GLES20.glVertexAttribPointer;
  * <p>For more information, read the Markers developer guide.
  */
 public final class Marker {
-    private GridPoint mGridPoint;
+    private Point mPoint;
     private final Bitmap mIconBitmap;
     private final float mIconTintR;
     private final float mIconTintG;
@@ -100,7 +102,7 @@ public final class Marker {
     private boolean mInfoWindowHighlighted;
 
     Marker(MarkerOptions options, Bitmap icon, GLMapRenderer map) {
-        mGridPoint = options.getGridPoint();
+        mPoint = options.getPoint();
         mIconBitmap = icon;
         mIconTintR = options.getIcon().mTintR;
         mIconTintG = options.getIcon().mTintG;
@@ -117,14 +119,14 @@ public final class Marker {
     /**
      * Returns the position of the marker.
      *
-     * @return A {@link GridPoint} object specifying the marker's current position
+     * @return A {@link Point} object specifying the marker's current position
      */
-    public GridPoint getGridPoint() {
-        return mGridPoint;
+    public Point getPoint() {
+        return mPoint;
     }
 
-    public void setGridPoint(GridPoint gp) {
-        mGridPoint = gp;
+    public void setPoint(Point gp) {
+        mPoint = gp;
         requestRender();
     }
 
@@ -290,7 +292,7 @@ public final class Marker {
     }
 
     PointF getScreenLocation(ScreenProjection projection, PointF screenLocationOut) {
-        projection.toScreenLocation(mGridPoint, screenLocationOut);
+        projection.toScreenLocation(mPoint, screenLocationOut);
 
         // U and V are in the range 0..1 where 0,0 is the top left. Since we draw the marker from the bottom left,
         // convert V' = 1 - V.
@@ -340,7 +342,7 @@ public final class Marker {
         glVertexAttribPointer(program.attribVCoord, 2, GL_FLOAT, false, 0, tex.vertexCoords);
 
         ScreenProjection projection = mMap.getProjection();
-        projection.toScreenLocation(mGridPoint, temp);
+        projection.toScreenLocation(mPoint, temp);
         PointF screenLocation = temp;
         final float OFFSET = 1 / 3.0f;
         float xPixels = (float) Math.rint(screenLocation.x + OFFSET);

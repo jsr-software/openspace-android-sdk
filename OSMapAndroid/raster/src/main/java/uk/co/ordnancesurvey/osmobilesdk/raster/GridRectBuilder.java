@@ -22,17 +22,19 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 public final class GridRectBuilder {
 	private double minX = Double.POSITIVE_INFINITY;
 	private double minY = Double.POSITIVE_INFINITY;
 	private double maxX = Double.NEGATIVE_INFINITY;
 	private double maxY = Double.NEGATIVE_INFINITY;
 
-	public GridRectBuilder include(GridPoint p) {
-		minX = Math.min(minX, p.x);
-		minY = Math.min(minY, p.y);
-		maxX = Math.max(maxX, p.x);
-		maxY = Math.max(maxY, p.y);
+	public GridRectBuilder include(Point p) {
+		minX = Math.min(minX, p.getX());
+		minY = Math.min(minY, p.getY());
+		maxX = Math.max(maxX, p.getX());
+		maxY = Math.max(maxY, p.getY());
 
 		return this;
 	}

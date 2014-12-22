@@ -22,39 +22,43 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 import static java.lang.Math.sin;
 import static java.lang.Math.cos;
 
-final class BasicMapProjection extends MapProjection {
+public final class BasicMapProjection implements MapProjection {
+
 	//private final static String TAG = "BasicMapProjection";
-	@Override
-	public GridPoint toGridPoint(double latitude, double longitude) {
-		double[] temp = new double[3];
-		// Approximate average GPS altitude in the UK at a National Grid altitutde of 0.
-		// It's somewhere between around 49 and 55, anyway.
-		double AVERAGE_GPS_ALTITUDE = 53;
-		getOSCoords(latitude, longitude, AVERAGE_GPS_ALTITUDE, temp);
-		return new GridPoint(temp[0], temp[1]);
-	}
 
-	@Override
-	public void fromGridPoint(GridPoint gp, double[] out) {
-		if (out.length < 3)
-		{
-			double[] temp = new double[3];
-			fromGridPoint(gp,temp);
-			out[0] = temp[0];
-			out[1] = temp[1];
-			return;
-		}
-
-		double out2 = out[2];
-		try {
-			fromOSCoords(gp.x, gp.y, 0, out);
-		} finally {
-			out[2] = out2;
-		}
-	}
+//	@Override
+//	public Point toBng(double latitude, double longitude) {
+//		double[] temp = new double[3];
+//		// Approximate average GPS altitude in the UK at a National Grid altitutde of 0.
+//		// It's somewhere between around 49 and 55, anyway.
+//		double AVERAGE_GPS_ALTITUDE = 53;
+//		getOSCoords(latitude, longitude, AVERAGE_GPS_ALTITUDE, temp);
+//		return new Point(temp[0], temp[1]);
+//	}
+//
+//	@Override
+//	public void fromPoint(Point gp, double[] out) {
+//		if (out.length < 3)
+//		{
+//			double[] temp = new double[3];
+//			fromPoint(gp,temp);
+//			out[0] = temp[0];
+//			out[1] = temp[1];
+//			return;
+//		}
+//
+//		double out2 = out[2];
+//		try {
+//			fromOSCoords(gp.x, gp.y, 0, out);
+//		} finally {
+//			out[2] = out2;
+//		}
+//	}
 
 	private static final double DEG = Math.PI/180;
 	// From http://www.ordnancesurvey.co.uk/oswebsite/gps/information/coordinatesystemsinfo/guidecontents/guidea.html
@@ -328,4 +332,29 @@ print "t/m", T2[0,3],T2[1,3],T2[2,3]
 			);
 		return m;
 	}
+
+    @Override
+    public MapProjection getDefault() {
+        return this;
+    }
+
+    /**
+     * Converts a WGS84 latitude/longitude to the corresponding BNG Point.
+     * @param point - the Point using WGS84 projection
+     * @return newly created Point
+     */
+    // TODO: actually fix the point
+    public Point toBng(Point point) {
+        return point;
+    }
+
+    /**
+     * Converts a BNG {@link .Point} to the corresponding WGS84 Point.
+     * @param point - the Point using BNG projection
+     * @return newly created Point
+     */
+    // TODO: actually fix the point
+    public Point toWGS84(Point point) {
+        return point;
+    }
 }

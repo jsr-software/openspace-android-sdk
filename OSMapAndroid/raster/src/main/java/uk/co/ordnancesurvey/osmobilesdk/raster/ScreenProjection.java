@@ -24,11 +24,13 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import android.graphics.PointF;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 final class ScreenProjection {
 	private final int mScreenWidth;
 	private final int mScreenHeight;
 
-	private final GridPoint mCentre;
+	private final Point mCentre;
 	private final float mMetresPerPixel;
 	private final GridRect mVisibleMapRect;
 
@@ -36,42 +38,42 @@ final class ScreenProjection {
 		mScreenWidth = width;
 		mScreenHeight = height;
 
-		mCentre = new GridPoint(scrollpos.x, scrollpos.y);
+		mCentre = new Point(scrollpos.x, scrollpos.y, Point.BNG);
 		mMetresPerPixel = scrollpos.metresPerPixel;
 
 		float mapWidth = mScreenWidth * mMetresPerPixel;
 		float mapHeight = mScreenHeight * mMetresPerPixel;
 
 		// Clip the rect in case the user has somehow scrolled off the map.
-		mVisibleMapRect = GridRect.fromCentreXYWH(mCentre.x, mCentre.y, mapWidth, mapHeight).clippedToGridBounds();
+		mVisibleMapRect = GridRect.fromCentreXYWH(mCentre.getX(), mCentre.getY(), mapWidth, mapHeight).clippedToGridBounds();
 	}
 
-	public PointF toScreenLocation(GridPoint gp)
+	public PointF toScreenLocation(Point gp)
 	{
 		return toScreenLocation(gp, new PointF());
 	}
 
-	public PointF toScreenLocation(GridPoint gp, PointF pointOut)
+	public PointF toScreenLocation(Point gp, PointF pointOut)
 	{
 		float metresPerPixel = mMetresPerPixel;
 
-		pointOut.x = mScreenWidth/2.0f + (float)(gp.x-mCentre.x)/metresPerPixel;
-		pointOut.y = mScreenHeight/2.0f - (float)(gp.y-mCentre.y)/metresPerPixel;
+		pointOut.x = mScreenWidth/2.0f + (float)(gp.getX()-mCentre.getX())/metresPerPixel;
+		pointOut.y = mScreenHeight/2.0f - (float)(gp.getY()-mCentre.getY())/metresPerPixel;
 		return pointOut;
 	}
 
-	public GridPoint fromScreenLocation(PointF point)
+	public Point fromScreenLocation(PointF point)
 	{
 		return fromScreenLocation(point.x, point.y);
 	}
 
-	public GridPoint fromScreenLocation(float x, float y)
+	public Point fromScreenLocation(float x, float y)
 	{
 		float metresPerPixel = mMetresPerPixel;
 
-		double mapx = mCentre.x + (x - mScreenWidth/2.0f) * metresPerPixel;
-		double mapy = mCentre.y + (mScreenHeight/2.0f - y) * metresPerPixel;
-		return new GridPoint(mapx, mapy);
+		double mapx = mCentre.getX() + (x - mScreenWidth/2.0f) * metresPerPixel;
+		double mapy = mCentre.getY() + (mScreenHeight/2.0f - y) * metresPerPixel;
+		return new Point(mapx, mapy, Point.BNG);
 	}
 
 	GridRect getVisibleMapRect() {
@@ -87,18 +89,18 @@ final class ScreenProjection {
 		return getVisibleMapRectWithScreenInsets(-mScreenWidth/2.0f, -mScreenHeight/2.0f);
 	}
 
-	GridPoint getCenter() {
+	Point getCenter() {
 		return mCentre;
 	}
 
-	PointF displayPointFromGridPoint(GridPoint gp, PointF displayPointOut)
+	PointF displayPointFromPoint(Point gp, PointF displayPointOut)
 	{
-		double mapCenterX = mCentre.x;
-		double mapCenterY = mCentre.y;
+		double mapCenterX = mCentre.getX();
+		double mapCenterY = mCentre.getY();
 		float metresPerPixel = mMetresPerPixel;
 
-		float xPixels = (float)(gp.x-mapCenterX)/metresPerPixel;
-		float yPixels = (float)(gp.y-mapCenterY)/metresPerPixel;
+		float xPixels = (float)(gp.getX()-mapCenterX)/metresPerPixel;
+		float yPixels = (float)(gp.getY()-mapCenterY)/metresPerPixel;
 
 		displayPointOut.x = xPixels;
 		displayPointOut.y = yPixels;

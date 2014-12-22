@@ -25,6 +25,7 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 import android.view.View;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
 
 /**
  * This is the main class of the Google Maps Android API and is the entry point for all methods related to the map. You cannot 
@@ -51,7 +52,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
  *  <li>		CameraPosition.Builder
  * 	<li>	GroundOverlay
  * 	<li>	GroundOverlayOptions
- * 	<li>	LatLng is replaced by GridPoint
+ * 	<li>	LatLng is replaced by Point
  * 	<li>	LatLngBounds
  * 	<li>	LatLngBounds.Builder
  * 	<li>	Tile
@@ -123,7 +124,7 @@ public interface OSMap {
 		 * 
 		 * @param gp The point on the ground (projected from the screen point) that was tapped.
 		 */
-		public abstract boolean onMapClick(GridPoint gp);		
+		public abstract boolean onMapClick(Point gp);
 	}
 
 	/**
@@ -139,7 +140,7 @@ public interface OSMap {
 		 * 
  		 * @param gp The point on the ground (projected from the screen point) that was tapped.
 		 */
-		public abstract void onMapLongClick(GridPoint gp);		
+		public abstract void onMapLongClick(Point gp);
 	}
 
 	/**
@@ -162,17 +163,17 @@ public interface OSMap {
 	interface OnMarkerDragListener
 	{
 		/**
-		 * Called repeatedly while a marker is being dragged. The marker's location can be accessed via {@link Marker#getGridPoint()}.
+		 * Called repeatedly while a marker is being dragged. The marker's location can be accessed via {@link Marker#getPoint()}.
 		 * @param marker The marker being dragged
 		 */
 		public abstract void onMarkerDrag(Marker marker);
 		/**
-		 * Called when a marker has finished beign dragged. The marker's location can be accessed via {@link Marker#getGridPoint()}.
+		 * Called when a marker has finished beign dragged. The marker's location can be accessed via {@link Marker#getPoint()}.
 		 * @param marker The marker being dragged
 		 */
 		public abstract void onMarkerDragEnd(Marker marker);
 		/**
-		 * Called when a marker starts being dragged. The marker's location can be accessed via {@link Marker#getGridPoint()}; this position may 
+		 * Called when a marker starts being dragged. The marker's location can be accessed via {@link Marker#getPoint()}; this position may
 		 * be different to the position prior to the start of the drag because the marker is popped up above the touch point.
 		 * @param marker The marker being dragged
 		 */

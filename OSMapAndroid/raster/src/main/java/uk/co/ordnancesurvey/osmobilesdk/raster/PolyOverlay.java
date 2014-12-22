@@ -39,6 +39,8 @@ import java.util.List;
 import android.graphics.PointF;
 import android.opengl.Matrix;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+
 abstract class PolyOverlay extends ShapeOverlay {
 	private volatile PolyPoints mPoints;
 	private final boolean mClosed;
@@ -64,14 +66,14 @@ abstract class PolyOverlay extends ShapeOverlay {
 		requestRender();
 	}
 
-	public void setPoints(List<GridPoint> points)
+	public void setPoints(List<Point> points)
 	{
 		mPoints = new PolyPoints(points);
 		calculatePolygonForLine(points);	
 		requestRender();
 	}
 
-	public List<GridPoint> getPoints() {
+	public List<Point> getPoints() {
 		return mPoints.getPoints();
 	}
 
@@ -102,7 +104,7 @@ abstract class PolyOverlay extends ShapeOverlay {
 	}
 
 
-	private void calculatePolygonForLine(List<GridPoint> points)
+	private void calculatePolygonForLine(List<Point> points)
 	{
 		PolyPoints polyPoints = getPolyPoints();
 		int numPoints = points.size();
@@ -119,7 +121,7 @@ abstract class PolyOverlay extends ShapeOverlay {
 		// Pre-compute the normals for each line segment
 		for(int i = 0; i < numPoints; i++)
 		{
-			GridPoint pt1 = points.get(i);
+			Point pt1 = points.get(i);
 			// These initializers are just to avoid compiler warnings about possible failure to initialize
 			double ax = 0;
 			double bx = 0;
@@ -131,10 +133,10 @@ abstract class PolyOverlay extends ShapeOverlay {
 			if(mClosed || i > 0)
 			{
 				int j = (i+numPoints-1) % numPoints;
-				GridPoint pt0 = points.get(j);
+				Point pt0 = points.get(j);
 
-				ax = pt1.x - pt0.x;
-				ay = pt1.y - pt0.y;
+				ax = pt1.getX() - pt0.getX();
+				ay = pt1.getY() - pt0.getY();
 
 				double maga = Math.sqrt(ax*ax + ay*ay);
 				// Normalize a
@@ -147,9 +149,9 @@ abstract class PolyOverlay extends ShapeOverlay {
 			if(mClosed || i < (numPoints - 1))
 			{
 				int k = (i+1) % numPoints;
-				GridPoint pt2 = points.get(k);
-				bx = pt2.x - pt1.x;
-				by = pt2.y - pt1.y;
+				Point pt2 = points.get(k);
+				bx = pt2.getX() - pt1.getX();
+				by = pt2.getY() - pt1.getY();
 				// Normalize b.
 				double magb = Math.sqrt(bx*bx + by*by);
 				bx = bx / magb;
@@ -339,8 +341,8 @@ abstract class PolyOverlay extends ShapeOverlay {
 		double topLeftX = gridRect.minX;
 		double topLeftY = gridRect.maxY;
 
-		float tx = (float)(points.mVertexCentre.x-topLeftX);
-		float ty = (float)(points.mVertexCentre.y-topLeftY);
+		float tx = (float)(points.mVertexCentre.getX()-topLeftX);
+		float ty = (float)(points.mVertexCentre.getY()-topLeftY);
 
 		// Convert from metres to pixels.
 		// Translate by the appropriate number of metres
@@ -363,46 +365,46 @@ abstract class PolyOverlay extends ShapeOverlay {
 	}
 
 	final static class PolyPoints {
-		private final GridPoint[] mArray;
+		private final Point[] mArray;
 		public final int mVertexCount;
-		public final GridPoint mVertexCentre;
+		public final Point mVertexCentre;
 		public final FloatBuffer mVertexBuffer;
 		public FloatBuffer mAdditionalData;
-		public PolyPoints(List<GridPoint> points) {
-			mArray = points.toArray(new GridPoint[0]);
+		public PolyPoints(List<Point> points) {
+			mArray = points.toArray(new Point[0]);
 			mVertexCount = mArray.length;
 			mVertexCentre = getMidpoint(mArray);
 			mVertexBuffer = getVertexBuffer(mArray, mVertexCentre, 1);
 		}
 
-		public List<GridPoint> getPoints() {
+		public List<Point> getPoints() {
 			return Collections.unmodifiableList(Arrays.asList(mArray));
 		}
 
-		private static GridPoint getMidpoint(GridPoint[] points) {
+		private static Point getMidpoint(Point[] points) {
 			double minX = Double.POSITIVE_INFINITY;
 			double minY = Double.POSITIVE_INFINITY;
 			double maxX = Double.NEGATIVE_INFINITY;
 			double maxY = Double.NEGATIVE_INFINITY;
 
-			for (GridPoint p : points) {
-				minX = Math.min(minX, p.x);
-				minY = Math.min(minY, p.y);
-				maxX = Math.max(maxX, p.x);
-				maxY = Math.max(maxY, p.y);
+			for (Point p : points) {
+				minX = Math.min(minX, p.getX());
+				minY = Math.min(minY, p.getY());
+				maxX = Math.max(maxX, p.getX());
+				maxY = Math.max(maxY, p.getY());
 			}
-			return new GridPoint((minX+maxX)/2, (minY+maxY)/2);
+			return new Point((minX+maxX)/2, (minY+maxY)/2, Point.BNG);
 		}
 
-		private static FloatBuffer getVertexBuffer(GridPoint[] points, GridPoint center, float scale) {
+		private static FloatBuffer getVertexBuffer(Point[] points, Point center, float scale) {
 			// Set up line coordinates.
 			FloatBuffer vertexBuffer = Utils.directFloatBuffer(points.length * 2);
-			double centerX = center.x;
-			double centerY = center.y;
-			for(GridPoint gp : points)
+			double centerX = center.getX();
+			double centerY = center.getY();
+			for(Point gp : points)
 			{
-				float scaledX = (float)(gp.x-centerX)/scale;
-				float scaledY = (float)(gp.y-centerY)/scale;
+				float scaledX = (float)(gp.getX()-centerX)/scale;
+				float scaledY = (float)(gp.getY()-centerY)/scale;
 				vertexBuffer.put(scaledX);
 				vertexBuffer.put(scaledY);
 			}

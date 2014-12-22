@@ -4,14 +4,14 @@ package uk.co.ordnancesurvey.osmobilesdk.raster.test;
 
 import android.location.Location;
 import android.util.Log;
-import uk.co.ordnancesurvey.android.maps.GridPoint;
+import uk.co.ordnancesurvey.android.maps.Point;
 import uk.co.ordnancesurvey.android.maps.MapProjection;
 import junit.framework.TestCase;
 
 public class MapProjectionTest extends TestCase {
 	private final String TAG = "MapProjectionTest";
 
-	public void testLatLngToOSGridPoint() {
+	public void testLatLngToOSPoint() {
 		MapProjection projection = MapProjection.getDefault();
 		double sumX = 0;
 		double sumY = 0;
@@ -21,7 +21,7 @@ public class MapProjectionTest extends TestCase {
 		double maxDSq = 0;
 		int n = TEST_COORDINATES.length;
 		for (int i = 0; i < n; i++) {
-			GridPoint p = projection.toGridPoint(TEST_COORDINATES[i].lat, TEST_COORDINATES[i].lng);
+			Point p = projection.toPoint(TEST_COORDINATES[i].lat, TEST_COORDINATES[i].lng);
 			double diffX = p.x - TEST_COORDINATES[i].gp.x;
 			double diffY = p.y - TEST_COORDINATES[i].gp.y;
 			assertEquals("E error", 0.0, diffX, 6);
@@ -53,7 +53,7 @@ public class MapProjectionTest extends TestCase {
 		assertEquals("Maximum squared error", 0.0, maxDSq, 25);
 	}
 
-	public void testOSGridPointToLatLngToGridPoint()
+	public void testOSPointToLatLngToPoint()
 	{
 		MapProjection projection = MapProjection.getDefault();
 		double[] temp = new double[2];
@@ -66,11 +66,11 @@ public class MapProjectionTest extends TestCase {
 		int n = TEST_COORDINATES.length;
 		for (int i = 0; i < n; i++)
 		{
-			projection.fromGridPoint(TEST_COORDINATES[i].gp, temp);
+			projection.fromPoint(TEST_COORDINATES[i].gp, temp);
 			double latitude = temp[0];
 			double longitude = temp[1];
 
-			GridPoint p = projection.toGridPoint(latitude, longitude);
+			Point p = projection.toPoint(latitude, longitude);
 
 			double diffX = p.x - TEST_COORDINATES[i].gp.x;
 			double diffY = p.y - TEST_COORDINATES[i].gp.y;
@@ -99,7 +99,7 @@ public class MapProjectionTest extends TestCase {
 		assertEquals("Maximum squared error", 0.0, maxoffsetsq, 0.0003);
 	}
 
-	public void testOSGridPointToLatLng()
+	public void testOSPointToLatLng()
 	{
 		MapProjection projection = MapProjection.getDefault();
 		double[] temp = new double[2];
@@ -115,7 +115,7 @@ public class MapProjectionTest extends TestCase {
 		int n = TEST_COORDINATES.length;
 		for (int i = 0; i < n; i++)
 		{
-			projection.fromGridPoint(TEST_COORDINATES[i].gp, temp);
+			projection.fromPoint(TEST_COORDINATES[i].gp, temp);
 			double latitude = temp[0];
 			double longitude = temp[1];
 
@@ -158,12 +158,12 @@ public class MapProjectionTest extends TestCase {
 		int n = TEST_COORDINATES.length;
 		for (int i = 0; i < n; i++)
 		{
-			GridPoint gp = TEST_COORDINATES[i].gp;
-			projection.fromGridPoint(gp, temp);
+			Point gp = TEST_COORDINATES[i].gp;
+			projection.fromPoint(gp, temp);
 			double latitude = temp[0];
 			double longitude = temp[1];
 
-			GridPoint gp2 = projection.toGridPoint(latitude, longitude);
+			Point gp2 = projection.toPoint(latitude, longitude);
 			// Proj4 is somewhat better (0.001, 0.001)
 			assertEquals("Error E", gp.x, gp2.x, 0.005);
 			assertEquals("Error N", gp.y, gp2.y, 0.01);
@@ -175,13 +175,13 @@ public class MapProjectionTest extends TestCase {
 	private static class TestCoordinate {
 		public final String station;
 		public final double lat, lng;
-		public final GridPoint gp;
+		public final Point gp;
 
 		public TestCoordinate(String station, double lat, double lng, double e, double n) {
 			this.station = station;
 			this.lat = lat;
 			this.lng = lng;
-			this.gp = new GridPoint(e, n);
+			this.gp = new Point(e, n);
 		}
 	}
 }

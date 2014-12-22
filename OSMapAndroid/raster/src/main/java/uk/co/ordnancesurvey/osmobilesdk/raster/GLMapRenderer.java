@@ -60,6 +60,8 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BngUtil;
+import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.network.NetworkStateMonitor;
 import uk.co.ordnancesurvey.osmobilesdk.raster.tiles.TileService;
 
@@ -257,7 +259,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private long debugPreviousFrameUptimeMillis;
     private long debugPreviousFrameNanoTime;
     private boolean mMyLocationEnabled;
-    private GridPoint mCurrentGridPoint = null;
+    private Point mCurrentPoint = null;
     private Location mCurrentLocation = null;
     private boolean mForeground;
 
@@ -648,7 +650,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         if (DEBUG_FRAME_TIMING) {
             // OS-60 OS-62: Print inter-frame time (based on time at entry to onDrawFrame(), whether we're "animating" (e.g. flinging), and the distance scrolled in metres.
             ScreenProjection oldProjection = mVolatileProjection;
-            Log.v(TAG, debugDiffUptimeMillis + " " + debugDiffNanoTime + " AS=" + mScrollState.animatingScroll + " dx=" + (projection.getCenter().x - oldProjection.getCenter().x) + " dy=" + (projection.getCenter().y - oldProjection.getCenter().y));
+            Log.v(TAG, debugDiffUptimeMillis + " " + debugDiffNanoTime + " AS=" + mScrollState.animatingScroll + " dx=" + (projection.getCenter().getX() - oldProjection.getCenter().getX()) +
+                    " dy=" + (projection.getCenter().getY() - oldProjection.getCenter().getY()));
         }
         mVolatileProjection = projection;
 
@@ -881,7 +884,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         if (!handled) {
             if (mOnMapClickListener != null) {
-                GridPoint gp = projection.fromScreenLocation(screenx, screeny);
+                Point gp = projection.fromScreenLocation(screenx, screeny);
                 handled = mOnMapClickListener.onMapClick(gp);
             }
             if (!handled) {
@@ -898,11 +901,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
      */
     public Object longClick(float screenx, float screeny) {
         ScreenProjection projection = mVolatileProjection;
-        GridPoint gp = projection.fromScreenLocation(screenx, screeny);
-        GridPoint gp2 = projection.fromScreenLocation(screenx, screeny - MARKER_DRAG_OFFSET);
+        Point gp = projection.fromScreenLocation(screenx, screeny);
+        Point gp2 = projection.fromScreenLocation(screenx, screeny - MARKER_DRAG_OFFSET);
 
         // Check gp2 as well, because we don't want to lift a marker out of bounds.
-        if (!gp.isInBounds() || !gp2.isInBounds()) {
+        if (!BngUtil.isInBngBounds(gp) || !BngUtil.isInBngBounds(gp2) ) {
             return null;
         }
 
@@ -938,11 +941,10 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     private void updateMarkerPosition(Marker marker, float x, float y) {
-
         ScreenProjection projection = mVolatileProjection;
-
-        GridPoint gp = projection.fromScreenLocation(x, y).clippedToGridBounds();
-        marker.setGridPoint(gp);
+        Point unclamped = projection.fromScreenLocation(x, y);
+        Point clamped = BngUtil.clampToBngBounds(unclamped);
+        marker.setPoint(clamped);
     }
 
     public void dragEnded(float screenx, float screeny, Object draggable) {
@@ -1104,7 +1106,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             return null;
         }
 
-        GridPoint gp = marker.getGridPoint();
+        Point gp = marker.getPoint();
 
         // Skip invisible or out of visible area markers
         if (!marker.isVisible() || !checkRect.contains(gp)) {
@@ -1439,10 +1441,10 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         boolean isValidPosition = isValidPosition(eastings, northings, zoom);
         CameraPosition position;
         if (isValidPosition) {
-            position = new CameraPosition(new GridPoint(eastings, northings), zoom);
+            position = new CameraPosition(new Point(eastings, northings, Point.BNG), zoom);
         } else {
-            position = new CameraPosition(new GridPoint(DEFAULT_EASTINGS,
-                    DEFAULT_NORTHINGS), DEFAULT_ZOOM);
+            position = new CameraPosition(new Point(DEFAULT_EASTINGS,
+                    DEFAULT_NORTHINGS, Point.BNG), DEFAULT_ZOOM);
         }
 
         return position;
@@ -1453,7 +1455,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             return;
         }
 
-        boolean isValidPosition = isValidPosition(position.target.x, position.target.y,
+        boolean isValidPosition = isValidPosition(position.target.getX(), position.target.getY(),
                 position.zoom);
         if (!isValidPosition) {
             return;
@@ -1461,8 +1463,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         PreferenceManager.getDefaultSharedPreferences(mContext)
                 .edit()
-                .putFloat(POSITION_EASTINGS, (float) position.target.x)
-                .putFloat(POSITION_NORTHINGS, (float) position.target.y)
+                .putFloat(POSITION_EASTINGS, (float) position.target.getX())
+                .putFloat(POSITION_NORTHINGS, (float) position.target.getY())
                 .putFloat(POSITION_ZOOM, position.zoom)
                 .commit();
     }

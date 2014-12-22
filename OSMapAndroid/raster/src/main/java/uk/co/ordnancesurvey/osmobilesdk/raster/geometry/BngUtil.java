@@ -67,6 +67,27 @@ public final class BngUtil {
     }
 
     /**
+     * Construct a new {@link .BoundingBox}, clipped to the OS National Grid bounds.
+     * @param boundingBox the original {@link .BoundingBox}
+     * @return new {@link .BoundingBox} clamped to the BNG bounds
+     */
+    public static BoundingBox clippedToGridBounds(BoundingBox boundingBox) {
+        double minX = Math.max(0, boundingBox.getMinX());
+        double minY = Math.max(0, boundingBox.getMinY());
+        double maxX = Math.min(GRID_WIDTH, boundingBox.getMaxX());
+        double maxY = Math.min(GRID_HEIGHT, boundingBox.getMaxY());
+        return new BoundingBox(minX, minY, maxX, maxY);
+    }
+
+    public static boolean isInBngBounds(BoundingBox boundingBox) {
+        if (0 <= boundingBox.getMinX() && boundingBox.getMaxX() <= GRID_WIDTH
+                && 0 <= boundingBox.getMinY() && boundingBox.getMaxY() <= GRID_HEIGHT) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Note: that if the {@link .Point} is a WGS84 {@link .Point} an
      * inner conversion is carried out and the evaluation is carried out on the BNG {@link .Point}.
      * The original point is unchanged.

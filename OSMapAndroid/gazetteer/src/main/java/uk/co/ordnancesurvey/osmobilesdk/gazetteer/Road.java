@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.gazetteer;
 
 public final class Road extends Placemark {
 	public String roadName()
@@ -44,7 +44,7 @@ public final class Road extends Placemark {
 	private final String mSettlement;
 	private final String mLocality;
 
-	Road(String name, String county, GridPoint gp, String roadName, String roadClassifier, String settlement, String locality) {
+	Road(String name, String county, Point gp, String roadName, String roadClassifier, String settlement, String locality) {
 		super(name, null, county, gp);
 		mRoadName = roadName;
 		mRoadClassifier = roadClassifier;

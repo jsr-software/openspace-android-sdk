@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.gazetteer;
 
 import java.io.File;
 import java.text.ParseException;
@@ -31,7 +31,6 @@ import java.util.EnumSet;
 import java.util.List;
 
 import android.content.Context;
-import android.util.Log;
 
 /**
  Geocoder provides an interface to lookup positions based on place names, postcodes, grid references, roads, or any 
@@ -75,9 +74,10 @@ import android.util.Log;
  */
 public class Geocoder {
 
-	private final static String TAG = Geocoder.class.getSimpleName();
+	private static final String TAG = Geocoder.class.getSimpleName();
+    private static final int DEFAULT_REFERENCE_LENGTH = 6;
 
-	public static enum GeocodeType {
+    public static enum GeocodeType {
 		Gazetteer,
 		Postcode,
 		GridReference,
@@ -184,10 +184,8 @@ public class Geocoder {
 			return null;
 		case GridReference:
 			try {
-				int[] temp = new int[1];
-				GridPoint gp = GridPoint.parse(s.trim(), temp);
-				int numDigits = temp[0];
-				String gpStr = gp.toString(numDigits >= 0 ? numDigits : 6);
+				Point gp = BngUtil.convertBngGridReference(s.trim());
+				String gpStr = BngUtil.toBngGridReferenceString(gp, DEFAULT_REFERENCE_LENGTH);
 				Placemark result = new Placemark(gpStr, null, null, gp);
 
 				return Arrays.asList(result);

@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.gazetteer;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -158,7 +158,7 @@ final class DBGeocoder {
 
 		int x = cursor.getInt(4);
 		int y = cursor.getInt(5);
-		GridPoint gp = new GridPoint(x,y);
+		Point gp = new Point(x,y, Point.BNG);
 		
 		String county = cursor.getString(7);
 		int rowId = cursor.getInt(8);
@@ -488,7 +488,7 @@ final class DBGeocoder {
 
 			int x = result.getInt(EAST1000) * 1000 + 500;
 			int y = result.getInt(NORTH1000) * 1000 + 500;
-			GridPoint gp = new GridPoint(x,y);
+			Point gp = new Point(x,y, Point.BNG);
 			Placemark placemark = new Placemark(name, type, county, gp);
 			placemarks.add(placemark);
         }
@@ -706,7 +706,7 @@ final class DBGeocoder {
 				int x = result.getInt(result.getColumnIndex("easting"));
 				int y = result.getInt(result.getColumnIndex("northing"));
 				
-				GridPoint gp = new GridPoint(x,y);
+				Point gp = new Point(x,y, Point.BNG);
 				Placemark p = new Placemark(name,  null, null, gp);
 				placemarks.add(p);
 			}
@@ -840,8 +840,8 @@ final class DBGeocoder {
 				break;
 			}
 			
-			GridPoint gp = place.mGridPoint;
-			GridRect placeRect = GridRect.fromCentreXYWH(gp.x, gp.y, size, size);
+			Point gp = place.mPoint;
+			GridRect placeRect = GridRect.fromCentreXYWH(gp.getX(), gp.getY(), size, size);
 			if(rect != null && !rect.isNull())
 			{
 				placeRect = placeRect.intersect(rect);
@@ -850,7 +850,7 @@ final class DBGeocoder {
 			List<RoadWrapper> placeRoads = _locateRoad(roadName, placeRect, -1, 0);
 			for(RoadWrapper road : placeRoads)
 			{
-				double d = road.mRoad.mGridPoint.distanceTo(gp);
+				double d = road.mRoad.mPoint.distanceTo(gp);
 				
 				if(d < closest)
 				{

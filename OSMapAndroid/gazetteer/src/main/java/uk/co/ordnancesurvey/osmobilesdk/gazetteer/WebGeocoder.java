@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.gazetteer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -96,7 +95,7 @@ final class WebGeocoder {
 	}
 	
 
-	private static GridPoint GridPointForJSONObject(JSONObject location)
+	private static Point PointForJSONObject(JSONObject location)
 	{
 		try {
 			JSONObject gmlPoint = location.getJSONObject("gml:Point");
@@ -113,7 +112,7 @@ final class WebGeocoder {
 					String northingStr = gmlPos.substring(r+1);
 					if(eastingStr.length() > 0 && northingStr.length() > 0)
 					{
-						return new GridPoint(Double.valueOf(eastingStr), Double.valueOf(northingStr));
+						return new Point(Double.valueOf(eastingStr), Double.valueOf(northingStr), Point.BNG);
 					}
 				}
 			}
@@ -138,10 +137,10 @@ final class WebGeocoder {
 		if (postcodeResult != null)
 		{
 			JSONObject postcodeLocation = postcodeResult.getJSONObject("location");
-			GridPoint postcodeGridPoint = GridPointForJSONObject(postcodeLocation);
-			if(postcodeGridPoint != null)
+			Point postcodePoint = PointForJSONObject(postcodeLocation);
+			if(postcodePoint != null)
 			{
-				placemarks.add(new Placemark(searchString.toUpperCase(Locale.ENGLISH), null, null, postcodeGridPoint));
+				placemarks.add(new Placemark(searchString.toUpperCase(Locale.ENGLISH), null, null, postcodePoint));
 			}
 		}
 
@@ -160,7 +159,7 @@ final class WebGeocoder {
 			{
 				JSONObject itemDict = gazetteerItemItems.getJSONObject(j);
 				JSONObject itemLocation = itemDict.optJSONObject("location");
-				GridPoint gp = GridPointForJSONObject(itemLocation);
+				Point gp = PointForJSONObject(itemLocation);
 				if(gp == null)
 				{
 					continue;

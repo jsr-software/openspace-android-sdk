@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.gazetteer;
 
 import android.util.Log;
 
@@ -30,15 +30,15 @@ public class Placemark {
 	final String mName;
 	final Type mType;
 	final String mCounty;
-	final GridPoint mGridPoint;
+	final Point mPoint;
 
-	Placemark(String name, String type, String county, GridPoint gp)
+	Placemark(String name, String type, String county, Point gp)
 	{
 		mName = name;
 		// Convert the type to the index.
 		mType = Type.fromString(type);
 		mCounty = county;
-		mGridPoint = gp;
+		mPoint = gp;
 	}
 
 	public String getName() {
@@ -53,8 +53,8 @@ public class Placemark {
 		return mCounty;
 	}
 
-	public GridPoint getPosition() {
-		return mGridPoint;
+	public Point getPosition() {
+		return mPoint;
 	}
 
 	public static enum Type {

@@ -1,4 +1,4 @@
-package uk.co.ordnancesurvey.osmobilesdk.raster.test;
+package uk.co.ordnancesurvey.osmobilesdk.gazetteer;
 
 import java.io.File;
 import java.util.EnumSet;
@@ -124,7 +124,7 @@ public class GeocoderTest extends AndroidTestCase  {
 
 				assertEquals("Check names match", p.getName(), searchString);
 
-				GridPoint gp = p.getPosition();
+				Point gp = p.getPosition();
                 if(gp.y == pc.northing
                    && gp.x == pc.easting)
                 {
@@ -174,7 +174,7 @@ public class GeocoderTest extends AndroidTestCase  {
 
 				assertEquals("Check names match", p.getName(), comps[2]);
 
-				GridPoint gp = p.getPosition();
+				Point gp = p.getPosition();
 				if(gp.x == Integer.parseInt(comps[9]) && gp.y == Integer.parseInt(comps[8]))
 				{
 					if(p.getCounty().equals(comps[13]))
@@ -231,7 +231,7 @@ public class GeocoderTest extends AndroidTestCase  {
 			{
 				if(j == 1)
 				{
-					GridPoint gp = new GridPoint(Double.valueOf(comps[2]), Double.valueOf(comps[3]));
+					Point gp = new Point(Double.valueOf(comps[2]), Double.valueOf(comps[3]));
 					rect = new GridRect(gp.x - 500, gp.y - 500, gp.x + 500, gp.y + 500);
 	            }
 				if(j == 2)
@@ -257,7 +257,7 @@ public class GeocoderTest extends AndroidTestCase  {
 						continue;
 	                }
 
-					GridPoint gp = r.getPosition();
+					Point gp = r.getPosition();
 					if(String.valueOf((int)gp.x).equals(comps[2])
 							&& String.valueOf((int)gp.y).equals(comps[3]))
 					{

@@ -29,7 +29,7 @@ import android.graphics.RectF;
 import android.opengl.Matrix;
 import android.view.View;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_TRIANGLE_STRIP;

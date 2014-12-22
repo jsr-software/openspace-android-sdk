@@ -28,7 +28,7 @@ import java.nio.FloatBuffer;
 
 import android.graphics.PointF;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 
 /**
  * A circle in the OS National Grid projection.

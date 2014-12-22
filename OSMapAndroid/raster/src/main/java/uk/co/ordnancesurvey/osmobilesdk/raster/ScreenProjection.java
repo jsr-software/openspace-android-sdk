@@ -24,9 +24,9 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import android.graphics.PointF;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BngUtil;
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BoundingBox;
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
+import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 
 final class ScreenProjection {
     private final int mScreenWidth;

@@ -40,7 +40,6 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.Display;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
@@ -59,10 +58,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
+import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BngUtil;
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BoundingBox;
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.network.NetworkStateMonitor;
 import uk.co.ordnancesurvey.osmobilesdk.raster.tiles.TileService;
 

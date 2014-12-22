@@ -22,7 +22,7 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 
 import static java.lang.Math.sin;
 import static java.lang.Math.cos;

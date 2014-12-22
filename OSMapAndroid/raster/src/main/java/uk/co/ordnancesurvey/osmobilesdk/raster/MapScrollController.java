@@ -32,8 +32,8 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.Scroller;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BngUtil;
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 
 public final class MapScrollController extends CombinedGestureDetector {
 	public interface ScrollListener {

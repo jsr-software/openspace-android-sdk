@@ -22,7 +22,7 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 
 /**
  * Encapsulates the conversion between a {@link .Point} in WGS84 to a {@link Point} in BNG.

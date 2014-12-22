@@ -22,13 +22,8 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
-import static android.opengl.GLES20.GL_FLOAT;
-import static android.opengl.GLES20.GL_LINE_STRIP;
-import static android.opengl.GLES20.GL_TRIANGLE_STRIP;
-import static android.opengl.GLES20.glDrawArrays;
-import static android.opengl.GLES20.glLineWidth;
-import static android.opengl.GLES20.glUniformMatrix4fv;
-import static android.opengl.GLES20.glVertexAttribPointer;
+import android.graphics.PointF;
+import android.opengl.Matrix;
 import android.util.Log;
 
 import java.nio.FloatBuffer;
@@ -36,11 +31,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import android.graphics.PointF;
-import android.opengl.Matrix;
+import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.BoundingBox;
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+import static android.opengl.GLES20.GL_FLOAT;
+import static android.opengl.GLES20.GL_LINE_STRIP;
+import static android.opengl.GLES20.GL_TRIANGLE_STRIP;
+import static android.opengl.GLES20.glDrawArrays;
+import static android.opengl.GLES20.glLineWidth;
+import static android.opengl.GLES20.glUniformMatrix4fv;
+import static android.opengl.GLES20.glVertexAttribPointer;
 
 abstract class PolyOverlay extends ShapeOverlay {
 	private volatile PolyPoints mPoints;

@@ -22,7 +22,7 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 
 public final class PolylineOptions extends PolyOptions {
 	public PolylineOptions add(Point gp)

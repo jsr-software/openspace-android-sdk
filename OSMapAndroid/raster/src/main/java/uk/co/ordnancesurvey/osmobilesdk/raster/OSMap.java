@@ -24,8 +24,8 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import android.view.View;
 
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
-import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
 
 /**
  * This is the main class of the Google Maps Android API and is the entry point for all methods related to the map. You cannot 

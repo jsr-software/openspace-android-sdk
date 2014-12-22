@@ -59,7 +59,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.geometry.Point;
  * 	<li>	TileOverlay
  * 	<li>	TileOverlayOptions
  * 	<li>	UrlTileProvider
- * 	<li>	VisibleRegion is replaced by GridRect
+ * 	<li>	VisibleRegion is replaced by BoundingBox
  * </ul>
  * <p>
  * In, the following features of Google Maps are not supported

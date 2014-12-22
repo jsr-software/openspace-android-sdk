@@ -37,6 +37,9 @@ import org.json.JSONObject;
 
 import android.net.Uri;
 
+import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+
 final class WebGeocoder {
 
     private final static String TAG = WebGeocoder.class.getSimpleName();

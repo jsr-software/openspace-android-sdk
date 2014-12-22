@@ -35,6 +35,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.text.TextUtils;
 
+import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+
 final class DBGeocoder {
 	private SQLiteDatabase mDB;
 	private final String[] mFeatureCodes;

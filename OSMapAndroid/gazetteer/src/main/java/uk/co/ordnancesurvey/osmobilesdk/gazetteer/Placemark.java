@@ -24,6 +24,8 @@ package uk.co.ordnancesurvey.osmobilesdk.gazetteer;
 
 import android.util.Log;
 
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+
 public class Placemark {
 	private final static String TAG = "Placemark";
 

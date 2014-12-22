@@ -32,6 +32,10 @@ import java.util.List;
 
 import android.content.Context;
 
+import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
+import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+
 /**
  Geocoder provides an interface to lookup positions based on place names, postcodes, grid references, roads, or any 
  combination thereof.

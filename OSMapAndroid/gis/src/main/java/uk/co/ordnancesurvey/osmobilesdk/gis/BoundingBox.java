@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.gazetteer;
+package uk.co.ordnancesurvey.osmobilesdk.gis;
 
 import java.io.Serializable;
 
@@ -136,7 +136,7 @@ public class BoundingBox implements Serializable {
         return NULL_BOUNDING_BOX;
     }
 
-    boolean isNull() {
+    public boolean isNull() {
         return Double.isInfinite(mMinX) || Double.isInfinite(mMinY);
     }
 

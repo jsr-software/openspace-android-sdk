@@ -22,6 +22,8 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.gazetteer;
 
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+
 public final class Road extends Placemark {
 	public String roadName()
 	{

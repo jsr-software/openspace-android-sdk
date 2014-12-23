@@ -23,65 +23,61 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import android.net.Uri;
-import android.util.Log;
 
 /**
  * Do not use this class; this only returns URIs for requests using the ZoomMap TileMatrixSet.
- *
  */
 final class WMTSTileSource extends WebTileSource {
 
-	private final static String TAG = WMTSTileSource.class.getSimpleName();
+    private final static String TAG = WMTSTileSource.class.getSimpleName();
 
-	private final String mApiKey;
-	private final String mApiKeyPackageName;
+    private final String mApiKey;
+    private final String mApiKeyPackageName;
 
-	
-	public WMTSTileSource(String apiKey, String apiKeyPackageName, String[] productsOrNull) {
-		super(productsOrNull);
-		mApiKey = apiKey;
-		mApiKeyPackageName = apiKeyPackageName;
-	}
 
-	@Override
-	String uriStringForTile(MapTile tile) {
-		MapLayer layer = tile.layer;
-		String productCode = layer.productCode;
+    public WMTSTileSource(String apiKey, String apiKeyPackageName, String[] productsOrNull) {
+        super(productsOrNull);
+        mApiKey = apiKey;
+        mApiKeyPackageName = apiKeyPackageName;
+    }
 
-		if(!isProductSupported(productCode))
-		{
-			return null;
-		}
+    @Override
+    String uriStringForTile(MapTile tile) {
+        MapLayer layer = tile.layer;
+        String productCode = layer.productCode;
+
+        if (!isProductSupported(productCode)) {
+            return null;
+        }
 
         /**
          * NB. this only works for ZoomMap TileMatrixSet
          */
-		if (productCode.length() == 4 && productCode.startsWith("CS"))
-		{
-			// TODO: Magic number
-			int mapHeight = Math.round(1344000/layer.tileSizeMetres);
-			String wmtsCode = productCode.substring(2);
-			
-			int tileRow = mapHeight-1-tile.y;
-			int tileCol = tile.x;
+        if (productCode.length() == 4 && productCode.startsWith("CS")) {
+            // TODO: Magic number
+            int mapHeight = Math.round(1344000 / layer.tileSizeMetres);
+            String wmtsCode = productCode.substring(2);
 
-			// Use Uri.encode() instead of URLEncoder.encode():
-			//   - It works for path elements (not just query keys/values).
-			//   - It doesn't make us catch UnsupportedEncodingException.
-			// TODO: handle non-pro API keys.
-			String uriString = "https://osopenspacepro.ordnancesurvey.co.uk/osmapapi/wmts/" +
-					Uri.encode(mApiKey) +
-					"/ts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=osgb&STYLE=default&FORMAT=image/png&TILEMATRIXSET=ZoomMap" +
-					"&TILEMATRIX=" + Uri.encode(wmtsCode) +
-					"&TILEROW=" +tileRow +
-					"&TILECOL=" +tileCol +
-					"&appId=" + Uri.encode(mApiKeyPackageName);
+            int tileRow = mapHeight - 1 - tile.y;
+            int tileCol = tile.x;
+
+            // Use Uri.encode() instead of URLEncoder.encode():
+            //   - It works for path elements (not just query keys/values).
+            //   - It doesn't make us catch UnsupportedEncodingException.
+            // TODO: handle non-pro API keys.
+            String uriString = "https://osopenspacepro.ordnancesurvey.co.uk/osmapapi/wmts/" +
+                    Uri.encode(mApiKey) +
+                    "/ts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=osgb&STYLE=default&FORMAT=image/png&TILEMATRIXSET=ZoomMap" +
+                    "&TILEMATRIX=" + Uri.encode(wmtsCode) +
+                    "&TILEROW=" + tileRow +
+                    "&TILECOL=" + tileCol +
+                    "&appId=" + Uri.encode(mApiKeyPackageName);
 
             //Log.v(TAG, uriString);
 
-			return uriString;
-		}
+            return uriString;
+        }
 
-		return null;
-	}
+        return null;
+    }
 }

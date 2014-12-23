@@ -23,16 +23,14 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import android.net.Uri;
-import android.util.Log;
 
 public final class WMSTileSource extends WebTileSource {
 
+    private final static String CLASS_TAG = WMSTileSource.class.getSimpleName();
 
-	private final static String TAG = WMSTileSource.class.getSimpleName();
-
-	private final String mApiKey;
-	private final String mApiKeyPackageName;
-	private final boolean mIsPro;
+    private final String mApiKey;
+    private final String mApiKeyPackageName;
+    private final boolean mIsPro;
 
     public WMSTileSource(String apiKey, String apiKeyPackageName, boolean isPro, String[] productsOrNull) {
         super(productsOrNull);
@@ -41,40 +39,36 @@ public final class WMSTileSource extends WebTileSource {
         mIsPro = isPro;
     }
 
-	@Override
-	String uriStringForTile(MapTile tile) {
+    @Override
+    String uriStringForTile(MapTile tile) {
 
-		MapLayer layer = tile.layer;
+        MapLayer layer = tile.layer;
 
-		if(!isProductSupported(layer.productCode))
-		{
-			return null;
-		}
+        if (!isProductSupported(layer.productCode)) {
+            return null;
+        }
 
-		// This calculates the actual bbox.
-		float bboxX0 = layer.tileSizeMetres *tile.x;
-		float bboxY0 = layer.tileSizeMetres *tile.y;
-		float bboxX1 = bboxX0 + layer.tileSizeMetres;
-		float bboxY1 = bboxY0 + layer.tileSizeMetres;
+        float bboxX0 = layer.tileSizeMetres * tile.x;
+        float bboxY0 = layer.tileSizeMetres * tile.y;
+        float bboxX1 = bboxX0 + layer.tileSizeMetres;
+        float bboxY1 = bboxY0 + layer.tileSizeMetres;
 
-		String uriString = "https://" + (mIsPro ? "osopenspacepro" : "openspace") + ".ordnancesurvey.co.uk/osmapapi/ts" +
-				"?FORMAT=image/png" +
-				"&SERVICE=WMS" +
-				"&VERSION=1.1.1" +
-				"&EXCEPTIONS=application/vnd.ogc.se_inimage" +
-				"&SRS=EPSG:27700" +
-				"&STYLES=" +
-				"&REQUEST=GetMap" +
-				"&KEY=" + Uri.encode(mApiKey) +
-				"&appId=" +  Uri.encode(mApiKeyPackageName) +
-				"&WIDTH=" + layer.tileSizePixels + 
-				"&HEIGHT="+ layer.tileSizePixels +
-				"&BBOX=" + bboxX0 + "," + bboxY0 + "," + bboxX1 + "," + bboxY1 +
-				"&LAYERS=" + Uri.encode(layer.layerCode) +
-				"&PRODUCT=" + Uri.encode(layer.productCode);
+        String uriString = "https://" + (mIsPro ? "osopenspacepro" : "openspace") + ".ordnancesurvey.co.uk/osmapapi/ts" +
+                "?FORMAT=image/png" +
+                "&SERVICE=WMS" +
+                "&VERSION=1.1.1" +
+                "&EXCEPTIONS=application/vnd.ogc.se_inimage" +
+                "&SRS=EPSG:27700" +
+                "&STYLES=" +
+                "&REQUEST=GetMap" +
+                "&KEY=" + Uri.encode(mApiKey) +
+                "&appId=" + Uri.encode(mApiKeyPackageName) +
+                "&WIDTH=" + layer.tileSizePixels +
+                "&HEIGHT=" + layer.tileSizePixels +
+                "&BBOX=" + bboxX0 + "," + bboxY0 + "," + bboxX1 + "," + bboxY1 +
+                "&LAYERS=" + Uri.encode(layer.layerCode) +
+                "&PRODUCT=" + Uri.encode(layer.productCode);
 
-        //Log.v(TAG, uriString);
-
-		return uriString;
-	}
+        return uriString;
+    }
 }

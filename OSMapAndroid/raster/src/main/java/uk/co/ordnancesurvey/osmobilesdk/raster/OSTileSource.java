@@ -62,24 +62,20 @@ public abstract class OSTileSource implements Closeable
 	boolean shouldDiskCache() {
 		return false;
 	}
-	
 
-	boolean isProductSupported(String productCode)
-	{
-		if(mProducts == null)
-		{
-			return true;
-		}
 
-		for(int i = 0; i < mProducts.length; i++)
-		{
-			if(mProducts[i].equals(productCode))
-			{
-				return true;
-			}
-		}
-		return false;
-	}
+    boolean isProductSupported(String productCode) {
+        if (mProducts == null) {
+            return true;
+        }
+
+        for (int i = 0; i < mProducts.length; i++) {
+            if (mProducts[i].equals(productCode)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Override
     public void close() throws IOException {

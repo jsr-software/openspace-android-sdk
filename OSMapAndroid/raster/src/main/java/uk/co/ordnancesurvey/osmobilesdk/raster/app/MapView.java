@@ -32,10 +32,10 @@ import android.view.MotionEvent;
 import android.widget.FrameLayout;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
-import uk.co.ordnancesurvey.osmobilesdk.raster.MapLayer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapScrollController;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMapPrivate;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.LayerCatalog;
 
 public final class MapView extends FrameLayout {
     private final GLMapRenderer mMapRenderer;
@@ -111,11 +111,11 @@ public final class MapView extends FrameLayout {
         if (mapConfiguration == null || mapConfiguration.getBasemap().getMapLayers() == null) {
             // If no map stack specified then use the default layers; these are available to Free and Pro
             // API key users.
-            map.setMapLayers(MapLayer.getDefaultLayers());
+            map.setMapLayers(LayerCatalog.getDefaultLayers());
 
         } else {
             // Otherwise use the map stack specified by the user
-            map.setMapLayers(MapLayer.layersForProductCodes(mapConfiguration.getBasemap().getMapLayers()));
+            map.setMapLayers(LayerCatalog.layersForProductCodes(mapConfiguration.getBasemap().getMapLayers()));
         }
         return map;
     }

@@ -62,8 +62,10 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.LayerCatalog;
 import uk.co.ordnancesurvey.osmobilesdk.raster.network.NetworkStateMonitor;
-import uk.co.ordnancesurvey.osmobilesdk.raster.tiles.TileService;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileService;
 
 import static android.opengl.GLES20.GL_BACK;
 import static android.opengl.GLES20.GL_BLEND;
@@ -213,10 +215,10 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final MapTile rTempTile = new MapTile();
     private final FetchQuota rFetchQuota = new FetchQuota();
 
-    private MapLayer[] mLayers;
+    private Layer[] mLayers;
 
-    private MapLayer mPreviousLayer;
-    private MapLayer mFadingOutLayer;
+    private Layer mPreviousLayer;
+    private Layer mFadingOutLayer;
     private long mFadingInStartUptimeMillis;
     private static final int ZOOM_FADE_DURATION = 400; // It's 0.4s in the iOS code.
     private final Handler mHandler;
@@ -317,14 +319,14 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     ;
     DirtyArea mDirtyArea = new DirtyArea();
 
-    public void setMapLayers(MapLayer[] layers) {
+    public void setMapLayers(Layer[] layers) {
         layers = layers.clone();
-        Arrays.sort(layers, Collections.reverseOrder(MapLayer.COMPARE_METRES_PER_PIXEL));
+        Arrays.sort(layers, Collections.reverseOrder(LayerCatalog.COMPARE_METRES_PER_PIXEL));
 
         float[] mpps = new float[layers.length];
         int i = 0;
-        for (MapLayer layer : layers) {
-            mpps[i++] = layer.metresPerPixel;
+        for (Layer layer : layers) {
+            mpps[i++] = layer.getMetresPerPixel();
         }
         mScrollController.setZoomScales(mpps);
 
@@ -388,13 +390,13 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     // Round the metres per pixel down to 1,2,5,
-    private MapLayer mapLayerForMPP(float metresPerPixel) {
-        MapLayer bestLayer = null;
+    private Layer mapLayerForMPP(float metresPerPixel) {
+        Layer bestLayer = null;
         float bestScore = Float.POSITIVE_INFINITY;
         // Precalculate log(mpp). This costs an extra log() but means we don't have to do float division (which might overflow/underflow).
         float logMPP = (float) Math.log(metresPerPixel);
-        for (MapLayer layer : mLayers) {
-            float score = Math.abs((float) Math.log(layer.metresPerPixel) - logMPP);
+        for (Layer layer : mLayers) {
+            float score = Math.abs((float) Math.log(layer.getMetresPerPixel()) - logMPP);
             if (score < bestScore) {
                 bestScore = score;
                 bestLayer = layer;
@@ -403,9 +405,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         return bestLayer;
     }
 
-    private int indexForMapLayerOrNegative(MapLayer layer) {
+    private int indexForMapLayerOrNegative(Layer layer) {
         assert layer != null;
-        int index = Arrays.binarySearch(mLayers, layer, MapLayer.COMPARE_METRES_PER_PIXEL_REVERSED);
+        int index = Arrays.binarySearch(mLayers, layer, LayerCatalog.COMPARE_METRES_PER_PIXEL_REVERSED);
         if (index < 0) {
             assert false : "This might happen if mLayers is changed in another thread. If this happens frequently enough when debugging, onDrawFrame() should be changed to only read mLayers once.";
             return Integer.MIN_VALUE / 2;
@@ -413,8 +415,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         return index;
     }
 
-    private MapLayer mapLayerForIndexOrNull(int index) {
-        MapLayer[] layers = mLayers;
+    private Layer mapLayerForIndexOrNull(int index) {
+        Layer[] layers = mLayers;
         if (0 <= index && index < layers.length) {
             return layers[index];
         }
@@ -563,14 +565,14 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private void roundToPixelBoundary() {
         // OS-56: A better pixel-aligned-drawing algorithm.
         float originalMPP = mScrollState.metresPerPixel;
-        MapLayer layer = mapLayerForMPP(originalMPP);
-        float originalSizeScreenPx = layer.tileSizeMetres / originalMPP;
+        Layer layer = mapLayerForMPP(originalMPP);
+        float originalSizeScreenPx = layer.getTileSizeInMetres() / originalMPP;
         float roundedSizeScreenPx = (float) Math.ceil(originalSizeScreenPx);
-        float roundedMPP = layer.tileSizeMetres / roundedSizeScreenPx;
+        float roundedMPP = layer.getTileSizeInMetres() / roundedSizeScreenPx;
         if (mapLayerForMPP(roundedMPP) != layer) {
             // If rounding up would switch layer boundaries, try rounding down.
             roundedSizeScreenPx = (float) Math.floor(originalSizeScreenPx);
-            roundedMPP = layer.tileSizeMetres / roundedSizeScreenPx;
+            roundedMPP = layer.getTileSizeInMetres() / roundedSizeScreenPx;
             // If that breaks too, we're in trouble.
             if (roundedSizeScreenPx < 1 || mapLayerForMPP(roundedMPP) != layer) {
                 assert false : "This shouldn't happen!";
@@ -578,8 +580,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             }
         }
 
-        double tileOriginX = Math.floor(mScrollState.x / layer.tileSizeMetres) * layer.tileSizeMetres;
-        double tileOriginY = Math.floor(mScrollState.y / layer.tileSizeMetres) * layer.tileSizeMetres;
+        double tileOriginX = Math.floor(mScrollState.x / layer.getTileSizeInMetres()) * layer.getTileSizeInMetres();
+        double tileOriginY = Math.floor(mScrollState.y / layer.getTileSizeInMetres()) * layer.getTileSizeInMetres();
 
         // OS-57: Fudge the rounding by half a pixel if the screen width is odd.
         double halfPixelX = (mGLViewportWidth % 2 == 0 ? 0 : 0.5);
@@ -682,9 +684,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         // (Not resetting it could mean looping over several million tiles when animating from fully zoomed-out to fully zoomed-in.)
         // This only makes a difference if we fail to render a frame in the second half of the zoom animation.
 
-        MapLayer currentLayer = mapLayerForMPP(metresPerPixel);
-        MapLayer fadingFromLayer = null;
-        MapLayer fadingToLayer = null;
+        Layer currentLayer = mapLayerForMPP(metresPerPixel);
+        Layer fadingFromLayer = null;
+        Layer fadingToLayer = null;
         float fadeToAlpha = 0;
         if (mScrollState.animatingZoom) {
             float startMPP = mScrollState.animationStartMetresPerPixel;
@@ -733,7 +735,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         assert fading == (fadingFromLayer != null);
         // If we are fading, use the layer we're fading *from* as the "base layer" for deciding which fallbacks to render.
         // This matches what the (old) iOS maps app does.
-        final MapLayer baseLayer = (fading ? fadingFromLayer : currentLayer);
+        final Layer baseLayer = (fading ? fadingFromLayer : currentLayer);
 
 
         // Reset the fetch quota. It doesn't really matter where we do this, as long as we do it before drawLayer.
@@ -1155,7 +1157,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
 
-    private boolean drawLayerWithFallbacks(MapLayer layer, FetchQuota quota, float alpha, float depth) {
+    private boolean drawLayerWithFallbacks(Layer layer, FetchQuota quota, float alpha, float depth) {
         if (layer == null) {
             return false;
         }
@@ -1166,7 +1168,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         boolean needsRedraw = drawLayer(layer, quota, alpha, depth);
 
 
-        MapLayer fallbackLayer = null;
+        Layer fallbackLayer = null;
         // Fallback in preference to +1, -1, -2, -3.
         for (int i = 1; !mDirtyArea.isEmpty() && i >= -3; i--) {
             // If we are rendering with alpha != 1.0, then only draw one layer at most, to avoid overlapping transparency.
@@ -1195,7 +1197,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         return needsRedraw;
     }
 
-    private boolean drawLayer(MapLayer layer, FetchQuota quota, float alpha, float depth) {
+    private boolean drawLayer(Layer layer, FetchQuota quota, float alpha, float depth) {
         if (layer == null) {
             return false;
         }
@@ -1205,7 +1207,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         BoundingBox visibleBounds = projection.getVisibleBounds();
 
-        float mapTileSize = layer.tileSizeMetres;
+        float mapTileSize = layer.getTileSizeInMetres();
         float screenTileSize = mapTileSize / metresPerPixel;
 
         double mapTopLeftX = visibleBounds.getMinX();

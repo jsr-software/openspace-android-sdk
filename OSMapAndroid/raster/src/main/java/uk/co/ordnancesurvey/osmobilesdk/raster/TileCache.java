@@ -49,7 +49,7 @@ public final class TileCache extends CombinedLruCache<MapTile> {
 
     @Override
     public String stringForKey(MapTile key) {
-        return key.layer.productCode + "_" + key.x + "_" + key.y;
+        return key.layer.getProductCode() + "_" + key.x + "_" + key.y;
     }
 
     public static synchronized TileCache newInstance(Context context) {

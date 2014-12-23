@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters;
 
 import java.util.Random;
 
@@ -32,6 +32,8 @@ import android.os.Build;
 import android.os.SystemClock;
 import android.annotation.TargetApi;
 import android.content.Context;
+
+import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 
 final class DummyTileSource extends OSTileSource {
 	Context mContext;
@@ -95,7 +97,7 @@ final class DummyTileSource extends OSTileSource {
 	private Bitmap generateFilledBitmap(MapTile tile)
 	{
 		int seed = tile.y * 10 + tile.x;
-		int tileSizePixels = tile.layer.tileSizePixels;
+		int tileSizePixels = tile.layer.getTileSizeInPixels();
 
 		Bitmap.Config conf = Bitmap.Config.ARGB_8888;
 		Bitmap bmp = Bitmap.createBitmap(tileSizePixels, tileSizePixels, conf);

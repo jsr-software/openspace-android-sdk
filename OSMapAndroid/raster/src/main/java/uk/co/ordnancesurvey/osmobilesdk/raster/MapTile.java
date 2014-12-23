@@ -22,10 +22,12 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
+
 public final class MapTile {
-    MapLayer layer;
-    int x;
-    int y;
+    public Layer layer;
+    public int x;
+    public int y;
 
     MapTile() {
     }
@@ -36,7 +38,7 @@ public final class MapTile {
         layer = copy.layer;
     }
 
-    void set(int xx, int yy, MapLayer l) {
+    void set(int xx, int yy, Layer l) {
         x = xx;
         y = yy;
         layer = l;

@@ -148,7 +148,7 @@ public class TileService {
 
         if (!apiKey.equals(EMPTY_API_KEY)) {
             sources.add(new WMSTileSource(apiKey, packageName, mMapConfiguration.isPro(),
-                    mMapConfiguration.getDisplayedProducts()));
+                    mMapConfiguration.getBasemap().getMapLayers()));
         }
         return sources.toArray(new OSTileSource[sources.size()]);
     }

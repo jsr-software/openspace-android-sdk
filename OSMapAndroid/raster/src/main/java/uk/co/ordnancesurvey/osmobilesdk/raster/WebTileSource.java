@@ -22,179 +22,65 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import android.util.Log;
+
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
+
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Locale;
-
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-
-import android.net.http.AndroidHttpClient;
-import android.os.Build;
-import android.os.SystemClock;
-import android.util.Log;
 
 abstract class WebTileSource extends OSTileSource {
-	private final static String TAG = "WebTileSource";
+    private final static String CLASS_TAG = WebTileSource.class.getSimpleName();
 
-	public WebTileSource(String[] productsOrNull) {
-		super(productsOrNull);
+    public WebTileSource(String[] productsOrNull) {
+        super(productsOrNull);
+    }
 
-		// There's a bug in Android versions prior to 2.2 (Froyo, API level 8):
-		// * http://android-developers.blogspot.co.uk/2011/09/androids-http-clients.html
-		// * https://code.google.com/p/android/issues/detail?id=2939
-		// Our current minimum is 2.2.3 (API level 10), but an assert does not hurt in case an app includes this in a JAR.
-		assert Build.VERSION.SDK_INT >= Build.VERSION_CODES.FROYO : "Android < 2.2 is not supported (Android issue #2939)";
-	}
+    abstract String uriStringForTile(MapTile tile);
 
-	abstract String uriStringForTile(MapTile tile);
-
-	@Override
+    @Override
     public byte[] dataForTile(MapTile tile) {
-		String uriString = uriStringForTile(tile);
-		if (uriString == null)
-		{
-			return null;
-		}
-		// The compiler is clever enough to detect that it will never be used uninitialized.
-		final long startTime, startThreadTime;
-		if (BuildConfig.DEBUG) {
-			startTime = SystemClock.uptimeMillis();
-			startThreadTime = SystemClock.currentThreadTimeMillis();
-		} else {
-            startTime = 0;
-            startThreadTime = 0;
+        String uriString = uriStringForTile(tile);
+        if (uriString == null) {
+            return null;
         }
 
-		boolean success = false;
-		try {
-			byte[] ret = loadDataWithHttpURLConnection(uriString);
-			//byte[] ret = loadDataWithAndroidHttpClient(uriString);
-			//byte[] ret = loadDatapWithDefaultHttpClient(uriString);
-			success = true;
-			return ret;
-		} finally {
-			// Do this here so it happens on the majority of return paths. It also happens on exception paths, which is acceptable.
-			if (BuildConfig.DEBUG)
-			{
-				long endTime = SystemClock.uptimeMillis();
-				long endThreadTime = SystemClock.currentThreadTimeMillis();
-				Log.v(TAG, String.format(Locale.ENGLISH, "Fetch %s %d ms (real), %d ms (CPU)", (success?"took":"failed,"), endTime-startTime, endThreadTime-startThreadTime));
-			}
-		}
-	}
+        try {
+            URL url = new URL(uriString);
+            OkHttpClient client = new OkHttpClient();
 
-	private byte[] loadDataWithHttpURLConnection(String uriString)
-	{
-		URL url;
-		try {
-			url = new URL(uriString);
-		} catch (MalformedURLException e) {
-			throw new Error("Caught MalformedURLException where it should never happen", e);
-		}
+            Request request = new Request.Builder()
+                    .url(url)
+                    .build();
 
-		HttpURLConnection urlConnection = null;
-		try {
-			urlConnection = (HttpURLConnection)url.openConnection();
+            Response response = client.newCall(request).execute();
+            if (response.code() == HttpURLConnection.HTTP_OK) {
+                return response.body().bytes();
+            }
+        } catch (MalformedURLException e) {
+            throw new Error("Caught MalformedURLException where it should never happen", e);
+        } catch (IOException e) {
+            Log.e(CLASS_TAG, "Unable to load tile");
+        }
+        return null;
+    }
 
-			// tchan: It is not worth using a BufferedInputStream; the vast majority of the CPU time is spent before getInputStream() returns.
-			// According to the Android docs, it is not our job to close the stream:
-			//   http://developer.android.com/reference/java/net/HttpURLConnection.html
-			InputStream inputStream = urlConnection.getInputStream();
-
-			// We can only get the response code after getInputStream() returns.
-			//   http://www.tbray.org/ongoing/When/201x/2012/01/17/HttpURLConnection
-			int httpStatusCode = urlConnection.getResponseCode();
-			// What should we do about errors?
-			if (httpStatusCode/100 != 2) {
-				if (BuildConfig.DEBUG)
-				{
-					assert false;
-				}
-				//Log.v(TAG, String.format(Locale.ENGLISH, "Request for tile TILEMATRIX=%s TILEROW=%d TILECOL=%d returned HTTP status %d", wmtsCode, tileRow, tileCol, httpStatusCode));
-				return null;
-			}
-
-			// We do not need to close the stream according to http://developer.android.com/reference/java/net/HttpURLConnection.html
-			// The Java docs are unclear: http://docs.oracle.com/javase/6/docs/api/java/net/URLConnection.html
-			return Helpers.readAllNoClose(inputStream);
-		} catch (IOException e) {
-			Log.v(TAG, "Failed to fetch tile", e);
-			return null;
-		} finally {
-			if (urlConnection != null) {
-				// According to http://developer.android.com/reference/java/net/HttpURLConnection.html
-				//   "Once the response body has been read, the HttpURLConnection should be closed by calling disconnect()."
-				//   "Unlike other Java implementations, this will not necessarily close socket connections that can be reused. "
-				urlConnection.disconnect();
-			}
-		}
-	}
-
-	@SuppressWarnings("unused")
-	private byte[] loadDataWithAndroidHttpClient(String uriString)
-	{
-		// This is largely a test to see if it will improve upon HttpURLConnection.
-		// If anything, AndroidHttpClient seems to have slightly more overhead:
-		//   loadBitmapWithHttpURLConnection() spends about
-		//     30.3% in BitmapFactory.decodeStream()
-		//     12.5% in URL.<init>
-		//     57.1% in HttpURLConnectionImpl.getInputStream()
-		//   loadBitmapWithAndroidHttpClient() spends about
-		//     28.4% in BitmapFactory.decodeStream()
-		//     17.0% in HttpGet.<init>
-		//     54.6% in AndroidHttpClient.execute()
-		// We might be able to make AndroidHttpClient marginally faster if we can reuse HttpGet objects, but that does not seem worth it.
-
-		// AndroidHttpClient seems to have a lower limit on the number of concurrent connections per host, which makes scrolling appear smother.
-		// A similar effect can be achieved by simply limiting the number of request threads.
-
-		// TODO: Version number.
-		AndroidHttpClient client = AndroidHttpClient.newInstance("OSMapAndroid/0.1");
-		try {
-			HttpGet request = new HttpGet(uriString);
-			InputStream inputStream = client.execute(request).getEntity().getContent();
-			// We should close the stream according to http://hc.apache.org/httpcomponents-client-ga/tutorial/html/fundamentals.html#d5e37
-			return Helpers.readAllAndClose(inputStream);
-		} catch (IOException e) {
-			Log.v(TAG, "AndroidHttpClient.execute() threw", e);
-			return null;
-		} finally {
-			client.close();
-		}
-	}
-
-	@SuppressWarnings("unused")
-	private byte[] loadDataWithDefaultHttpClient(String uriString)
-	{
-		DefaultHttpClient client = new DefaultHttpClient();
-		try {
-			HttpGet request = new HttpGet(uriString);
-			InputStream inputStream = client.execute(request).getEntity().getContent();
-			// We should close the stream according to http://hc.apache.org/httpcomponents-client-ga/tutorial/html/fundamentals.html#d5e37
-			return Helpers.readAllAndClose(inputStream);
-		} catch (IOException e) {
-			Log.v(TAG, "AndroidHttpClient.execute() threw", e);
-			return null;
-		}
-	}
-
-
-	@Override
+    @Override
     public boolean isNetwork() {
-		return true;
-	}
+        return true;
+    }
 
-	@Override
+    @Override
     public boolean isSynchronous() {
-		return false;
-	}
+        return false;
+    }
 
-	@Override
-	boolean shouldDiskCache() {
-		return true;
-	}
+    @Override
+    boolean shouldDiskCache() {
+        return true;
+    }
 }

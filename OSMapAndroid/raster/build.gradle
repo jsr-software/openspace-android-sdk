@@ -21,6 +21,8 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:appcompat-v7:21.0.2'
+
+    compile 'com.squareup.okhttp:okhttp:2.1.0'
     compile 'io.reactivex:rxandroid:0.23.0'
     compile project(':gis')
 }

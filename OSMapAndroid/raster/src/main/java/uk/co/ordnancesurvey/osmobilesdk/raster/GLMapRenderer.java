@@ -320,9 +320,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     DirtyArea mDirtyArea = new DirtyArea();
 
     public void setMapLayers(Layer[] layers) {
-        layers = layers.clone();
-        Arrays.sort(layers, Collections.reverseOrder(LayerCatalog.COMPARE_METRES_PER_PIXEL));
-
         float[] mpps = new float[layers.length];
         int i = 0;
         for (Layer layer : layers) {
@@ -407,7 +404,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private int indexForMapLayerOrNegative(Layer layer) {
         assert layer != null;
-        int index = Arrays.binarySearch(mLayers, layer, LayerCatalog.COMPARE_METRES_PER_PIXEL_REVERSED);
+        int index = Arrays.binarySearch(mLayers, layer, LayerCatalog.getReverseComparator());
         if (index < 0) {
             assert false : "This might happen if mLayers is changed in another thread. If this happens frequently enough when debugging, onDrawFrame() should be changed to only read mLayers once.";
             return Integer.MIN_VALUE / 2;

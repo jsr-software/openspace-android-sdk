@@ -1,5 +1,26 @@
+/**
+ * OpenSpace Android SDK Licence Terms
+ *
+ * The OpenSpace Android SDK is protected by © Crown copyright – Ordnance Survey 2013.[https://github.com/OrdnanceSurvey]
+ *
+ * All rights reserved (subject to the BSD licence terms as follows):.
+ *
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+ *
+ * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided
+ * with the distribution.
+ *
+ * Neither the name of Ordnance Survey nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+ * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
+ *
+ */
 package uk.co.ordnancesurvey.osmobilesdk.raster.layers;
-
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,7 +30,9 @@ import java.util.Comparator;
 public class LayerCatalog {
 
     private static final String[] DEFAULT_LAYERS =
-            new String[]{"SV", "SVR", "50K", "50KR", "250K", "250KR", "MS", "MSR", "OV2", "OV1", "OV0"};
+            new String[]{"SV", "SVR", "50K", "50KR", "250K",
+                    "250KR", "MS", "MSR", "OV2", "OV1", "OV0"};
+
     private static Layer[] ALL_LAYERS = new Layer[]{
             new Layer("SV", "1", 250, 250), // Street view
             new Layer("SVR", "2", 250, 500), // Street view
@@ -44,9 +67,7 @@ public class LayerCatalog {
             new Layer("CS09", "1.75", 250, 437.5f),
             new Layer("CS10", "0.875", 250, 218.75f),
 
-            // Undocumented projects extracted from JavaScript:
-            //   resolutionLookup = '''{"SV": [1.0, 250],"SVR": [2.0, 250],"50K": [5.0, 200],"50KR": [10.0, 200],"250K": [25.0, 200],"250KR": [50.0, 200],"MS": [100.0, 200],"MSR": [200.0, 200],"OV2": [500.0, 200],"OV1": [1000.0, 200],"OV0": [2500.0, 200],"VMD": [2.5, 200],"VMDR": [4.0, 250],"25K": [2.5, 200],"25KR": [4.0, 250],"VML": [1.0, 250],"VMLR": [2.0, 250],"10KBW": [1.0, 250],"10KBWR": [2.0, 250],"10KR": [2.0, 250],"10K": [1.0, 250],"CS00": [896.0, 250],"CS01": [448.0, 250],"CS02": [224.0, 250],"CS03": [112.0, 250],"CS04": [56.0, 250],"CS05": [28.0, 250],"CS06": [14.0, 250],"CS07": [7.0, 250],"CS08": [3.5, 250],"CS09": [1.75, 250],"CS10": [0.875, 250],"CSG06": [14.0, 250],"CSG07": [7.0, 250],"CSG08": [3.5, 250],"CSG09": [1.75, 250]}'''
-            //   for k,v in sorted(json.loads(resolutionLookup).iteritems()): print '{%-10s%5g, %3r},'%('"%s",'%k,v[0],v[1])
+            // Undocumented projects
             new Layer("10K", "1", 250, 250),
             new Layer("10KBW", "1", 250, 250),
             new Layer("10KBWR", "2", 250, 500),
@@ -63,9 +84,10 @@ public class LayerCatalog {
             new Layer("50K-330DPI", null, 260, 1000), // 1:50k
             new Layer("50K-165DPI", null, 260, 2000), // 1:50k
     };
-    public final static Comparator<Layer> COMPARE_METRES_PER_PIXEL = new MetresPerPixelComparator();
-    public final static Comparator<Layer> COMPARE_METRES_PER_PIXEL_REVERSED = Collections.reverseOrder(COMPARE_METRES_PER_PIXEL);
-
+    private final static Comparator<Layer> COMPARE_METRES_PER_PIXEL
+            = new MetresPerPixelComparator();
+    private final static Comparator<Layer> COMPARE_METRES_PER_PIXEL_REVERSED
+            = Collections.reverseOrder(COMPARE_METRES_PER_PIXEL);
     private final static class MetresPerPixelComparator implements Comparator<Layer> {
         @Override
         public int compare(Layer lhs, Layer rhs) {
@@ -73,9 +95,13 @@ public class LayerCatalog {
         }
     }
 
-    public static Layer[] layersForProductCodes(String[] productCodes) {
+    public static Layer[] getDefaultLayers() {
+        return getLayers(DEFAULT_LAYERS);
+    }
+
+    public static Layer[] getLayers(String[] productCodes) {
         Arrays.sort(productCodes);
-        ArrayList<Layer> list = new ArrayList<Layer>();
+        ArrayList<Layer> list = new ArrayList<>();
         for (Layer layer : ALL_LAYERS) {
             boolean isContained = (Arrays.binarySearch(productCodes, layer.getProductCode()) >= 0);
             if (isContained) {
@@ -87,7 +113,9 @@ public class LayerCatalog {
         return ret;
     }
 
-    public static Layer[] getDefaultLayers() {
-        return layersForProductCodes(DEFAULT_LAYERS);
+    public static Comparator<? super Layer> getReverseComparator() {
+        return COMPARE_METRES_PER_PIXEL_REVERSED;
     }
+
+
 }

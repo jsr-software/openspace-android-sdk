@@ -20,9 +20,12 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters;
 
 import android.net.Uri;
+
+import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 
 public final class WMSTileSource extends WebTileSource {
 
@@ -42,16 +45,16 @@ public final class WMSTileSource extends WebTileSource {
     @Override
     String uriStringForTile(MapTile tile) {
 
-        MapLayer layer = tile.layer;
+        Layer layer = tile.layer;
 
-        if (!isProductSupported(layer.productCode)) {
+        if (!isProductSupported(layer.getProductCode())) {
             return null;
         }
 
-        float bboxX0 = layer.tileSizeMetres * tile.x;
-        float bboxY0 = layer.tileSizeMetres * tile.y;
-        float bboxX1 = bboxX0 + layer.tileSizeMetres;
-        float bboxY1 = bboxY0 + layer.tileSizeMetres;
+        float bboxX0 = layer.getTileSizeInMetres() * tile.x;
+        float bboxY0 = layer.getTileSizeInMetres() * tile.y;
+        float bboxX1 = bboxX0 + layer.getTileSizeInMetres();
+        float bboxY1 = bboxY0 + layer.getTileSizeInMetres();
 
         String uriString = "https://" + (mIsPro ? "osopenspacepro" : "openspace") + ".ordnancesurvey.co.uk/osmapapi/ts" +
                 "?FORMAT=image/png" +
@@ -63,11 +66,11 @@ public final class WMSTileSource extends WebTileSource {
                 "&REQUEST=GetMap" +
                 "&KEY=" + Uri.encode(mApiKey) +
                 "&appId=" + Uri.encode(mApiKeyPackageName) +
-                "&WIDTH=" + layer.tileSizePixels +
-                "&HEIGHT=" + layer.tileSizePixels +
+                "&WIDTH=" + layer.getTileSizeInPixels() +
+                "&HEIGHT=" + layer.getTileSizeInPixels() +
                 "&BBOX=" + bboxX0 + "," + bboxY0 + "," + bboxX1 + "," + bboxY1 +
-                "&LAYERS=" + Uri.encode(layer.layerCode) +
-                "&PRODUCT=" + Uri.encode(layer.productCode);
+                "&LAYERS=" + Uri.encode(layer.getLayerCode()) +
+                "&PRODUCT=" + Uri.encode(layer.getProductCode());
 
         return uriString;
     }

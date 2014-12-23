@@ -20,10 +20,12 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters;
 
 import java.io.Closeable;
 import java.io.IOException;
+
+import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 
 public abstract class OSTileSource implements Closeable
 {

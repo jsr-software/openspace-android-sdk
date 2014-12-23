@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters;
 
 import android.util.Log;
 
@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+
+import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 
 abstract class WebTileSource extends OSTileSource {
     private final static String CLASS_TAG = WebTileSource.class.getSimpleName();

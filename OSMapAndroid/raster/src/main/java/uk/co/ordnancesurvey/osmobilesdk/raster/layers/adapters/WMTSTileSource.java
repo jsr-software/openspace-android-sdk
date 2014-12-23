@@ -20,9 +20,12 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters;
 
 import android.net.Uri;
+
+import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 
 /**
  * Do not use this class; this only returns URIs for requests using the ZoomMap TileMatrixSet.
@@ -43,8 +46,8 @@ final class WMTSTileSource extends WebTileSource {
 
     @Override
     String uriStringForTile(MapTile tile) {
-        MapLayer layer = tile.layer;
-        String productCode = layer.productCode;
+        Layer layer = tile.layer;
+        String productCode = layer.getProductCode();
 
         if (!isProductSupported(productCode)) {
             return null;
@@ -55,7 +58,7 @@ final class WMTSTileSource extends WebTileSource {
          */
         if (productCode.length() == 4 && productCode.startsWith("CS")) {
             // TODO: Magic number
-            int mapHeight = Math.round(1344000 / layer.tileSizeMetres);
+            int mapHeight = Math.round(1344000 / layer.getTileSizeInMetres());
             String wmtsCode = productCode.substring(2);
 
             int tileRow = mapHeight - 1 - tile.y;

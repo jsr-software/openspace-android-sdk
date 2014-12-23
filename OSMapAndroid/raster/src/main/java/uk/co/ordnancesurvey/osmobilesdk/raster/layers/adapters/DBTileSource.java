@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -30,6 +30,10 @@ import android.os.Environment;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+
+import uk.co.ordnancesurvey.osmobilesdk.raster.FailedToLoadException;
+import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 
 public final class DBTileSource extends OSTileSource {
 
@@ -109,8 +113,8 @@ public final class DBTileSource extends OSTileSource {
         return openFile(db);
     }
 
-    private ZoomLevel zoomLevelForLayer(MapLayer layer) {
-        String productCode = layer.productCode;
+    private ZoomLevel zoomLevelForLayer(Layer layer) {
+        String productCode = layer.getProductCode();
         for (ZoomLevel zl : mZoomLevels) {
             if (zl.product_code.equals(productCode)) {
                 return zl;
@@ -121,7 +125,7 @@ public final class DBTileSource extends OSTileSource {
 
     @Override
     public byte[] dataForTile(MapTile tile) {
-        MapLayer layer = tile.layer;
+       Layer layer = tile.layer;
 
         ZoomLevel zl = zoomLevelForLayer(layer);
         if (zl == null || !zl.containsTile(tile.x, tile.y)) {

@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster.tiles;
+package uk.co.ordnancesurvey.osmobilesdk.raster.layers;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -39,15 +39,15 @@ import rx.Subscriber;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
-import uk.co.ordnancesurvey.osmobilesdk.raster.DBTileSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.FailedToLoadException;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
-import uk.co.ordnancesurvey.osmobilesdk.raster.OSTileSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.TileCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.TileServiceDelegate;
-import uk.co.ordnancesurvey.osmobilesdk.raster.WMSTileSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.network.NetworkStateMonitor;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.DBTileSource;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.OSTileSource;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.WMSTileSource;
 
 public class TileService {
 

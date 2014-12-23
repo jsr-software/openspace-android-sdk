@@ -6,6 +6,7 @@ import android.os.Bundle;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapFragment;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Basemap;
 
 public class MainActivity extends Activity {
 
@@ -20,7 +21,7 @@ public class MainActivity extends Activity {
 
         if (savedInstanceState == null) {
             MapConfiguration.Builder builder = new MapConfiguration.Builder()
-                    .setDisplayedProducts(OVERVIEW_STACK)
+                    .setBaseMap(new Basemap("Test maps", OVERVIEW_STACK))
                     .setIsPro(true)
                     .setOfflineTileSource(getExternalFilesDir(null));
 

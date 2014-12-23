@@ -108,14 +108,14 @@ public final class MapView extends FrameLayout {
         map.setLayoutParams(fill);
         addView(map);
 
-        if (mapConfiguration == null || mapConfiguration.getDisplayedProducts() == null) {
+        if (mapConfiguration == null || mapConfiguration.getBasemap().getMapLayers() == null) {
             // If no map stack specified then use the default layers; these are available to Free and Pro
             // API key users.
             map.setMapLayers(MapLayer.getDefaultLayers());
 
         } else {
             // Otherwise use the map stack specified by the user
-            map.setMapLayers(MapLayer.layersForProductCodes(mapConfiguration.getDisplayedProducts()));
+            map.setMapLayers(MapLayer.layersForProductCodes(mapConfiguration.getBasemap().getMapLayers()));
         }
         return map;
     }

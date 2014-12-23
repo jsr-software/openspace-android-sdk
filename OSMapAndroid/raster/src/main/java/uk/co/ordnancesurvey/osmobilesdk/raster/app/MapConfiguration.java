@@ -27,13 +27,16 @@ import android.os.Parcelable;
 
 import java.io.File;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Basemap;
+
 public class MapConfiguration implements Parcelable {
+
 
     public static class Builder {
 
         private String mApiKey = "";
         private File mOfflineSource = null;
-        private String[] mProducts = null;
+        private Basemap mBasemap = null;
         private boolean mIsPro = false;
 
         public MapConfiguration build() {
@@ -53,8 +56,8 @@ public class MapConfiguration implements Parcelable {
             return this;
         }
 
-        public Builder setDisplayedProducts(String[] products) {
-            mProducts = products;
+        public Builder setBaseMap(Basemap basemap) {
+            mBasemap = basemap;
             return this;
         }
 
@@ -66,13 +69,13 @@ public class MapConfiguration implements Parcelable {
 
     private final String mApiKey;
     private final File mOfflineSource;
-    private String[] mProducts;
+    private final Basemap mBasemap;
     private final boolean mIsPro;
 
     private MapConfiguration(Builder builder) {
         mApiKey = builder.mApiKey;
         mOfflineSource = builder.mOfflineSource;
-        mProducts = builder.mProducts;
+        mBasemap = builder.mBasemap;
         mIsPro = builder.mIsPro;
     }
 
@@ -80,12 +83,12 @@ public class MapConfiguration implements Parcelable {
         return mApiKey;
     }
 
-    public String[] getDisplayedProducts() {
-        return mProducts;
-    }
-
     public File getOfflineSource() {
         return mOfflineSource;
+    }
+
+    public Basemap getBasemap() {
+        return mBasemap;
     }
 
     public boolean isPro() {
@@ -98,7 +101,7 @@ public class MapConfiguration implements Parcelable {
     private MapConfiguration(Parcel parcel) {
         mApiKey = parcel.readString();
         mOfflineSource = (File) parcel.readSerializable();
-        parcel.readStringArray(mProducts);
+        mBasemap = (Basemap) parcel.readSerializable();
         mIsPro = parcel.readByte() == 0;
     }
 
@@ -111,7 +114,7 @@ public class MapConfiguration implements Parcelable {
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(mApiKey);
         dest.writeSerializable(mOfflineSource);
-        dest.writeStringArray(mProducts);
+        dest.writeSerializable(mBasemap);
         dest.writeByte((byte) (mIsPro ? 1 : 0));
     }
 

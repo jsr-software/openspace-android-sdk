@@ -48,9 +48,9 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.FileNotFoundException;
 import java.nio.FloatBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -1409,7 +1409,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private void startTileService(MapConfiguration mapConfiguration) {
         try {
             mTileService.start(mapConfiguration);
-        } catch (FailedToLoadException e) {
+        } catch (FileNotFoundException e) {
             throw new IllegalStateException("Unable to load offline tile sources in map configuration");
         }
     }

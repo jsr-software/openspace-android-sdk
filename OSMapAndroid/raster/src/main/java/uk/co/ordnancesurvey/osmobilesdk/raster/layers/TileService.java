@@ -28,6 +28,7 @@ import android.graphics.BitmapFactory;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,7 +40,6 @@ import rx.Subscriber;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
-import uk.co.ordnancesurvey.osmobilesdk.raster.FailedToLoadException;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 import uk.co.ordnancesurvey.osmobilesdk.raster.TileCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.TileServiceDelegate;
@@ -95,7 +95,7 @@ public class TileService {
         mNetworkMonitor = networkStateMonitor;
     }
 
-    public void start(MapConfiguration mapConfiguration) throws FailedToLoadException {
+    public void start(MapConfiguration mapConfiguration) throws FileNotFoundException {
         if (mapConfiguration == null) {
             throw new IllegalStateException("Null MapConfiguration given");
         }
@@ -153,7 +153,7 @@ public class TileService {
         return sources.toArray(new OSTileSource[sources.size()]);
     }
 
-    private OSTileSource[] loadSyncTileSources() throws FailedToLoadException {
+    private OSTileSource[] loadSyncTileSources() throws FileNotFoundException {
         final File offlineSource = mMapConfiguration.getOfflineSource();
         final List<OSTileSource> sources = new ArrayList<>();
 

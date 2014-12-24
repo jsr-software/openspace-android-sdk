@@ -28,10 +28,10 @@ import android.database.sqlite.SQLiteException;
 import android.os.Environment;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.FailedToLoadException;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 
@@ -92,20 +92,17 @@ public final class DBTileSource extends OSTileSource {
         }
     }
 
-    public static DBTileSource openFile(File db) throws FailedToLoadException {
+    public static DBTileSource openFile(File db) throws FileNotFoundException, SQLiteException {
         if (!db.exists()) {
-            // Reduce logspam: Don't try to open a database doesn't exist.
-            // Sqlite unconditionally logs about 30 lines at ERROR severity.
-            throw new FailedToLoadException("File not found: " + db.getPath());
+            throw new FileNotFoundException("File not found: " + db.getPath());
         }
-        try {
-            return new DBTileSource(db.getPath());
-        } catch (SQLiteException e) {
-            throw new FailedToLoadException(e);
-        }
+
+        return new DBTileSource(db.getPath());
+
     }
 
-    public static DBTileSource openFromExternalStorage(String name) throws FailedToLoadException {
+    public static DBTileSource openFromExternalStorage(String name) throws SQLiteException,
+            FileNotFoundException {
         // TODO: use Context.getExternalFilesDir() instead?
         // TODO: Do we actually want to support loading from the SD card? What about DRM?
         File sdcard = Environment.getExternalStorageDirectory();

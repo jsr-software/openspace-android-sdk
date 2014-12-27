@@ -24,15 +24,9 @@ package uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 
-public interface LayerSource {
-
-    /**
-     * Blocking method to fetch a single tile.
-     *
-     * <b>Implementations must be thread-safe.</b>
-     *
-     * @param tile
-     * @return
-     */
-    public byte[] getTileData(MapTile tile);
+public class RemoteLayerSource implements LayerSource {
+    @Override
+    public byte[] getTileData(MapTile tile) {
+        return new byte[0];
+    }
 }

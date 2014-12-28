@@ -34,6 +34,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import rx.Observable;
 import rx.Subscriber;
@@ -44,10 +46,10 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 import uk.co.ordnancesurvey.osmobilesdk.raster.TileCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.TileServiceDelegate;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.LayerSource;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.LocalLayerSource;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.RemoteLayerSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.network.NetworkStateMonitor;
-import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.DBTileSource;
-import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.OSTileSource;
-import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.WMSTileSource;
 
 public class TileService {
 
@@ -77,8 +79,8 @@ public class TileService {
         }
     });
 
-    private volatile OSTileSource[] mVolatileSynchronousSources = new OSTileSource[0];
-    private volatile OSTileSource[] mVolatileAsynchronousSources = new OSTileSource[0];
+    private Set<LocalLayerSource> mLocalSources = new CopyOnWriteArraySet<>();
+    private Set<RemoteLayerSource> mRemoteSources = new CopyOnWriteArraySet<>();
 
     private MapConfiguration mMapConfiguration;
 
@@ -102,11 +104,10 @@ public class TileService {
 
         mMapConfiguration = mapConfiguration;
 
-        unloadSources(mVolatileSynchronousSources);
-        unloadSources(mVolatileAsynchronousSources);
+        unloadLocalSources();
 
-        mVolatileSynchronousSources = loadSyncTileSources();
-        mVolatileAsynchronousSources = loadAsyncTileSources();
+        loadLocalSources();
+        loadRemoteSources();
 
         mCurrentSubscriptions.clear();
 
@@ -141,37 +142,42 @@ public class TileService {
         return null;
     }
 
-    private OSTileSource[] loadAsyncTileSources() {
-        final String apiKey = mMapConfiguration.getApiKey();
-        final String packageName = mContext.getPackageName();
-        final List<OSTileSource> sources = new ArrayList<>();
-
-        if (!apiKey.equals(EMPTY_API_KEY)) {
-            sources.add(new WMSTileSource(apiKey, packageName, mMapConfiguration.isPro(),
-                    mMapConfiguration.getBasemap().getMapLayers()));
-        }
-        return sources.toArray(new OSTileSource[sources.size()]);
-    }
-
-    private OSTileSource[] loadSyncTileSources() throws FileNotFoundException {
+    private void loadLocalSources() throws FileNotFoundException {
         final File offlineSource = mMapConfiguration.getOfflineSource();
-        final List<OSTileSource> sources = new ArrayList<>();
+
+        if(offlineSource == null || !offlineSource.exists()) {
+            return;
+        }
+
+        if(!mLocalSources.isEmpty()) {
+            unloadLocalSources();
+        }
 
         if (offlineSource.isDirectory()) {
             File[] files = offlineSource.listFiles(mFileFilter);
             if (files != null) {
                 for (File file : files) {
-                    sources.add(DBTileSource.openFile(file));
+
+                    mLocalSources.add(new LocalLayerSource(file));
                 }
             }
         } else {
-            sources.add(DBTileSource.openFile(offlineSource));
+            mLocalSources.add(new LocalLayerSource(offlineSource));
         }
-        return sources.toArray(new OSTileSource[sources.size()]);
     }
 
-    private void unloadSources(OSTileSource[] sources) {
-        for (OSTileSource source : sources) {
+    private void loadRemoteSources() {
+        final String apiKey = mMapConfiguration.getApiKey();
+        final String packageName = mContext.getPackageName();
+
+        if (!apiKey.equals(EMPTY_API_KEY)) {
+            mRemoteSources.add(new RemoteLayerSource(apiKey, packageName, mMapConfiguration.isPro(),
+                    mMapConfiguration.getBasemap().getMapLayers()));
+        }
+    }
+
+    private void unloadLocalSources() {
+        for (LocalLayerSource source : mLocalSources) {
             try {
                 source.close();
             } catch (IOException e) {
@@ -243,12 +249,13 @@ public class TileService {
 
     private Bitmap getTileBitmapAsync(MapTile tile) {
 
-        for (OSTileSource source : mVolatileAsynchronousSources) {
+        if(!mNetworkMonitor.hasNetworkAccess()) {
+            return null;
+        }
+
+        for (LayerSource source : mRemoteSources) {
             // Don't try to fetch if the network is down.
-            if (source.isNetwork() && !mNetworkMonitor.hasNetworkAccess()) {
-                continue;
-            }
-            byte[] data = source.dataForTile(tile);
+            byte[] data = source.getTileData(tile);
             if (data == null) {
                 continue;
             }

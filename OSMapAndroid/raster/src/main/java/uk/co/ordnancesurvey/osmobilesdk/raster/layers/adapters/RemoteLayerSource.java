@@ -22,11 +22,152 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters;
 
+import android.net.Uri;
+import android.util.Log;
+
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
+
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 
 public class RemoteLayerSource implements LayerSource {
+
+    private final static String CLASS_TAG = RemoteLayerSource.class.getSimpleName();
+
+    private final String[] mProducts;
+    private final String mApiKey;
+    private final String mApiKeyPackageName;
+    private final boolean mIsPro;
+
+    public RemoteLayerSource(String apiKey, String apiKeyPackageName, boolean isPro,
+                             String[] productsOrNull) {
+        mProducts = productsOrNull;
+        mApiKey = apiKey;
+        mApiKeyPackageName = apiKeyPackageName;
+        mIsPro = isPro;
+    }
+
     @Override
     public byte[] getTileData(MapTile tile) {
-        return new byte[0];
+        String uriString = uriStringForTile(tile);
+        if (uriString == null) {
+            return null;
+        }
+
+        try {
+            URL url = new URL(uriString);
+            OkHttpClient client = new OkHttpClient();
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .build();
+
+            Response response = client.newCall(request).execute();
+            if (response.code() == HttpURLConnection.HTTP_OK) {
+                return response.body().bytes();
+            }
+        } catch (MalformedURLException e) {
+            throw new Error("Caught MalformedURLException where it should never happen", e);
+        } catch (IOException e) {
+            Log.e(CLASS_TAG, "Unable to load tile");
+        }
+        return null;
     }
+
+    private String uriStringForTile(MapTile tile) {
+
+        Layer layer = tile.layer;
+
+        if (!isProductSupported(layer.getProductCode())) {
+            return null;
+        }
+
+        float bboxX0 = layer.getTileSizeInMetres() * tile.x;
+        float bboxY0 = layer.getTileSizeInMetres() * tile.y;
+        float bboxX1 = bboxX0 + layer.getTileSizeInMetres();
+        float bboxY1 = bboxY0 + layer.getTileSizeInMetres();
+
+        String uriString = "https://" + (mIsPro ? "osopenspacepro" : "openspace") +
+                ".ordnancesurvey.co.uk/osmapapi/ts" +
+                "?FORMAT=image/png" +
+                "&SERVICE=WMS" +
+                "&VERSION=1.1.1" +
+                "&EXCEPTIONS=application/vnd.ogc.se_inimage" +
+                "&SRS=EPSG:27700" +
+                "&STYLES=" +
+                "&REQUEST=GetMap" +
+                "&KEY=" + Uri.encode(mApiKey) +
+                "&appId=" + Uri.encode(mApiKeyPackageName) +
+                "&WIDTH=" + layer.getTileSizeInPixels() +
+                "&HEIGHT=" + layer.getTileSizeInPixels() +
+                "&BBOX=" + bboxX0 + "," + bboxY0 + "," + bboxX1 + "," + bboxY1 +
+                "&LAYERS=" + Uri.encode(layer.getLayerCode()) +
+                "&PRODUCT=" + Uri.encode(layer.getProductCode());
+
+        return uriString;
+    }
+
+    boolean isProductSupported(String productCode) {
+        if (mProducts == null) {
+            return true;
+        }
+
+        for (int i = 0; i < mProducts.length; i++) {
+            if (mProducts[i].equals(productCode)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Do not use this method; this only returns URIs for requests using the ZoomMap TileMatrixSet.
+     */
+//    @Override
+//    String uriStringForTile(MapTile tile) {
+//        Layer layer = tile.layer;
+//        String productCode = layer.getProductCode();
+//
+//        if (!isProductSupported(productCode)) {
+//            return null;
+//        }
+//
+//        /**
+//         * NB. this only works for ZoomMap TileMatrixSet
+//         */
+//        if (productCode.length() == 4 && productCode.startsWith("CS")) {
+//            // TODO: Magic number
+//            int mapHeight = Math.round(1344000 / layer.getTileSizeInMetres());
+//            String wmtsCode = productCode.substring(2);
+//
+//            int tileRow = mapHeight - 1 - tile.y;
+//            int tileCol = tile.x;
+//
+//            // Use Uri.encode() instead of URLEncoder.encode():
+//            //   - It works for path elements (not just query keys/values).
+//            //   - It doesn't make us catch UnsupportedEncodingException.
+//            // TODO: handle non-pro API keys.
+//            String uriString = "https://osopenspacepro.ordnancesurvey.co.uk/osmapapi/wmts/" +
+//                    Uri.encode(mApiKey) +
+//                    "/ts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=osgb&STYLE=default&FORMAT=image/png&TILEMATRIXSET=ZoomMap" +
+//                    "&TILEMATRIX=" + Uri.encode(wmtsCode) +
+//                    "&TILEROW=" + tileRow +
+//                    "&TILECOL=" + tileCol +
+//                    "&appId=" + Uri.encode(mApiKeyPackageName);
+//
+//            //Log.v(TAG, uriString);
+//
+//            return uriString;
+//        }
+//
+//        return null;
+//    }
+
 }

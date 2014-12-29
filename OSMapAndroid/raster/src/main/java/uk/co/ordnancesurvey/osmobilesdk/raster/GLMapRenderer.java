@@ -115,6 +115,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final TileService mTileService;
     private final PositionManager mPositionManager = new PositionManager();
 
+    private final TileRenderer mTileRenderer = new TileRenderer();
+
     private MapConfiguration mMapConfiguration;
 
     public GLMapRenderer(Context context, MapScrollController scrollController, MapConfiguration mapConfiguration) {
@@ -240,7 +242,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
 
     // Markers
-    private final LinkedList<Marker> mMarkers = new LinkedList<Marker>();
+    private final LinkedList<Marker> mMarkers = new LinkedList<>();
     private final ReentrantReadWriteLock mMarkersLock = new ReentrantReadWriteLock();
     private InfoWindowAdapter mInfoWindowAdapter;
     private OnMapClickListener mOnMapClickListener;
@@ -251,8 +253,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private OnCameraChangeListener mOnCameraChangeListener;
     private Marker mExpandedMarker = null;
     // Overlays
-    private final LinkedList<PolyOverlay> mPolyOverlays = new LinkedList<PolyOverlay>();
-    private final LinkedList<Circle> mCircleOverlays = new LinkedList<Circle>();
+    private final LinkedList<PolyOverlay> mPolyOverlays = new LinkedList<>();
+    private final LinkedList<Circle> mCircleOverlays = new LinkedList<>();
 
     // FPS limiter
     private final int mMinFramePeriodMillis;
@@ -262,64 +264,13 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final static boolean DEBUG_FRAME_TIMING = BuildConfig.DEBUG && false;
     private long debugPreviousFrameUptimeMillis;
     private long debugPreviousFrameNanoTime;
-    private boolean mMyLocationEnabled;
-    private Point mCurrentPoint = null;
-    private Location mCurrentLocation = null;
-    private boolean mForeground;
 
     // Avoid issuing too many location callbacks
     private double lastx;
     private double lasty;
     private float lastMPP;
 
-    // Maintain a dirty area for drawing fallbacks. We'll implement this as a simple rect for the moment
-    private class DirtyArea {
 
-        private double minX, minY, maxX, maxY;
-
-        private boolean mDidDraw;
-
-        boolean isEmpty() {
-            return Double.isInfinite(minX);
-        }
-
-        void zero() {
-            minX = Double.POSITIVE_INFINITY;
-            minY = Double.POSITIVE_INFINITY;
-            maxX = Double.NEGATIVE_INFINITY;
-            maxY = Double.NEGATIVE_INFINITY;
-        }
-
-        void drewRect() {
-            mDidDraw = true;
-        }
-
-        boolean didDraw() {
-            return mDidDraw;
-        }
-
-        void addDirtyRect(float tilesize, MapTile tile) {
-            minX = Math.min(minX, tile.x * tilesize);
-            minY = Math.min(minY, tile.y * tilesize);
-            maxX = Math.max(maxX, tile.x * tilesize + tilesize);
-            maxY = Math.max(maxY, tile.y * tilesize + tilesize);
-        }
-
-
-        void reset() {
-            ScreenProjection projection = mVolatileProjection;
-            BoundingBox visible = projection.getVisibleBounds();
-            // Set to full visible area.
-            maxX = visible.getMaxX();
-            minX = visible.getMinX();
-            maxY = visible.getMaxY();
-            minY = visible.getMinY();
-            mDidDraw = false;
-        }
-    }
-
-    ;
-    DirtyArea mDirtyArea = new DirtyArea();
 
     public void setMapLayers(Layer[] layers) {
         float[] mpps = new float[layers.length];
@@ -374,18 +325,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     public void onResume() {
         super.onResume();
-        Log.v(TAG, "onResume");
-        mForeground = true;
-
         mPositionManager.setInitialMapPosition();
-
         startTileService(mMapConfiguration);
-    }
-
-    public void onPause() {
-        super.onPause();
-        Log.v(TAG, "onPause");
-        mForeground = false;
     }
 
     // Round the metres per pixel down to 1,2,5,
@@ -656,126 +597,10 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
         mVolatileProjection = projection;
 
-        //leakGPUMemory();
-        // At the start of each frame, mark each tile as off-screen.
-        // They are marked on-screen as part of tile drawing.
-        mGLTileCache.resetTileVisibility();
-        mTileService.resetTileRequests();
-
-        Utils.throwIfErrors();
-
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        setProgram(shaderProgram);
-
-
-        Utils.throwIfErrors();
-
-        glActiveTexture(GL_TEXTURE0);
-        glUniform1i(shaderProgram.uniformTexture, 0);
+        boolean needRedraw = mTileRenderer.onDrawFrame(projection, nowUptimeMillis);
 
         float metresPerPixel = projection.getMetresPerPixel();
-
         boolean animating = (mScrollState.animatingScroll || mScrollState.animatingZoom);
-        boolean needRedraw = animating;
-        // OS-50: Ideally we'd set this to fadingToLayer during an animated fade+zoom, but this would require resetting it if we decide not to fade.
-        // (Not resetting it could mean looping over several million tiles when animating from fully zoomed-out to fully zoomed-in.)
-        // This only makes a difference if we fail to render a frame in the second half of the zoom animation.
-
-        Layer currentLayer = mapLayerForMPP(metresPerPixel);
-        Layer fadingFromLayer = null;
-        Layer fadingToLayer = null;
-        float fadeToAlpha = 0;
-        if (mScrollState.animatingZoom) {
-            float startMPP = mScrollState.animationStartMetresPerPixel;
-            float finalMPP = mScrollState.animationFinalMetresPerPixel;
-            fadingFromLayer = mapLayerForMPP(startMPP);
-            fadingToLayer = mapLayerForMPP(finalMPP);
-            if (fadingFromLayer == fadingToLayer) {
-                // If we're not actually changing layers, do this to avoid the assert crash.
-                fadingFromLayer = null;
-                fadingToLayer = null;
-                mFadingOutLayer = null;
-            } else {
-                fadeToAlpha = (float) ((Math.log(metresPerPixel) - Math.log(startMPP)) / (Math.log(finalMPP) - Math.log(startMPP)));
-
-                // OS-50 If the zoom gets interrupted, this will continue the fade roughly as if it was non-animated.
-                if (currentLayer != fadingToLayer) {
-                    mFadingOutLayer = currentLayer;
-                }
-                // OS-50: Also set the alpha such that if we subsequently calculate fadeToAlpha we get roughly the same result.
-                // TODO: This also affects the end of an animated zoom! Sigh.
-                mFadingInStartUptimeMillis = nowUptimeMillis - (long) (fadeToAlpha * ZOOM_FADE_DURATION);
-                assert Math.abs(fadeToAlpha - (nowUptimeMillis - mFadingInStartUptimeMillis) / (float) ZOOM_FADE_DURATION) < 1 / 256.0f;
-            }
-        } else {
-            if (mPreviousLayer != currentLayer && mFadingOutLayer != mPreviousLayer) {
-                mFadingOutLayer = mPreviousLayer;
-                mFadingInStartUptimeMillis = nowUptimeMillis;
-            } else if (mFadingOutLayer != null && nowUptimeMillis >= mFadingInStartUptimeMillis + ZOOM_FADE_DURATION) {
-                mFadingOutLayer = null;
-            }
-
-            if (mFadingOutLayer != null) {
-                fadingToLayer = currentLayer;
-                fadingFromLayer = mFadingOutLayer;
-                fadeToAlpha = (nowUptimeMillis - mFadingInStartUptimeMillis) / (float) ZOOM_FADE_DURATION;
-            }
-        }
-        mPreviousLayer = currentLayer;
-
-        if (fadingToLayer != null && Math.abs(indexForMapLayerOrNegative(fadingFromLayer) - indexForMapLayerOrNegative(fadingToLayer)) != 1) {
-            fadingFromLayer = null;
-            fadingToLayer = null;
-        }
-
-        final boolean fading = (fadingToLayer != null);
-        assert fading == (fadingFromLayer != null);
-        // If we are fading, use the layer we're fading *from* as the "base layer" for deciding which fallbacks to render.
-        // This matches what the (old) iOS maps app does.
-        final Layer baseLayer = (fading ? fadingFromLayer : currentLayer);
-
-
-        // Reset the fetch quota. It doesn't really matter where we do this, as long as we do it before drawLayer.
-        rFetchQuota.reset(nowUptimeMillis);
-
-        // We need to enable depth-testing to write to the depth buffer.
-        glEnable(GL_DEPTH_TEST);
-        // The default depth function is GL_LESS, so we don't actually need to pass in any depths (for now).
-
-        if (fading) {
-            rFetchQuota.setNoAsyncFetches();
-        }
-
-
-        float depth = 0.5f;
-        float alpha = 1.0f;
-
-        mDirtyArea.reset();
-        glVertexAttribPointer(shaderProgram.attribVCoord, 2, GL_FLOAT, false, 0, vertexBuffer);
-
-        // Don't execute any fetches on a layer that is fading out.
-        if (fadingToLayer != null) {
-            rFetchQuota.setNoAsyncFetches();
-        }
-        needRedraw |= drawLayerWithFallbacks(baseLayer, rFetchQuota, alpha, depth);
-        depth = 0.0f;
-        alpha = fadeToAlpha;
-        if (!mDirtyArea.didDraw()) {
-            Log.v(TAG, "Failed to draw any tiles!");
-        }
-        mDirtyArea.reset();
-        drawLayerWithFallbacks(fadingToLayer, rFetchQuota, fadeToAlpha, depth);
-
-        glDisable(GL_DEPTH_TEST);
-
-        // Always redraw if we're fading.
-        needRedraw |= fading;
-
-        mTileService.resetTileRequests();
-
-        Utils.throwIfErrors();
 
         // Enable alpha-blending
         glEnable(GL_BLEND);
@@ -1156,152 +981,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
 
-    private boolean drawLayerWithFallbacks(Layer layer, FetchQuota quota, float alpha, float depth) {
-        if (layer == null) {
-            return false;
-        }
-
-        int baseLayerIndex = indexForMapLayerOrNegative(layer);
 
 
-        boolean needsRedraw = drawLayer(layer, quota, alpha, depth);
 
-
-        Layer fallbackLayer = null;
-        // Fallback in preference to +1, -1, -2, -3.
-        for (int i = 1; !mDirtyArea.isEmpty() && i >= -3; i--) {
-            // If we are rendering with alpha != 1.0, then only draw one layer at most, to avoid overlapping transparency.
-            if (alpha < 1.0 && mDirtyArea.didDraw()) {
-                break;
-            }
-
-            // Skip over 0 difference, as that's the same as the desired layer.
-            if (i == 0) {
-                i = i - 1;
-            }
-            depth += 0.1f;
-
-
-            fallbackLayer = mapLayerForIndexOrNull(baseLayerIndex + i);
-            needsRedraw |= drawLayer(fallbackLayer, quota, alpha, depth);
-        }
-//		if(fallbackLayer != null)
-//		{
-//			Log.v(TAG, "Rendered " + layer.productCode + " fell back to " + fallbackLayer.productCode + " at " + alpha + " " + mDirtyArea.isEmpty() + " " + needsRedraw);
-//		}
-//		else
-//		{
-//			Log.v(TAG, "Rendered " + layer.productCode + " at " + alpha + " " + mDirtyArea.isEmpty() + " " + needsRedraw);			
-//		}
-        return needsRedraw;
-    }
-
-    private boolean drawLayer(Layer layer, FetchQuota quota, float alpha, float depth) {
-        if (layer == null) {
-            return false;
-        }
-
-        ScreenProjection projection = mVolatileProjection;
-        float metresPerPixel = projection.getMetresPerPixel();
-
-        BoundingBox visibleBounds = projection.getVisibleBounds();
-
-        float mapTileSize = layer.getTileSizeInMetres();
-        float screenTileSize = mapTileSize / metresPerPixel;
-
-        double mapTopLeftX = visibleBounds.getMinX();
-        double mapTopLeftY = visibleBounds.getMaxY();
-
-        // Draw only the dirty area.
-        Rect tileRect = rTempTileRect;
-        tileRect.left = (int) Math.floor(mDirtyArea.minX / mapTileSize);
-        tileRect.top = (int) Math.floor(mDirtyArea.minY / mapTileSize);
-        tileRect.right = (int) Math.ceil(mDirtyArea.maxX / mapTileSize);
-        tileRect.bottom = (int) Math.ceil(mDirtyArea.maxY / mapTileSize);
-
-        mDirtyArea.zero();
-
-
-        // Set alpha.
-        glUniform4f(shaderProgram.uniformTintColor, -1, -1, -1, alpha);
-
-        // Blend if alpha is not 1.
-        if (alpha == 1.0f) {
-            glDisable(GL_BLEND);
-        } else {
-            glEnable(GL_BLEND);
-        }
-
-        // Set up projection matrix	so we can refer to things in tile coordinates.
-        {
-            float[] mvpTempMatrix = rTempMatrix;
-            Matrix.scaleM(mvpTempMatrix, 0, mMVPOrthoMatrix, 0, screenTileSize, screenTileSize, 1);
-            glUniformMatrix4fv(shaderProgram.uniformMVP, 1, false, mvpTempMatrix, 0);
-        }
-
-        // Render from the centre, spiralling out.
-        MapTile tile = rTempTile;
-        tile.set(tileRect.centerX(), tileRect.centerY(), layer);
-
-        int tilesWide = tileRect.width();
-        int tilesHigh = tileRect.height();
-        int numTiles = Math.max(tilesWide, tilesHigh);
-        if ((numTiles & 1) == 0) {
-            numTiles++;
-        }
-        numTiles = numTiles * numTiles;
-        int offy = 1;
-        int offx = 0;
-        if (tilesWide > tilesHigh) {
-            offx = 1;
-            offy = 0;
-        }
-
-        int tilesNeeded = 1;
-        int tilesDrawn = 0;
-        int line = 0;
-
-        boolean needRedraw = false;
-        for (int i = 0; i < numTiles; i++) {
-            // Is the tile actually visible?
-            if (tileRect.contains(tile.x, tile.y)) {
-                if (bindTextureForTile(tile, quota) != 0) {
-                    // Draw this texture in the correct place. The offset is expressed in tiles (and can be a fraction of a tile).
-                    // tchan: We cast to float at the end to avoid losing too much precision.
-                    glVertexAttrib4f(shaderProgram.attribVOffset, (float) (tile.x - mapTopLeftX / mapTileSize), -(float) (tile.y - mapTopLeftY / mapTileSize), depth, 1);
-                    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-                    // Note that we drew something
-                    mDirtyArea.drewRect();
-                } else {
-                    // Failed to draw this bit.
-                    mDirtyArea.addDirtyRect(mapTileSize, tile);
-
-                    if (quota == null || quota.isExceeded()) {
-                        needRedraw = true;
-                        // Still continue because we can draw tiles from the GL cache
-                    }
-                }
-            }
-            // Draw in a spiral manner.
-            tile.y += offy;
-            tile.x += offx;
-            tilesDrawn++;
-            if (tilesDrawn == tilesNeeded) {
-                // Gone sufficient tiles in this direction.
-                tilesDrawn = 0;
-                int tmp = offx;
-                offx = offy;
-                offy = -tmp;
-                line++;
-                // Every 2nd line, increase the line length
-                if (line == 2) {
-                    line = 0;
-                    tilesNeeded++;
-                }
-            }
-        }
-        return needRedraw;
-    }
 
     @Override
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
@@ -1413,6 +1095,321 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             mTileService.start(mapConfiguration);
         } catch (FileNotFoundException e) {
             throw new IllegalStateException("Unable to load offline tile sources in map configuration");
+        }
+    }
+
+    private class TileRenderer {
+
+        DirtyArea mDirtyArea = new DirtyArea();
+
+        public boolean onDrawFrame(ScreenProjection projection, long nowUptimeMillis) {
+            //leakGPUMemory();
+            // At the start of each frame, mark each tile as off-screen.
+            // They are marked on-screen as part of tile drawing.
+            mGLTileCache.resetTileVisibility();
+            mTileService.resetTileRequests();
+
+            Utils.throwIfErrors();
+
+
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            setProgram(shaderProgram);
+
+
+            Utils.throwIfErrors();
+
+            glActiveTexture(GL_TEXTURE0);
+            glUniform1i(shaderProgram.uniformTexture, 0);
+
+            float metresPerPixel = projection.getMetresPerPixel();
+
+            boolean animating = (mScrollState.animatingScroll || mScrollState.animatingZoom);
+            boolean needRedraw = animating;
+            // OS-50: Ideally we'd set this to fadingToLayer during an animated fade+zoom, but this would require resetting it if we decide not to fade.
+            // (Not resetting it could mean looping over several million tiles when animating from fully zoomed-out to fully zoomed-in.)
+            // This only makes a difference if we fail to render a frame in the second half of the zoom animation.
+
+            Layer currentLayer = mapLayerForMPP(metresPerPixel);
+            Layer fadingFromLayer = null;
+            Layer fadingToLayer = null;
+            float fadeToAlpha = 0;
+            if (mScrollState.animatingZoom) {
+                float startMPP = mScrollState.animationStartMetresPerPixel;
+                float finalMPP = mScrollState.animationFinalMetresPerPixel;
+                fadingFromLayer = mapLayerForMPP(startMPP);
+                fadingToLayer = mapLayerForMPP(finalMPP);
+                if (fadingFromLayer == fadingToLayer) {
+                    // If we're not actually changing layers, do this to avoid the assert crash.
+                    fadingFromLayer = null;
+                    fadingToLayer = null;
+                    mFadingOutLayer = null;
+                } else {
+                    fadeToAlpha = (float) ((Math.log(metresPerPixel) - Math.log(startMPP)) / (Math.log(finalMPP) - Math.log(startMPP)));
+
+                    // OS-50 If the zoom gets interrupted, this will continue the fade roughly as if it was non-animated.
+                    if (currentLayer != fadingToLayer) {
+                        mFadingOutLayer = currentLayer;
+                    }
+                    // OS-50: Also set the alpha such that if we subsequently calculate fadeToAlpha we get roughly the same result.
+                    // TODO: This also affects the end of an animated zoom! Sigh.
+                    mFadingInStartUptimeMillis = nowUptimeMillis - (long) (fadeToAlpha * ZOOM_FADE_DURATION);
+                    assert Math.abs(fadeToAlpha - (nowUptimeMillis - mFadingInStartUptimeMillis) / (float) ZOOM_FADE_DURATION) < 1 / 256.0f;
+                }
+            } else {
+                if (mPreviousLayer != currentLayer && mFadingOutLayer != mPreviousLayer) {
+                    mFadingOutLayer = mPreviousLayer;
+                    mFadingInStartUptimeMillis = nowUptimeMillis;
+                } else if (mFadingOutLayer != null && nowUptimeMillis >= mFadingInStartUptimeMillis + ZOOM_FADE_DURATION) {
+                    mFadingOutLayer = null;
+                }
+
+                if (mFadingOutLayer != null) {
+                    fadingToLayer = currentLayer;
+                    fadingFromLayer = mFadingOutLayer;
+                    fadeToAlpha = (nowUptimeMillis - mFadingInStartUptimeMillis) / (float) ZOOM_FADE_DURATION;
+                }
+            }
+            mPreviousLayer = currentLayer;
+
+            if (fadingToLayer != null && Math.abs(indexForMapLayerOrNegative(fadingFromLayer) - indexForMapLayerOrNegative(fadingToLayer)) != 1) {
+                fadingFromLayer = null;
+                fadingToLayer = null;
+            }
+
+            final boolean fading = (fadingToLayer != null);
+            assert fading == (fadingFromLayer != null);
+            // If we are fading, use the layer we're fading *from* as the "base layer" for deciding which fallbacks to render.
+            // This matches what the (old) iOS maps app does.
+            final Layer baseLayer = (fading ? fadingFromLayer : currentLayer);
+
+
+            // Reset the fetch quota. It doesn't really matter where we do this, as long as we do it before drawLayer.
+            rFetchQuota.reset(nowUptimeMillis);
+
+            // We need to enable depth-testing to write to the depth buffer.
+            glEnable(GL_DEPTH_TEST);
+            // The default depth function is GL_LESS, so we don't actually need to pass in any depths (for now).
+
+            if (fading) {
+                rFetchQuota.setNoAsyncFetches();
+            }
+
+
+            float depth = 0.5f;
+            float alpha = 1.0f;
+
+            mDirtyArea.reset();
+            glVertexAttribPointer(shaderProgram.attribVCoord, 2, GL_FLOAT, false, 0, vertexBuffer);
+
+            // Don't execute any fetches on a layer that is fading out.
+            if (fadingToLayer != null) {
+                rFetchQuota.setNoAsyncFetches();
+            }
+            needRedraw |= drawLayerWithFallbacks(baseLayer, rFetchQuota, alpha, depth);
+            depth = 0.0f;
+            alpha = fadeToAlpha;
+            if (!mDirtyArea.didDraw()) {
+                Log.v(TAG, "Failed to draw any tiles!");
+            }
+            mDirtyArea.reset();
+            drawLayerWithFallbacks(fadingToLayer, rFetchQuota, fadeToAlpha, depth);
+
+            glDisable(GL_DEPTH_TEST);
+
+            // Always redraw if we're fading.
+            needRedraw |= fading;
+
+            mTileService.resetTileRequests();
+
+            Utils.throwIfErrors();
+
+            return needRedraw;
+        }
+
+        private boolean drawLayer(Layer layer, FetchQuota quota, float alpha, float depth) {
+            if (layer == null) {
+                return false;
+            }
+
+            ScreenProjection projection = mVolatileProjection;
+            float metresPerPixel = projection.getMetresPerPixel();
+
+            BoundingBox visibleBounds = projection.getVisibleBounds();
+
+            float mapTileSize = layer.getTileSizeInMetres();
+            float screenTileSize = mapTileSize / metresPerPixel;
+
+            double mapTopLeftX = visibleBounds.getMinX();
+            double mapTopLeftY = visibleBounds.getMaxY();
+
+            // Draw only the dirty area.
+            Rect tileRect = rTempTileRect;
+            tileRect.left = (int) Math.floor(mDirtyArea.minX / mapTileSize);
+            tileRect.top = (int) Math.floor(mDirtyArea.minY / mapTileSize);
+            tileRect.right = (int) Math.ceil(mDirtyArea.maxX / mapTileSize);
+            tileRect.bottom = (int) Math.ceil(mDirtyArea.maxY / mapTileSize);
+
+            mDirtyArea.zero();
+
+
+            // Set alpha.
+            glUniform4f(shaderProgram.uniformTintColor, -1, -1, -1, alpha);
+
+            // Blend if alpha is not 1.
+            if (alpha == 1.0f) {
+                glDisable(GL_BLEND);
+            } else {
+                glEnable(GL_BLEND);
+            }
+
+            // Set up projection matrix	so we can refer to things in tile coordinates.
+            {
+                float[] mvpTempMatrix = rTempMatrix;
+                Matrix.scaleM(mvpTempMatrix, 0, mMVPOrthoMatrix, 0, screenTileSize, screenTileSize, 1);
+                glUniformMatrix4fv(shaderProgram.uniformMVP, 1, false, mvpTempMatrix, 0);
+            }
+
+            // Render from the centre, spiralling out.
+            MapTile tile = rTempTile;
+            tile.set(tileRect.centerX(), tileRect.centerY(), layer);
+
+            int tilesWide = tileRect.width();
+            int tilesHigh = tileRect.height();
+            int numTiles = Math.max(tilesWide, tilesHigh);
+            if ((numTiles & 1) == 0) {
+                numTiles++;
+            }
+            numTiles = numTiles * numTiles;
+            int offy = 1;
+            int offx = 0;
+            if (tilesWide > tilesHigh) {
+                offx = 1;
+                offy = 0;
+            }
+
+            int tilesNeeded = 1;
+            int tilesDrawn = 0;
+            int line = 0;
+
+            boolean needRedraw = false;
+            for (int i = 0; i < numTiles; i++) {
+                // Is the tile actually visible?
+                if (tileRect.contains(tile.x, tile.y)) {
+                    if (bindTextureForTile(tile, quota) != 0) {
+                        // Draw this texture in the correct place. The offset is expressed in tiles (and can be a fraction of a tile).
+                        // tchan: We cast to float at the end to avoid losing too much precision.
+                        glVertexAttrib4f(shaderProgram.attribVOffset, (float) (tile.x - mapTopLeftX / mapTileSize), -(float) (tile.y - mapTopLeftY / mapTileSize), depth, 1);
+                        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+                        // Note that we drew something
+                        mDirtyArea.drewRect();
+                    } else {
+                        // Failed to draw this bit.
+                        mDirtyArea.addDirtyRect(mapTileSize, tile);
+
+                        if (quota == null || quota.isExceeded()) {
+                            needRedraw = true;
+                            // Still continue because we can draw tiles from the GL cache
+                        }
+                    }
+                }
+                // Draw in a spiral manner.
+                tile.y += offy;
+                tile.x += offx;
+                tilesDrawn++;
+                if (tilesDrawn == tilesNeeded) {
+                    // Gone sufficient tiles in this direction.
+                    tilesDrawn = 0;
+                    int tmp = offx;
+                    offx = offy;
+                    offy = -tmp;
+                    line++;
+                    // Every 2nd line, increase the line length
+                    if (line == 2) {
+                        line = 0;
+                        tilesNeeded++;
+                    }
+                }
+            }
+            return needRedraw;
+        }
+
+        private boolean drawLayerWithFallbacks(Layer layer, FetchQuota quota, float alpha, float depth) {
+            if (layer == null) {
+                return false;
+            }
+
+            int baseLayerIndex = indexForMapLayerOrNegative(layer);
+
+
+            boolean needsRedraw = drawLayer(layer, quota, alpha, depth);
+
+
+            Layer fallbackLayer = null;
+            // Fallback in preference to +1, -1, -2, -3.
+            for (int i = 1; !mDirtyArea.isEmpty() && i >= -3; i--) {
+                // If we are rendering with alpha != 1.0, then only draw one layer at most, to avoid overlapping transparency.
+                if (alpha < 1.0 && mDirtyArea.didDraw()) {
+                    break;
+                }
+
+                // Skip over 0 difference, as that's the same as the desired layer.
+                if (i == 0) {
+                    i = i - 1;
+                }
+                depth += 0.1f;
+
+
+                fallbackLayer = mapLayerForIndexOrNull(baseLayerIndex + i);
+                needsRedraw |= drawLayer(fallbackLayer, quota, alpha, depth);
+            }
+
+            return needsRedraw;
+        }
+    }
+
+    private class DirtyArea {
+
+        private double minX, minY, maxX, maxY;
+
+        private boolean mDidDraw;
+
+        boolean isEmpty() {
+            return Double.isInfinite(minX);
+        }
+
+        void zero() {
+            minX = Double.POSITIVE_INFINITY;
+            minY = Double.POSITIVE_INFINITY;
+            maxX = Double.NEGATIVE_INFINITY;
+            maxY = Double.NEGATIVE_INFINITY;
+        }
+
+        void drewRect() {
+            mDidDraw = true;
+        }
+
+        boolean didDraw() {
+            return mDidDraw;
+        }
+
+        void addDirtyRect(float tilesize, MapTile tile) {
+            minX = Math.min(minX, tile.x * tilesize);
+            minY = Math.min(minY, tile.y * tilesize);
+            maxX = Math.max(maxX, tile.x * tilesize + tilesize);
+            maxY = Math.max(maxY, tile.y * tilesize + tilesize);
+        }
+
+
+        void reset() {
+            ScreenProjection projection = mVolatileProjection;
+            BoundingBox visible = projection.getVisibleBounds();
+            // Set to full visible area.
+            maxX = visible.getMaxX();
+            minX = visible.getMinX();
+            maxY = visible.getMaxY();
+            minY = visible.getMinY();
+            mDidDraw = false;
         }
     }
 

@@ -47,7 +47,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.LayerSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.LocalLayerSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.RemoteLayerSource;
-import uk.co.ordnancesurvey.osmobilesdk.raster.network.NetworkStateMonitor;
+import uk.co.ordnancesurvey.osmobilesdk.utilities.network.NetworkStateMonitor;
 
 public class TileService {
 

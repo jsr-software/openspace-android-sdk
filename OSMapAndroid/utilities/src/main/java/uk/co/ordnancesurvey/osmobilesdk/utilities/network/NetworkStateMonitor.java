@@ -20,7 +20,7 @@
 * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 *
 */
-package uk.co.ordnancesurvey.osmobilesdk.raster.network;
+package uk.co.ordnancesurvey.osmobilesdk.utilities.network;
 
 import android.content.Context;
 import android.content.Intent;

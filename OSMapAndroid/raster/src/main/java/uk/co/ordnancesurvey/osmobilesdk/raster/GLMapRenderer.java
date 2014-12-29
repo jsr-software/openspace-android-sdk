@@ -65,7 +65,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.LayerCatalog;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileServiceDelegate;
-import uk.co.ordnancesurvey.osmobilesdk.raster.network.NetworkStateMonitor;
+import uk.co.ordnancesurvey.osmobilesdk.utilities.network.NetworkStateMonitor;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileService;
 
 import static android.opengl.GLES20.GL_BACK;

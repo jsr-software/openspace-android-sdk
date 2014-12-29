@@ -1,1 +1,1 @@
-include ':raster', ':app', ':locations', ':gazetteer', ':gis'
+include ':raster', ':app', ':locations', ':gazetteer', ':gis', ':utilities'

@@ -167,7 +167,7 @@ public class BoundingBox implements Serializable {
 
     /**
      * Returns a hash code for a double value, using the algorithm from
-     * Joshua Bloch's book <i>Effective Java"</i>
+     * Joshua Bloch's book <i>Effective Java</i>
      */
     public static int hashCode(double x) {
         // CS:OFF MagicNumber FOR 2 LINES

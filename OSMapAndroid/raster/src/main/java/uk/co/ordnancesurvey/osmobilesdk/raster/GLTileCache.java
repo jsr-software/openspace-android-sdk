@@ -27,7 +27,6 @@ import static android.opengl.GLES20.*;
 import java.util.Locale;
 
 import android.graphics.Bitmap;
-import android.opengl.GLUtils;
 import android.os.SystemClock;
 import android.util.Log;
 

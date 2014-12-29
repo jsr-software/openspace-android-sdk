@@ -99,7 +99,7 @@ The anchor point is specified in the continuous space [0.0, 1.0] x [0.0, 1.0], w
 	 * Sets the location for the marker.
 	 * @return the object for which the method was called, with the new position set.
 	 */
-	public MarkerOptions Point(Point gp)
+	public MarkerOptions setPoint(Point gp)
 	{
 		mPoint = gp;
 		return this;

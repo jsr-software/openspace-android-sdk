@@ -4,6 +4,10 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.os.Bundle;
 
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Marker;
+import uk.co.ordnancesurvey.osmobilesdk.raster.MarkerOptions;
+import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapFragment;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Basemap;
@@ -11,7 +15,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Basemap;
 public class MainActivity extends Activity {
 
     private static final String MAP_TAG = "map_tag";
-    private Fragment mMapFragment;
+    private MapFragment mMapFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,7 +33,22 @@ public class MainActivity extends Activity {
                     .add(android.R.id.content, mMapFragment, MAP_TAG)
                     .commit();
         } else {
-            mMapFragment = getFragmentManager().findFragmentByTag(MAP_TAG);
+            mMapFragment = (MapFragment) getFragmentManager().findFragmentByTag(MAP_TAG);
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        final OSMap map = mMapFragment.getMap().getMap();
+        map.setOnMapClickListener(new OSMap.OnMapClickListener() {
+            @Override
+            public boolean onMapClick(Point point) {
+                MarkerOptions options = new MarkerOptions()
+                        .setPoint(point);
+                map.addMarker(options);
+                return false;
+            }
+        });
     }
 }

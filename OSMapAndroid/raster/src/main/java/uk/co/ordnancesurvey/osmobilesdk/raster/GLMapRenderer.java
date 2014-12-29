@@ -32,7 +32,6 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.NinePatchDrawable;
-import android.location.Location;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Build;
@@ -112,10 +111,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private static final String TAG = GLMapRenderer.class.getSimpleName();
 
     private final Context mContext;
-    private final TileService mTileService;
     private final PositionManager mPositionManager = new PositionManager();
-
-    private final TileRenderer mTileRenderer = new TileRenderer();
+    private final TileRenderer mTileRenderer;
 
     private MapConfiguration mMapConfiguration;
 
@@ -185,7 +182,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         mScrollController = scrollController;
 
-        mTileService = new TileService(getContext(), new NetworkStateMonitor(mContext), this);
+        mTileRenderer = new TileRenderer(mContext, this);
     }
 
     private final GLTileCache mGLTileCache;
@@ -219,12 +216,12 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final MapTile rTempTile = new MapTile();
     private final FetchQuota rFetchQuota = new FetchQuota();
 
-    private Layer[] mLayers;
-
-    private Layer mPreviousLayer;
-    private Layer mFadingOutLayer;
-    private long mFadingInStartUptimeMillis;
-    private static final int ZOOM_FADE_DURATION = 400; // It's 0.4s in the iOS code.
+//    private Layer[] mLayers;
+//
+//    private Layer mPreviousLayer;
+//    private Layer mFadingOutLayer;
+//    private long mFadingInStartUptimeMillis;
+//    private static final int ZOOM_FADE_DURATION = 400; // It's 0.4s in the iOS code.
     private final Handler mHandler;
     private final Runnable mCameraChangeRunnable = new Runnable() {
         public void run() {
@@ -280,7 +277,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
         mScrollController.setZoomScales(mpps);
 
-        mLayers = layers;
+        mTileRenderer.setLayers(layers);
+//        mLayers = layers;
     }
 
     public void setInfoWindowAdapter(InfoWindowAdapter adapter) {
@@ -320,73 +318,13 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
 
     public void onDestroy() {
-        mTileService.shutDown();
+        mTileRenderer.shutdown();
     }
 
     public void onResume() {
         super.onResume();
         mPositionManager.setInitialMapPosition();
-        startTileService(mMapConfiguration);
-    }
-
-    // Round the metres per pixel down to 1,2,5,
-    private Layer mapLayerForMPP(float metresPerPixel) {
-        Layer bestLayer = null;
-        float bestScore = Float.POSITIVE_INFINITY;
-        // Precalculate log(mpp). This costs an extra log() but means we don't have to do float division (which might overflow/underflow).
-        float logMPP = (float) Math.log(metresPerPixel);
-        for (Layer layer : mLayers) {
-            float score = Math.abs((float) Math.log(layer.getMetresPerPixel()) - logMPP);
-            if (score < bestScore) {
-                bestScore = score;
-                bestLayer = layer;
-            }
-        }
-        return bestLayer;
-    }
-
-    private int indexForMapLayerOrNegative(Layer layer) {
-        assert layer != null;
-        int index = Arrays.binarySearch(mLayers, layer, LayerCatalog.getReverseComparator());
-        if (index < 0) {
-            assert false : "This might happen if mLayers is changed in another thread. If this happens frequently enough when debugging, onDrawFrame() should be changed to only read mLayers once.";
-            return Integer.MIN_VALUE / 2;
-        }
-        return index;
-    }
-
-    private Layer mapLayerForIndexOrNull(int index) {
-        Layer[] layers = mLayers;
-        if (0 <= index && index < layers.length) {
-            return layers[index];
-        }
-        return null;
-    }
-
-    private int bindTextureForTile(MapTile tile, FetchQuota quota) {
-        int textureId = mGLTileCache.bindTextureForTile(tile);
-        if (textureId != 0) {
-            return textureId;
-        }
-
-        // Don't fetch if there's no quota!
-        if (quota == null) {
-            return 0;
-        }
-
-        // Don't fetch if we've exceeded limits.
-        if (quota.isExceeded()) {
-            return 0;
-        }
-
-        Bitmap bmp = mTileService.requestBitmapForTile(tile);
-        if (bmp == null) {
-            quota.fetchFailure();
-        } else {
-            quota.fetchSuccess();
-            textureId = mGLTileCache.putTextureForTile(tile, bmp);
-        }
-        return textureId;
+        mTileRenderer.init(mMapConfiguration);
     }
 
     public final void clear() {
@@ -505,16 +443,16 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private void roundToPixelBoundary() {
         // OS-56: A better pixel-aligned-drawing algorithm.
         float originalMPP = mScrollState.metresPerPixel;
-        Layer layer = mapLayerForMPP(originalMPP);
+        Layer layer = mTileRenderer.mapLayerForMPP(originalMPP);
         float originalSizeScreenPx = layer.getTileSizeInMetres() / originalMPP;
         float roundedSizeScreenPx = (float) Math.ceil(originalSizeScreenPx);
         float roundedMPP = layer.getTileSizeInMetres() / roundedSizeScreenPx;
-        if (mapLayerForMPP(roundedMPP) != layer) {
+        if (mTileRenderer.mapLayerForMPP(roundedMPP) != layer) {
             // If rounding up would switch layer boundaries, try rounding down.
             roundedSizeScreenPx = (float) Math.floor(originalSizeScreenPx);
             roundedMPP = layer.getTileSizeInMetres() / roundedSizeScreenPx;
             // If that breaks too, we're in trouble.
-            if (roundedSizeScreenPx < 1 || mapLayerForMPP(roundedMPP) != layer) {
+            if (roundedSizeScreenPx < 1 || mTileRenderer.mapLayerForMPP(roundedMPP) != layer) {
                 assert false : "This shouldn't happen!";
                 return;
             }
@@ -597,7 +535,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
         mVolatileProjection = projection;
 
-        boolean needRedraw = mTileRenderer.onDrawFrame(projection, nowUptimeMillis);
+        boolean needRedraw = mTileRenderer.onDrawFrame(projection, nowUptimeMillis, mScrollState);
 
         float metresPerPixel = projection.getMetresPerPixel();
         boolean animating = (mScrollState.animatingScroll || mScrollState.animatingZoom);
@@ -980,11 +918,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         return ret;
     }
 
-
-
-
-
-
     @Override
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
         if (BuildConfig.DEBUG) {
@@ -1087,22 +1020,35 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void setMapConfiguration(MapConfiguration mapConfiguration) {
         mMapConfiguration = mapConfiguration;
-        startTileService(mMapConfiguration);
-    }
-
-    private void startTileService(MapConfiguration mapConfiguration) {
-        try {
-            mTileService.start(mapConfiguration);
-        } catch (FileNotFoundException e) {
-            throw new IllegalStateException("Unable to load offline tile sources in map configuration");
-        }
+        mTileRenderer.init(mMapConfiguration);
     }
 
     private class TileRenderer {
 
+        private final TileService mTileService;
+
+        private Layer[] mLayers;
+
+        private Layer mPreviousLayer;
+        private Layer mFadingOutLayer;
+        private long mFadingInStartUptimeMillis;
+        private static final int ZOOM_FADE_DURATION = 400; // It's 0.4s in the iOS code.
+
         DirtyArea mDirtyArea = new DirtyArea();
 
-        public boolean onDrawFrame(ScreenProjection projection, long nowUptimeMillis) {
+        public TileRenderer(Context context, TileServiceDelegate delegate) {
+            mTileService = new TileService(context, new NetworkStateMonitor(context), delegate);
+        }
+
+        public void init(MapConfiguration mapConfiguration) {
+            try {
+                mTileService.start(mapConfiguration);
+            } catch (FileNotFoundException e) {
+                throw new IllegalStateException("Unable to load offline tile sources in map configuration");
+            }
+        }
+
+        public boolean onDrawFrame(ScreenProjection projection, long nowUptimeMillis, MapScrollController.ScrollPosition scrollPosition) {
             //leakGPUMemory();
             // At the start of each frame, mark each tile as off-screen.
             // They are marked on-screen as part of tile drawing.
@@ -1116,7 +1062,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
             setProgram(shaderProgram);
 
-
             Utils.throwIfErrors();
 
             glActiveTexture(GL_TEXTURE0);
@@ -1124,7 +1069,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
             float metresPerPixel = projection.getMetresPerPixel();
 
-            boolean animating = (mScrollState.animatingScroll || mScrollState.animatingZoom);
+            boolean animating = (scrollPosition.animatingScroll || scrollPosition.animatingZoom);
             boolean needRedraw = animating;
             // OS-50: Ideally we'd set this to fadingToLayer during an animated fade+zoom, but this would require resetting it if we decide not to fade.
             // (Not resetting it could mean looping over several million tiles when animating from fully zoomed-out to fully zoomed-in.)
@@ -1134,9 +1079,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             Layer fadingFromLayer = null;
             Layer fadingToLayer = null;
             float fadeToAlpha = 0;
-            if (mScrollState.animatingZoom) {
-                float startMPP = mScrollState.animationStartMetresPerPixel;
-                float finalMPP = mScrollState.animationFinalMetresPerPixel;
+            if (scrollPosition.animatingZoom) {
+                float startMPP = scrollPosition.animationStartMetresPerPixel;
+                float finalMPP = scrollPosition.animationFinalMetresPerPixel;
                 fadingFromLayer = mapLayerForMPP(startMPP);
                 fadingToLayer = mapLayerForMPP(finalMPP);
                 if (fadingFromLayer == fadingToLayer) {
@@ -1225,6 +1170,32 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             Utils.throwIfErrors();
 
             return needRedraw;
+        }
+
+        public int bindTextureForTile(MapTile tile, FetchQuota quota) {
+            int textureId = mGLTileCache.bindTextureForTile(tile);
+            if (textureId != 0) {
+                return textureId;
+            }
+
+            // Don't fetch if there's no quota!
+            if (quota == null) {
+                return 0;
+            }
+
+            // Don't fetch if we've exceeded limits.
+            if (quota.isExceeded()) {
+                return 0;
+            }
+
+            Bitmap bmp = mTileService.requestBitmapForTile(tile);
+            if (bmp == null) {
+                quota.fetchFailure();
+            } else {
+                quota.fetchSuccess();
+                textureId = mGLTileCache.putTextureForTile(tile, bmp);
+            }
+            return textureId;
         }
 
         private boolean drawLayer(Layer layer, FetchQuota quota, float alpha, float depth) {
@@ -1334,6 +1305,22 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             return needRedraw;
         }
 
+        private Layer mapLayerForMPP(float metresPerPixel) {
+            Layer bestLayer = null;
+            float bestScore = Float.POSITIVE_INFINITY;
+            // Precalculate log(mpp). This costs an extra log() but means we don't have to do float division (which might overflow/underflow).
+            float logMPP = (float) Math.log(metresPerPixel);
+            for (Layer layer : mLayers) {
+                float score = Math.abs((float) Math.log(layer.getMetresPerPixel()) - logMPP);
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestLayer = layer;
+                }
+            }
+            return bestLayer;
+        }
+
+
         private boolean drawLayerWithFallbacks(Layer layer, FetchQuota quota, float alpha, float depth) {
             if (layer == null) {
                 return false;
@@ -1341,9 +1328,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
             int baseLayerIndex = indexForMapLayerOrNegative(layer);
 
-
             boolean needsRedraw = drawLayer(layer, quota, alpha, depth);
-
 
             Layer fallbackLayer = null;
             // Fallback in preference to +1, -1, -2, -3.
@@ -1365,6 +1350,32 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             }
 
             return needsRedraw;
+        }
+
+        private int indexForMapLayerOrNegative(Layer layer) {
+            assert layer != null;
+            int index = Arrays.binarySearch(mLayers, layer, LayerCatalog.getReverseComparator());
+            if (index < 0) {
+                assert false : "This might happen if mLayers is changed in another thread. If this happens frequently enough when debugging, onDrawFrame() should be changed to only read mLayers once.";
+                return Integer.MIN_VALUE / 2;
+            }
+            return index;
+        }
+
+        private Layer mapLayerForIndexOrNull(int index) {
+            Layer[] layers = mLayers;
+            if (0 <= index && index < layers.length) {
+                return layers[index];
+            }
+            return null;
+        }
+
+        public void setLayers(Layer[] layers) {
+            mLayers = layers;
+        }
+
+        public void shutdown() {
+            mTileService.shutdown();
         }
     }
 

@@ -112,7 +112,7 @@ public class TileService {
         mNetworkMonitor.start();
     }
 
-    public void shutDown() {
+    public void shutdown() {
         for (Subscription subscription : mCurrentSubscriptions) {
             subscription.unsubscribe();
         }

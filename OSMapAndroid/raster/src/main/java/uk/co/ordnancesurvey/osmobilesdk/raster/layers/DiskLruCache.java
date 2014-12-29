@@ -42,7 +42,9 @@
  * limitations under the License.
  */
 
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.layers;
+
+import android.util.Log;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
@@ -56,9 +58,9 @@ import java.io.FileWriter;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -69,10 +71,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import java.nio.charset.Charset;
-
-import android.util.Log;
 
 /**
  * A cache that uses a bounded amount of space on a filesystem. Each cache
@@ -224,7 +222,7 @@ final class DiskLruCache implements Closeable {
    * @param directory a writable directory
    * @param valueCount the number of values per cache entry. Must be positive.
    * @param maxSize the maximum number of bytes this cache should use to store
-   * @throws IOException if reading or writing the cache directory fails
+   * @throws java.io.IOException if reading or writing the cache directory fails
    */
   static DiskLruCache open(File directory, int appVersion, int valueCount, long maxSize)
       throws IOException {
@@ -943,7 +941,7 @@ final class DiskLruCache implements Closeable {
  */
 
 /**
- * Buffers input from an {@link InputStream} for reading lines.
+ * Buffers input from an {@link java.io.InputStream} for reading lines.
  *
  * This class is used for buffered reading of lines. For purposes of this class, a line ends with
  * "\n" or "\r\n". End of input is reported by throwing {@code EOFException}. Unterminated line at
@@ -952,7 +950,7 @@ final class DiskLruCache implements Closeable {
  *
  * This class is intended for reading input that strictly consists of lines, such as line-based
  * cache entries or cache journal. Unlike the {@link BufferedReader} which in conjunction with
- * {@link InputStreamReader} provides similar functionality, this class uses different
+ * {@link java.io.InputStreamReader} provides similar functionality, this class uses different
  * end-of-input reporting and a more restrictive definition of a line.
  *
  * This class supports only charsets that encode '\r' and '\n' as a single byte with value 13
@@ -1019,7 +1017,7 @@ private final class StrictLineReader implements Closeable {
    * Closes the reader by closing the underlying {@code InputStream} and
    * marking this reader as closed.
    *
-   * @throws IOException for errors when closing the underlying {@code InputStream}.
+   * @throws java.io.IOException for errors when closing the underlying {@code InputStream}.
    */
   @Override
   public void close() throws IOException {
@@ -1036,8 +1034,8 @@ private final class StrictLineReader implements Closeable {
    * this end of line marker is not included in the result.
    *
    * @return the next line from the input.
-   * @throws IOException for underlying {@code InputStream} errors.
-   * @throws EOFException for the end of source stream.
+   * @throws java.io.IOException for underlying {@code InputStream} errors.
+   * @throws java.io.EOFException for the end of source stream.
    */
   String readLine() throws IOException {
     synchronized (in) {
@@ -1093,8 +1091,8 @@ private final class StrictLineReader implements Closeable {
    * Reads new input data into the buffer. Call only with pos == end or end == -1,
    * depending on the desired outcome if the function throws.
    *
-   * @throws IOException for underlying {@code InputStream} errors.
-   * @throws EOFException for the end of source stream.
+   * @throws java.io.IOException for underlying {@code InputStream} errors.
+   * @throws java.io.EOFException for the end of source stream.
    */
   private void fillBuf() throws IOException {
     int result = in.read(buf, 0, buf.length);

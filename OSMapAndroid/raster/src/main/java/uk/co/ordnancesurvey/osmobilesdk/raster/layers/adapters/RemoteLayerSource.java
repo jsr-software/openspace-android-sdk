@@ -41,14 +41,14 @@ public class RemoteLayerSource implements LayerSource {
 
     private final static String CLASS_TAG = RemoteLayerSource.class.getSimpleName();
 
-    private final String[] mProducts;
+    private final Layer[] mLayers;
     private final String mApiKey;
     private final String mApiKeyPackageName;
     private final boolean mIsPro;
 
     public RemoteLayerSource(String apiKey, String apiKeyPackageName, boolean isPro,
-                             String[] productsOrNull) {
-        mProducts = productsOrNull;
+                             Layer[] layers) {
+        mLayers = layers;
         mApiKey = apiKey;
         mApiKeyPackageName = apiKeyPackageName;
         mIsPro = isPro;
@@ -115,12 +115,12 @@ public class RemoteLayerSource implements LayerSource {
     }
 
     boolean isProductSupported(String productCode) {
-        if (mProducts == null) {
+        if (mLayers == null) {
             return true;
         }
 
-        for (int i = 0; i < mProducts.length; i++) {
-            if (mProducts[i].equals(productCode)) {
+        for (int i = 0; i < mLayers.length; i++) {
+            if (mLayers[i].getProductCode().equals(productCode)) {
                 return true;
             }
         }

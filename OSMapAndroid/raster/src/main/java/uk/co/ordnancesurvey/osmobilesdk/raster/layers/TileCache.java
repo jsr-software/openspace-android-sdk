@@ -54,53 +54,6 @@ public class TileCache {
         return INSTANCE;
     }
 
-    private TileCache(int memoryMB, int diskMB, File dir, int appVersion) {
-        if (memoryMB > 0) {
-            if (memoryMB > Integer.MAX_VALUE / BYTES_PER_MB) {
-                assert !BuildConfig.DEBUG || false : "Too big!";
-                memoryMB = Integer.MAX_VALUE / BYTES_PER_MB;
-            }
-            mMemoryCache = new TileMemoryCache(memoryMB * BYTES_PER_MB);
-        } else {
-            mMemoryCache = null;
-        }
-
-        mDiskCache = (diskMB > 0) ? openDiskCacheOrNull(dir, appVersion, 1, diskMB * (long) BYTES_PER_MB) : null;
-        mAsyncExecutor = (mDiskCache != null) ? new ThreadPoolExecutor(0, 1, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>()) : null;
-    }
-
-    public String stringForKey(MapTile key) {
-        return key.layer.getProductCode() + "_" + key.x + "_" + key.y;
-    }
-
-
-
-    private static int getMemoryMB(Context context) {
-        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        int memoryClass = activityManager.getMemoryClass();
-        return memoryClass / 2;
-    }
-
-    private static int getAppVersion(Context context) {
-        final String packageName = context.getPackageName();
-        int appVersion;
-        try {
-            appVersion = context.getPackageManager().getPackageInfo(packageName, 0).versionCode;
-        } catch (PackageManager.NameNotFoundException e) {
-            Log.e(CLASS_TAG, "Failed to get package version for " + packageName, e);
-            appVersion = 1;
-        }
-        return appVersion;
-    }
-
-    private static boolean isSameCacheInstance(int memoryMB, int appVersion, File cacheDir) {
-        return INSTANCE != null &&
-                memoryMB == TileCache.sMemoryMB &&
-                DISK_MB == TileCache.sDiskMB &&
-                appVersion == TileCache.sAppVersion &&
-                cacheDir.equals(TileCache.sDir);
-    }
-
     public byte[] get(MapTile key) {
         if (mMemoryCache != null) {
             byte[] ret = mMemoryCache.get(key);
@@ -152,7 +105,52 @@ public class TileCache {
         }
     }
 
-    static DiskLruCache openDiskCacheOrNull(File directory, int appVersion, int valueCount, long maxSize) {
+    private TileCache(int memoryMB, int diskMB, File dir, int appVersion) {
+        if (memoryMB > 0) {
+            if (memoryMB > Integer.MAX_VALUE / BYTES_PER_MB) {
+                assert !BuildConfig.DEBUG || false : "Too big!";
+                memoryMB = Integer.MAX_VALUE / BYTES_PER_MB;
+            }
+            mMemoryCache = new TileMemoryCache(memoryMB * BYTES_PER_MB);
+        } else {
+            mMemoryCache = null;
+        }
+
+        mDiskCache = (diskMB > 0) ? openDiskCacheOrNull(dir, appVersion, 1, diskMB * (long) BYTES_PER_MB) : null;
+        mAsyncExecutor = (mDiskCache != null) ? new ThreadPoolExecutor(0, 1, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>()) : null;
+    }
+
+    private String stringForKey(MapTile key) {
+        return key.layer.getProductCode() + "_" + key.x + "_" + key.y;
+    }
+
+    private static int getAppVersion(Context context) {
+        final String packageName = context.getPackageName();
+        int appVersion;
+        try {
+            appVersion = context.getPackageManager().getPackageInfo(packageName, 0).versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(CLASS_TAG, "Failed to get package version for " + packageName, e);
+            appVersion = 1;
+        }
+        return appVersion;
+    }
+
+    private static int getMemoryMB(Context context) {
+        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        int memoryClass = activityManager.getMemoryClass();
+        return memoryClass / 2;
+    }
+
+    private static boolean isSameCacheInstance(int memoryMB, int appVersion, File cacheDir) {
+        return INSTANCE != null &&
+                memoryMB == TileCache.sMemoryMB &&
+                DISK_MB == TileCache.sDiskMB &&
+                appVersion == TileCache.sAppVersion &&
+                cacheDir.equals(TileCache.sDir);
+    }
+
+    private static DiskLruCache openDiskCacheOrNull(File directory, int appVersion, int valueCount, long maxSize) {
         try {
             return DiskLruCache.open(directory, appVersion, valueCount, maxSize);
         } catch (IOException e) {
@@ -161,7 +159,7 @@ public class TileCache {
         }
     }
 
-    static final class TileMemoryCache extends LruCache<MapTile, byte[]> {
+    private static final class TileMemoryCache extends LruCache<MapTile, byte[]> {
         public TileMemoryCache(int maxSize) {
             super(maxSize);
         }

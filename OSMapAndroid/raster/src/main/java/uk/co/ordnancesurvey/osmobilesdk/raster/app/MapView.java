@@ -115,7 +115,7 @@ public final class MapView extends FrameLayout {
 
         } else {
             // Otherwise use the map stack specified by the user
-            map.setMapLayers(LayerCatalog.getLayers(mapConfiguration.getBasemap().getMapLayers()));
+            map.setMapLayers(mapConfiguration.getBasemap().getMapLayers());
         }
         return map;
     }

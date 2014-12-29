@@ -24,11 +24,11 @@ package uk.co.ordnancesurvey.osmobilesdk.raster.layers;
 
 import java.io.Serializable;
 
-public class Basemap implements Serializable {
+public abstract class Basemap implements Serializable {
     private final String mBasemapName;
-    private final String[] mMapLayers;
+    private final Layer[] mMapLayers;
 
-    public Basemap(String basemapName, String[] mapLayers) {
+    public Basemap(String basemapName, Layer[] mapLayers) {
         mBasemapName = basemapName;
         mMapLayers = mapLayers;
     }
@@ -37,7 +37,7 @@ public class Basemap implements Serializable {
         return mBasemapName;
     }
 
-    public String[] getMapLayers() {
+    public Layer[] getMapLayers() {
         return mMapLayers;
     }
 }

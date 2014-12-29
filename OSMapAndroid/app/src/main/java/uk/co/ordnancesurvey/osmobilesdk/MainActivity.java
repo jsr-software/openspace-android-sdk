@@ -11,8 +11,6 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Basemap;
 public class MainActivity extends Activity {
 
     private static final String MAP_TAG = "map_tag";
-    private static final String[] OVERVIEW_STACK = new String[] {"CS00", "CS02", "CS04", "CS05"};
-
     private Fragment mMapFragment;
 
     @Override
@@ -21,7 +19,7 @@ public class MainActivity extends Activity {
 
         if (savedInstanceState == null) {
             MapConfiguration.Builder builder = new MapConfiguration.Builder()
-                    .setBaseMap(new Basemap("Test maps", OVERVIEW_STACK))
+                    .setBaseMap(new OverviewBaseMap())
                     .setIsPro(true)
                     .setOfflineTileSource(getExternalFilesDir(null));
 

@@ -113,6 +113,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private final Context mContext;
     private final TileService mTileService;
+    private final PositionManager mPositionManager = new PositionManager();
 
     private MapConfiguration mMapConfiguration;
 
@@ -228,7 +229,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             ScreenProjection projection = getProjection();
             CameraPosition position = new CameraPosition(projection.getCenter(), projection.getMetresPerPixel());
             // Cache position;
-            storePosition(position);
+            mPositionManager.storePosition(position);
             // TODO: move the position code
             // This listener is set on the main thread, so no problem using it like this.
             if (mOnCameraChangeListener != null) {
@@ -376,7 +377,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         Log.v(TAG, "onResume");
         mForeground = true;
 
-        setInitialMapPosition();
+        mPositionManager.setInitialMapPosition();
 
         startTileService(mMapConfiguration);
     }
@@ -1415,77 +1416,65 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     }
 
-    // POSITION CACHE
-    private static final String POSITION_EASTINGS = "position_eastings";
-    private static final String POSITION_NORTHINGS = "position_northings";
-    private static final String POSITION_ZOOM = "position_zoom";
+    private class PositionManager {
+        // POSITION CACHE
+        private static final String POSITION_EASTINGS = "position_eastings";
+        private static final String POSITION_NORTHINGS = "position_northings";
+        private static final String POSITION_ZOOM = "position_zoom";
 
-    private static final long DEFAULT_EASTINGS = 45000;
-    private static final long DEFAULT_NORTHINGS = 45000;
-    private static final long DEFAULT_ZOOM = 50000;
+        private static final long DEFAULT_EASTINGS = 45000;
+        private static final long DEFAULT_NORTHINGS = 45000;
+        private static final long DEFAULT_ZOOM = 50000;
 
-    private void setInitialMapPosition() {
-        moveCamera(getPosition(), false);
-    }
-
-    private CameraPosition getPosition() {
-
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-        double eastings = prefs.getFloat(POSITION_EASTINGS, DEFAULT_EASTINGS);
-        double northings = prefs.getFloat(POSITION_NORTHINGS, DEFAULT_NORTHINGS);
-        float zoom = prefs.getFloat(POSITION_ZOOM, DEFAULT_ZOOM);
-
-        boolean isValidPosition = isValidPosition(eastings, northings, zoom);
-        CameraPosition position;
-        if (isValidPosition) {
-            position = new CameraPosition(new Point(eastings, northings, Point.BNG), zoom);
-        } else {
-            position = new CameraPosition(new Point(DEFAULT_EASTINGS,
-                    DEFAULT_NORTHINGS, Point.BNG), DEFAULT_ZOOM);
+        public void setInitialMapPosition() {
+            moveCamera(getPosition(), false);
         }
 
-        return position;
-    }
+        public CameraPosition getPosition() {
 
-    private void storePosition(CameraPosition position) {
-        if (position == null) {
-            return;
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+            double eastings = prefs.getFloat(POSITION_EASTINGS, DEFAULT_EASTINGS);
+            double northings = prefs.getFloat(POSITION_NORTHINGS, DEFAULT_NORTHINGS);
+            float zoom = prefs.getFloat(POSITION_ZOOM, DEFAULT_ZOOM);
+
+            boolean isValidPosition = isValidPosition(eastings, northings, zoom);
+            CameraPosition position;
+            if (isValidPosition) {
+                position = new CameraPosition(new Point(eastings, northings, Point.BNG), zoom);
+            } else {
+                position = new CameraPosition(new Point(DEFAULT_EASTINGS,
+                        DEFAULT_NORTHINGS, Point.BNG), DEFAULT_ZOOM);
+            }
+
+            return position;
         }
 
-        boolean isValidPosition = isValidPosition(position.target.getX(), position.target.getY(),
-                position.zoom);
-        if (!isValidPosition) {
-            return;
+        public void storePosition(CameraPosition position) {
+            if (position == null) {
+                return;
+            }
+
+            boolean isValidPosition = isValidPosition(position.target.getX(), position.target.getY(),
+                    position.zoom);
+            if (!isValidPosition) {
+                return;
+            }
+
+            PreferenceManager.getDefaultSharedPreferences(mContext)
+                    .edit()
+                    .putFloat(POSITION_EASTINGS, (float) position.target.getX())
+                    .putFloat(POSITION_NORTHINGS, (float) position.target.getY())
+                    .putFloat(POSITION_ZOOM, position.zoom)
+                    .commit();
         }
 
-        PreferenceManager.getDefaultSharedPreferences(mContext)
-                .edit()
-                .putFloat(POSITION_EASTINGS, (float) position.target.getX())
-                .putFloat(POSITION_NORTHINGS, (float) position.target.getY())
-                .putFloat(POSITION_ZOOM, position.zoom)
-                .commit();
+        private boolean isValid(double value) {
+            return !Double.isNaN(value) && !Double.isInfinite(value);
+        }
+
+        private boolean isValidPosition(double easting, double northing, float zoom) {
+            return isValid(easting) && isValid(northing) && isValid(zoom);
+        }
     }
 
-    private boolean isValid(double value) {
-        return !Double.isNaN(value) && !Double.isInfinite(value);
-    }
-
-    private boolean isValidPosition(double easting, double northing, float zoom) {
-        return isValid(easting) && isValid(northing) && isValid(zoom);
-    }
-
-    /*
-    private int leaks = 0;
-	private void leakGPUMemory() {
-		long tileSizeBytes = TILE_SIZE_PIXELS * TILE_SIZE_PIXELS * 4;
-		long estGPUUsage = tileSizeBytes*NUM_TEXTURES;
-		float MB = 1048576.0f;
-
-		Utils.generateTexture();
-		GLUtils.texImage2D(GL_TEXTURE_2D, 0, mBitmaps[1], 0);
-		leaks++;
-
-		Log.v(TAG, String.format(Locale.ENGLISH, "Estimated RAM: %g + %g GPU + %g GPU leaked", estGPUUsage/MB, estGPUUsage/MB, (leaks*tileSizeBytes)/MB));
-	}
-*/
 }

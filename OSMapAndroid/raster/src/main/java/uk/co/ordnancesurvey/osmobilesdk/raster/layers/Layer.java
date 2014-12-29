@@ -22,7 +22,9 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster.layers;
 
-public class Layer {
+import java.io.Serializable;
+
+public class Layer implements Serializable {
     private final String mProductCode;
     private final String mLayerCode;
     private final int mTileSizePixels;

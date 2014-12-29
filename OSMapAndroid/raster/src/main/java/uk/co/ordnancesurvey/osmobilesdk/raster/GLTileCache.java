@@ -30,7 +30,7 @@ import android.graphics.Bitmap;
 import android.os.SystemClock;
 import android.util.Log;
 
-final class GLTileCache {
+public final class GLTileCache {
 	private final static String TAG = "GLTileCache";
 
 	private final LRUHashMap<MapTile, TileTexture> mTiles;

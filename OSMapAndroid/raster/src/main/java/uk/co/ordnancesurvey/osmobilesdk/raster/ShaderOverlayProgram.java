@@ -40,7 +40,7 @@ class ShaderOverlayProgram extends GLProgram {
 		Utils.throwIfErrors();
 	}
 
-	void use()
+	public void use()
 	{
 		super.use();
 		glEnableVertexAttribArray(attribVCoord);
@@ -48,7 +48,7 @@ class ShaderOverlayProgram extends GLProgram {
 	}
 	
 	@Override
-	void stopUsing()
+    public void stopUsing()
 	{
 		glDisableVertexAttribArray(attribVCoord);
 		glEnable(GL_CULL_FACE);

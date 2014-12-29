@@ -24,7 +24,7 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import static android.opengl.GLES20.glUseProgram;
 
-abstract class GLProgram {
+public abstract class GLProgram {
 	final int program;
 	
 	GLProgram(String vsh, String fsh) {
@@ -32,11 +32,11 @@ abstract class GLProgram {
 		Utils.throwIfErrors();
 	}
 	
-	void use()
+	public void use()
 	{
 		glUseProgram(program);
 		Utils.throwIfErrors();
 	}
 	
-	abstract void stopUsing();
+	public abstract void stopUsing();
 }

@@ -29,7 +29,7 @@ public final class MapTile {
     public int x;
     public int y;
 
-    MapTile() {
+    public MapTile() {
     }
 
     public MapTile(MapTile copy) {
@@ -38,7 +38,7 @@ public final class MapTile {
         layer = copy.layer;
     }
 
-    void set(int xx, int yy, Layer l) {
+    public void set(int xx, int yy, Layer l) {
         x = xx;
         y = yy;
         layer = l;

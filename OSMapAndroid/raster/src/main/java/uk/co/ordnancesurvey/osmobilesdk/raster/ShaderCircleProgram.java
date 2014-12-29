@@ -43,13 +43,13 @@ class ShaderCircleProgram extends GLProgram {
 
 		
 	}
-	void use() {
+	public void use() {
 		super.use();
 		glEnableVertexAttribArray(attribVCoord);		
 	}
 	
 	@Override
-	void stopUsing() {
+    public void stopUsing() {
 		glDisableVertexAttribArray(attribVCoord);
 
 	}

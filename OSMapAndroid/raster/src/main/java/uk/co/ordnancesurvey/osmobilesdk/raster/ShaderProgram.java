@@ -26,13 +26,13 @@ import static android.opengl.GLES20.*;
 
 import java.nio.FloatBuffer;
 
-class ShaderProgram extends GLProgram {
-	final int uniformMVP;
-	final int uniformTexture;
-	final int uniformTintColor;
-	final int attribVCoord;
+public class ShaderProgram extends GLProgram {
+	public final int uniformMVP;
+	public final int uniformTexture;
+	public final int uniformTintColor;
+	public final int attribVCoord;
 	private final int attribTextureCoord;
-	final int attribVOffset;
+	public final int attribVOffset;
 	
 
 	private static final FloatBuffer textureVertices = Utils.directFloatBuffer(new float[] {
@@ -59,7 +59,7 @@ class ShaderProgram extends GLProgram {
 		Utils.throwIfErrors();
 	}
 	
-	void use()
+	public void use()
 	{
 		super.use();
 		glEnableVertexAttribArray(attribVCoord);
@@ -68,7 +68,7 @@ class ShaderProgram extends GLProgram {
 	}
 	
 	@Override
-	void stopUsing()
+    public void stopUsing()
 	{
 		glDisableVertexAttribArray(attribVCoord);
 		glDisableVertexAttribArray(attribTextureCoord);

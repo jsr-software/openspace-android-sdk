@@ -422,7 +422,7 @@ public final class MapScrollController extends CombinedGestureDetector {
 	}
 
 
-	static final class ScrollPosition {
+	public static final class ScrollPosition {
 		double x,y;
 		public float metresPerPixel = 1;
 		public boolean animatingScroll;

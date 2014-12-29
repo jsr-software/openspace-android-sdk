@@ -28,7 +28,7 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 
-final class ScreenProjection {
+public final class ScreenProjection {
     private final int mScreenWidth;
     private final int mScreenHeight;
 
@@ -76,7 +76,7 @@ final class ScreenProjection {
         return new Point(mapx, mapy, Point.BNG);
     }
 
-    BoundingBox getVisibleBounds() {
+    public BoundingBox getVisibleBounds() {
         return mVisibleBounds;
     }
 
@@ -106,7 +106,7 @@ final class ScreenProjection {
         return displayPointOut;
     }
 
-    float getMetresPerPixel() {
+    public float getMetresPerPixel() {
         return mMetresPerPixel;
     }
 }

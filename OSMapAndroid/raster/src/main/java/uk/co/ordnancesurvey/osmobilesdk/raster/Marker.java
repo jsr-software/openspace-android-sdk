@@ -30,6 +30,7 @@ import android.opengl.Matrix;
 import android.view.View;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.MarkerRenderer;
 
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_TRIANGLE_STRIP;
@@ -83,6 +84,7 @@ import static android.opengl.GLES20.glVertexAttribPointer;
  * <p>For more information, read the Markers developer guide.
  */
 public final class Marker {
+    private final MarkerRenderer mMarkerRenderer;
     private Point mPoint;
     private final Bitmap mIconBitmap;
     private final float mIconTintR;
@@ -101,7 +103,7 @@ public final class Marker {
     private volatile Bitmap mVolatileInfoBitmap;
     private boolean mInfoWindowHighlighted;
 
-    Marker(MarkerOptions options, Bitmap icon, GLMapRenderer map) {
+    public Marker(MarkerOptions options, Bitmap icon, GLMapRenderer map, MarkerRenderer markerRenderer) {
         mPoint = options.getPoint();
         mIconBitmap = icon;
         mIconTintR = options.getIcon().mTintR;
@@ -114,6 +116,7 @@ public final class Marker {
         mAnchorU = options.getAnchorU();
         mAnchorV = options.getAnchorV();
         mMap = map;
+        mMarkerRenderer = markerRenderer;
     }
 
     /**
@@ -130,7 +133,7 @@ public final class Marker {
         requestRender();
     }
 
-    boolean containsPoint(ScreenProjection projection, PointF testPoint, PointF tempPoint, RectF tempRect) {
+    public boolean containsPoint(ScreenProjection projection, PointF testPoint, PointF tempPoint, RectF tempRect) {
         // tempPoint is used to save memory allocation - the alternative is allocating a new object
         // for every call.
         getScreenLocation(projection, tempPoint);
@@ -197,7 +200,7 @@ public final class Marker {
         // Save the bitmap, but only after we're done drawing!
         mVolatileInfoBitmap = bmp;
 
-        mMap.onInfoWindowShown(this);
+        mMarkerRenderer.onInfoWindowShown(this);
     }
 
     /**
@@ -212,7 +215,7 @@ public final class Marker {
         }
         mInfoWindowHighlighted = false;
         mVolatileInfoBitmap = null;
-        mMap.onInfoWindowShown(null);
+        mMarkerRenderer.onInfoWindowShown(null);
     }
 
     /**
@@ -229,17 +232,6 @@ public final class Marker {
      */
     public boolean isDraggable() {
         return mDraggable;
-    }
-
-    /**
-     * Removes this marker from the map. After a marker has been removed, the behavior of all its methods is undefined.
-     */
-    public void remove() {
-        GLMapRenderer map = mMap;
-        if (map != null) {
-            map.removeMarker(this);
-        }
-        mMap = null;
     }
 
     /**
@@ -305,7 +297,7 @@ public final class Marker {
         return screenLocationOut;
     }
 
-    boolean isClickOnInfoWindow(PointF clickLocation) {
+    public boolean isClickOnInfoWindow(PointF clickLocation) {
         PointF temp = new PointF();
         // TODO Thread safety - what happens if projection changes? Does it matter?
         ScreenProjection projection = mMap.getProjection();
@@ -328,7 +320,7 @@ public final class Marker {
         showInfoWindow();
     }
 
-    void glDraw(float[] ortho, float[] mvpTempMatrix, GLImageCache imageCache, PointF temp, ShaderProgram shaderProgram) {
+    public void glDraw(float[] ortho, float[] mvpTempMatrix, GLImageCache imageCache, PointF temp, ShaderProgram shaderProgram) {
         glUniform4f(shaderProgram.uniformTintColor, mIconTintR, mIconTintG, mIconTintB, 1);
 
         // Render the marker. For the moment, use the standard marker - and load it every time too!!

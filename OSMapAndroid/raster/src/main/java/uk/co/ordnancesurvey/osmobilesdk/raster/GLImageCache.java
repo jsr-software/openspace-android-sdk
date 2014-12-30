@@ -33,7 +33,7 @@ import java.util.WeakHashMap;
 import android.graphics.Bitmap;
 import android.util.Log;
 
-final class GLImageCache {
+public final class GLImageCache {
 	private final static String TAG = "GLTileCache";
 
 	private WeakHashMap<Bitmap, ImageTexture> mImages = new WeakHashMap<Bitmap, ImageTexture>();

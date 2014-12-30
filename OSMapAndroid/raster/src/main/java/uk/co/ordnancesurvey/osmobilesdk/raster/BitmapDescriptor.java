@@ -81,7 +81,7 @@ public final class BitmapDescriptor {
 		mResourceId = resourceId;
 	}
 
-	Bitmap loadBitmap(Context context)
+	public Bitmap loadBitmap(Context context)
 	{
 		InputStream is = null;
 		try {

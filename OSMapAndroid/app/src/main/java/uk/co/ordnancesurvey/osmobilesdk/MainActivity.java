@@ -62,7 +62,7 @@ public class MainActivity extends Activity {
                         map.removeMarker(marker);
                     }
                 }, 2000);
-                return false;
+                return true;
             }
         });
 

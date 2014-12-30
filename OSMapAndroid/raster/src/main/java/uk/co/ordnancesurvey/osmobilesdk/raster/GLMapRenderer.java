@@ -28,7 +28,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.PointF;
-import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.NinePatchDrawable;
 import android.opengl.GLSurfaceView;
@@ -47,21 +46,18 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.nio.FloatBuffer;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
-import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileServiceDelegate;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.CircleRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLProgramService;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.MarkerRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.OverlayRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.RendererListener;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.TileRenderer;
@@ -88,17 +84,20 @@ import static android.opengl.GLES20.glViewport;
  * Tiles are rendered in tile coordinates, which have the origin at the bottom left of the grid (not the screen). The units are tiles (i.e. a tile always has dimensions 1x1) and the
  * actual size of a tile is set up by modifying the projection transform.
  */
-public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMapPrivate, RendererListener {
+public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMapPrivate, RendererListener, MarkerRenderer.MarkerRendererListener {
 
-    private static final String TAG = GLMapRenderer.class.getSimpleName();
+    private static final String CLASS_TAG = GLMapRenderer.class.getSimpleName();
+    private static final int MARKER_DRAG_OFFSET = 70;
 
     private final Context mContext;
     private final PositionManager mPositionManager = new PositionManager();
 
     // Renderers
-    private final TileRenderer mTileRenderer;
     private final CircleRenderer mCircleRenderer;
+    private final MarkerRenderer mMarkerRenderer;
     private final OverlayRenderer mOverlayRenderer;
+    private final TileRenderer mTileRenderer;
+
     private final GLProgramService mProgramService;
 
     private MapConfiguration mMapConfiguration;
@@ -115,10 +114,10 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mHandler = new Handler(context.getMainLooper());
         if (BuildConfig.DEBUG) {
             if (GLMapRenderer.class.desiredAssertionStatus()) {
-                Log.v(TAG, "Assertions are enabled!");
+                Log.v(CLASS_TAG, "Assertions are enabled!");
             } else {
                 String s = "Assertions are disabled! To enable them, run \"adb shell setprop debug.assert 1\" and reinstall app";
-                Log.w(TAG, s);
+                Log.w(CLASS_TAG, s);
                 Toast.makeText(context, s, Toast.LENGTH_LONG).show();
                 // Sanity check that we have the test the right way around.
                 assert false;
@@ -150,7 +149,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             //  TYPE == eng
             //  USER == android-build
 
-            Log.w(TAG, "Setting an emulator-compatible GL config; this should not happen on devices!");
+            Log.w(CLASS_TAG, "Setting an emulator-compatible GL config; this should not happen on devices!");
             setEGLConfigChooser(8, 8, 8, 8, 8, 0);
         }
 
@@ -167,9 +166,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         mScrollController = scrollController;
 
-        mTileRenderer = new TileRenderer(mContext, this, mGLTileCache);
         mCircleRenderer = new CircleRenderer(this, this);
+        mMarkerRenderer = new MarkerRenderer(mContext, this, this);
         mOverlayRenderer = new OverlayRenderer(this, this);
+        mTileRenderer = new TileRenderer(mContext, this, mGLTileCache);
+
         mProgramService = new GLProgramService();
     }
 
@@ -203,9 +204,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     };
 
-    // Markers
-    private final LinkedList<Marker> mMarkers = new LinkedList<>();
-    private final ReentrantReadWriteLock mMarkersLock = new ReentrantReadWriteLock();
     private InfoWindowAdapter mInfoWindowAdapter;
     private OnMapClickListener mOnMapClickListener;
     private OnMapLongClickListener mOnMapLongClickListener;
@@ -213,7 +211,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private OnMarkerDragListener mOnMarkerDragListener;
     private OnInfoWindowClickListener mOnInfoWindowClickListener;
     private OnCameraChangeListener mOnCameraChangeListener;
-    private Marker mExpandedMarker = null;
 
     // FPS limiter
     private final int mMinFramePeriodMillis;
@@ -275,56 +272,33 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mScrollController.zoomToCenterScale(null, camera.target, camera.zoom, animated);
     }
 
-
     public void onDestroy() {
         mTileRenderer.shutdown();
     }
 
+    @Override
     public void onResume() {
         super.onResume();
         mPositionManager.setInitialMapPosition();
         mTileRenderer.init(mMapConfiguration);
     }
 
-    public final void clear() {
-        mMarkersLock.writeLock().lock();
-        try {
-            mMarkers.clear();
-            mExpandedMarker = null;
-        } finally {
-            mMarkersLock.writeLock().unlock();
-        }
-
-        mOverlayRenderer.clear();
+    @Override
+    public void clear() {
         mCircleRenderer.clear();
+        mMarkerRenderer.clear();
+        mOverlayRenderer.clear();
         requestRender();
     }
 
-    public final Marker addMarker(MarkerOptions markerOptions) {
-        Bitmap icon = markerOptions.getIcon().loadBitmap(getContext());
-        Marker marker = new Marker(markerOptions, icon, this);
-        mMarkersLock.writeLock().lock();
-        try {
-            mMarkers.add(marker);
-        } finally {
-            mMarkersLock.writeLock().unlock();
-        }
-        requestRender();
-        return marker;
+    @Override
+    public Marker addMarker(MarkerOptions markerOptions) {
+        return mMarkerRenderer.addMarker(markerOptions);
     }
 
     @Override
     public void removeMarker(Marker marker) {
-        mMarkersLock.writeLock().lock();
-        try {
-            mMarkers.remove(marker);
-            if (mExpandedMarker == marker) {
-                mExpandedMarker = null;
-            }
-        } finally {
-            mMarkersLock.writeLock().unlock();
-        }
-        requestRender();
+        mMarkerRenderer.removeMarker(marker);
     }
 
     @Override
@@ -444,7 +418,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         if (DEBUG_FRAME_TIMING) {
             // OS-60 OS-62: Print inter-frame time (based on time at entry to onDrawFrame(), whether we're "animating" (e.g. flinging), and the distance scrolled in metres.
             ScreenProjection oldProjection = mVolatileProjection;
-            Log.v(TAG, debugDiffUptimeMillis + " " + debugDiffNanoTime + " AS=" + mScrollState.animatingScroll + " dx=" + (projection.getCenter().getX() - oldProjection.getCenter().getX()) +
+            Log.v(CLASS_TAG, debugDiffUptimeMillis + " " + debugDiffNanoTime + " AS=" + mScrollState.animatingScroll + " dx=" + (projection.getCenter().getX() - oldProjection.getCenter().getX()) +
                     " dy=" + (projection.getCenter().getY() - oldProjection.getCenter().getY()));
         }
         mVolatileProjection = projection;
@@ -458,9 +432,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         mCircleRenderer.onDrawFrame(mProgramService, mGLViewportWidth, mGLViewportHeight, rTempMatrix, mMVPOrthoMatrix, rTempPoint, rTempFloatBuffer);
 
-        mProgramService.setActiveProgram(GLProgramService.GLProgramType.SHADER);
-
-        drawMarkers(projection);
+        mMarkerRenderer.onDrawFrame(mProgramService, projection, rTempPoint, rTempMatrix, mMVPOrthoMatrix, mGLImageCache);
 
         if (needRedraw) {
             requestRender();
@@ -482,61 +454,16 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     }
 
-    // Callback from marker when show/hideInfoWindow is called
-    void onInfoWindowShown(Marker marker) {
-        // if we are setting a new expanded marker, hide the old one.
-        assert !mMarkersLock.isWriteLockedByCurrentThread();
-        mMarkersLock.writeLock().lock();
-        try {
-            if (mExpandedMarker != null && mExpandedMarker != marker) {
-                // Need to hide the old one. This will cause a callback into this function
-                // with a null parameter
-                mExpandedMarker.hideInfoWindow();
-            }
-            mExpandedMarker = marker;
-        } finally {
-            mMarkersLock.writeLock().unlock();
-        }
-        requestRender();
-    }
-
     public boolean singleClick(float screenx, float screeny) {
-        boolean handled = false;
-
         ScreenProjection projection = mVolatileProjection;
         PointF screenLocation = new PointF(screenx, screeny);
 
-        // Check for a click on an info window first.
-        if (mExpandedMarker != null) {
-            if (mExpandedMarker.isClickOnInfoWindow(screenLocation)) {
-                if (mOnInfoWindowClickListener != null) {
-                    mOnInfoWindowClickListener.onInfoWindowClick(mExpandedMarker);
-                }
-            }
-        }
-
-        // TODO do we need to handle stacked markers where one marker declines the touch?
-        Marker marker = findMarker(projection, screenLocation);
-        if (marker != null) {
-            handled = false;
-            if (mOnMarkerClickListener != null) {
-                handled = mOnMarkerClickListener.onMarkerClick(marker);
-            }
-            if (!handled) {
-                if (marker == mExpandedMarker) {
-                    marker.hideInfoWindow();
-                } else {
-                    marker.showInfoWindow();
-                }
-                // TODO move map to ensure visible
-                handled = true;
-            }
-        }
+        boolean handled = mMarkerRenderer.singleClick(projection, screenLocation);
 
         if (!handled) {
             if (mOnMapClickListener != null) {
-                Point gp = projection.fromScreenLocation(screenx, screeny);
-                handled = mOnMapClickListener.onMapClick(gp);
+                Point point = projection.fromScreenLocation(screenx, screeny);
+                handled = mOnMapClickListener.onMapClick(point);
             }
             if (!handled) {
                 // TODO move camera here
@@ -545,7 +472,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         return handled;
     }
 
-    private static final int MARKER_DRAG_OFFSET = 70;
 
     /**
      * Return the object handling the long click, if we want to initiate a drag
@@ -560,16 +486,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             return null;
         }
 
-        // TODO do we need to handle stacked markers where one marker declines the touch?
-        Marker marker = findDraggableMarker(projection, new PointF(screenx, screeny));
+        Marker marker = mMarkerRenderer.longClick(projection, new PointF(screenx, screeny));
         if (marker != null) {
-            if (mOnMarkerDragListener != null) {
-                mOnMarkerDragListener.onMarkerDragStart(marker);
-            }
-
-            // Set position up a bit, so we can see the marker.
-            updateMarkerPosition(marker, screenx, screeny);
-            // TODO scroll map up if necessary
             return marker;
         }
 
@@ -581,38 +499,17 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     public void drag(float screenx, float screeny, Object draggable) {
         if (draggable instanceof Marker) {
-
-            Marker marker = (Marker) draggable;
-            if (mOnMarkerDragListener != null) {
-                mOnMarkerDragListener.onMarkerDrag(marker);
-            }
-
-            updateMarkerPosition(marker, screenx, screeny);
+            mMarkerRenderer.onDrag(mVolatileProjection, screenx, screeny, (Marker) draggable);
         }
-    }
-
-    private void updateMarkerPosition(Marker marker, float x, float y) {
-        ScreenProjection projection = mVolatileProjection;
-        Point unclamped = projection.fromScreenLocation(x, y);
-        Point clamped = BngUtil.clampToBngBounds(unclamped);
-        marker.setPoint(clamped);
     }
 
     public void dragEnded(float screenx, float screeny, Object draggable) {
         if (draggable instanceof Marker) {
-            Marker marker = (Marker) draggable;
-            if (mOnMarkerDragListener != null) {
-                mOnMarkerDragListener.onMarkerDragEnd(marker);
-            }
-
-            updateMarkerPosition(marker, screenx, screeny);
+            mMarkerRenderer.onDragEnded(mVolatileProjection, screenx, screeny, (Marker) draggable);
         }
     }
 
-    private interface MarkerCallable<T> {
-        // Return true if iteration should stop.
-        abstract boolean run(Marker marker, T params);
-    }
+
 
     public View getInfoWindow(Marker marker) {
         View view = null;
@@ -717,93 +614,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         view.setBackground(bg);
     }
 
-    private final MarkerCallable<PointF> mDrawMarkerCallable = new MarkerCallable<PointF>() {
-        @Override
-        public boolean run(Marker marker, PointF tempPoint) {
-            marker.glDraw(mMVPOrthoMatrix, rTempMatrix, mGLImageCache, tempPoint, mProgramService.getShaderProgram());
-            return false;
-        }
-    };
-
-    private void drawMarkers(final ScreenProjection projection) {
-        // Draw from the bottom up, so that top most marker is fully visible even if overlapped
-        iterateVisibleMarkers(true, projection, mDrawMarkerCallable, rTempPoint);
-    }
-
-    private Marker findMarker(final ScreenProjection projection, PointF screenLocation, final boolean draggableOnly) {
-        final PointF tempPoint = new PointF();
-        final RectF tempRect = new RectF();
-        MarkerCallable<PointF> callable = new MarkerCallable<PointF>() {
-            @Override
-            public boolean run(Marker marker, PointF screenLocation) {
-                return (!draggableOnly || marker.isDraggable()) && marker.containsPoint(projection, screenLocation, tempPoint, tempRect);
-            }
-        };
-        // Iterate from the top-down, since we're looking to capture a click.
-        return iterateVisibleMarkers(false, projection, callable, screenLocation);
-    }
-
-    private Marker findMarker(ScreenProjection projection, PointF screenLocation) {
-        return findMarker(projection, screenLocation, false);
-    }
-
-    private Marker findDraggableMarker(ScreenProjection projection, PointF screenLocation) {
-        return findMarker(projection, screenLocation, true);
-    }
-
-    private <T> Marker processMarker(Marker marker, BoundingBox boundingBox, MarkerCallable<T> callable, T params) {
-        // Check bounds
-        if (marker == null) {
-            return null;
-        }
-
-        Point gp = marker.getPoint();
-
-        // Skip invisible or out of visible area markers
-        if (!marker.isVisible() || !boundingBox.contains(gp)) {
-            return null;
-        }
-
-        if (callable.run(marker, params)) {
-            return marker;
-        }
-
-        return null;
-    }
-
-    private <T> Marker iterateVisibleMarkers(boolean bottomUp, ScreenProjection projection, MarkerCallable<T> callable, T params) {
-        Marker ret = null;
-        // Look at more markers than are nominally visible, in case their bitmap covers the relevant area.
-        // We extend to four times the actual screen area.
-        // TODO can we do something more intelligent than this... like remember the maximum bitmap size for markers, plus take
-        // account of anchors?
-        BoundingBox boundingBox = projection.getExpandedVisibleBounds();
-
-        mMarkersLock.readLock().lock();
-        {
-            Iterator<Marker> iter;
-            if (bottomUp) {
-                iter = mMarkers.iterator();
-            } else {
-                iter = mMarkers.descendingIterator();
-                ret = processMarker(mExpandedMarker, boundingBox, callable, params);
-            }
-            Marker marker = null;
-
-            while (ret == null && iter.hasNext()) {
-                marker = iter.next();
-                // processMarker returns non-null if iteration should stop.
-                ret = processMarker(marker, boundingBox, callable, params);
-            }
-
-            if (ret == null && bottomUp) {
-                ret = processMarker(mExpandedMarker, boundingBox, callable, params);
-            }
-
-        }
-        mMarkersLock.readLock().unlock();
-        return ret;
-    }
 
     @Override
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
@@ -831,7 +641,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void onSurfaceChanged(GL10 unused, int width, int height) {
         if (BuildConfig.DEBUG) {
-            Log.v(TAG, "Viewport " + width + "*" + height);
+            Log.v(CLASS_TAG, "Viewport " + width + "*" + height);
         }
 
         mGLViewportWidth = width;
@@ -864,6 +674,42 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void onRenderRequested() {
         requestRender();
+    }
+
+    @Override
+    public void onInfoWindowClick(Marker marker) {
+        if (mOnInfoWindowClickListener != null) {
+            mOnInfoWindowClickListener.onInfoWindowClick(marker);
+        }
+    }
+
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+        if (mOnMarkerClickListener != null) {
+            return mOnMarkerClickListener.onMarkerClick(marker);
+        }
+        return false;
+    }
+
+    @Override
+    public void onMarkerDrag(Marker marker) {
+        if (mOnMarkerDragListener != null) {
+            mOnMarkerDragListener.onMarkerDrag(marker);
+        }
+    }
+
+    @Override
+    public void onMarkerDragEnd(Marker marker) {
+        if (mOnMarkerDragListener != null) {
+            mOnMarkerDragListener.onMarkerDragEnd(marker);
+        }
+    }
+
+    @Override
+    public void onMarkerDragStart(Marker marker) {
+        if (mOnMarkerDragListener != null) {
+            mOnMarkerDragListener.onMarkerDragStart(marker);
+        }
     }
 
     private class PositionManager {

@@ -85,7 +85,7 @@ public final class ScreenProjection {
         return mVisibleBounds.inset(insetx * mpp, insety * mpp);
     }
 
-    BoundingBox getExpandedVisibleBounds() {
+    public BoundingBox getExpandedVisibleBounds() {
         return getVisibleBoundsWithScreenInsets(-mScreenWidth / 2.0f, -mScreenHeight / 2.0f);
     }
 

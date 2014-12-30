@@ -38,6 +38,7 @@ import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
@@ -45,12 +46,17 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureDetector;
+import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileServiceDelegate;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.CircleRenderer;
@@ -99,6 +105,15 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private final GLProgramService mProgramService;
     private final GLMatrixHandler mGLMatrixHandler;
+
+    // New Gesture Handling
+    private final MapGestureDetector mGestureDetector;
+    private final MapGestureListener mGestureListener = new MapGestureListener() {
+        @Override
+        public void onTouch(float screenX, float screenY) {
+            emitMapTouch(screenX, screenY);
+        }
+    };
 
     private final MarkerRenderer.MarkerRendererListener mMarkerRendererListener = new MarkerRenderer.MarkerRendererListener() {
         @Override
@@ -222,6 +237,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         mProgramService = new GLProgramService();
         mGLMatrixHandler = new GLMatrixHandler();
+
+        mGestureDetector = new MapGestureDetector(context, mGestureListener);
     }
 
     private final GLTileCache mGLTileCache;
@@ -707,6 +724,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mTileRenderer.init(mMapConfiguration);
     }
 
+
+
     private class PositionManager {
         // POSITION CACHE
         private static final String POSITION_EASTINGS = "position_eastings";
@@ -766,5 +785,37 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         private boolean isValidPosition(double easting, double northing, float zoom) {
             return isValid(easting) && isValid(northing) && isValid(zoom);
         }
+    }
+
+
+    /**
+     * NEW INTERFACE
+     */
+    private final List<OnMapTouchListener> mTouchListeners = new ArrayList<>();
+
+
+    @Override
+    public void addOnMapTouchListener(OnMapTouchListener onMapTouchListener) {
+        mTouchListeners.add(onMapTouchListener);
+    }
+
+    @Override
+    public void removeOnMapTouchListener(OnMapTouchListener onMapTouchListener) {
+        mTouchListeners.remove(onMapTouchListener);
+    }
+
+    private void emitMapTouch(float screenX, float screenY) {
+        ScreenProjection projection = mVolatileProjection;
+        Point point = projection.fromScreenLocation(screenX, screenY);
+        for(OnMapTouchListener listener : mTouchListeners) {
+            listener.onMapTouch(point);
+        }
+    }
+
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        boolean gestureHandled = mGestureDetector.onTouch(event);
+        return super.onTouchEvent(event);
     }
 }

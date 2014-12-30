@@ -306,4 +306,28 @@ public interface OSMap {
      * @param mapConfiguration
      */
     void setMapConfiguration(MapConfiguration mapConfiguration);
+
+
+
+
+
+    /**
+     * NEW INTERFACE
+     */
+    public interface OnMapTouchListener {
+        void onMapTouch(Point point);
+    }
+
+    /**
+     * Sets a callback object for when the Map is touched. Note that there can be multiple callbacks
+     * added. Each callback will receive the touch event.
+     * @param onMapTouchListener The callback that will be invoked on a Map touch event
+     */
+    public void addOnMapTouchListener(OnMapTouchListener onMapTouchListener);
+
+    /**
+     * Removes a callback object for when the Map is touched.
+     * @param onMapTouchListener The callback that will be removed
+     */
+    public void removeOnMapTouchListener(OnMapTouchListener onMapTouchListener);
 }

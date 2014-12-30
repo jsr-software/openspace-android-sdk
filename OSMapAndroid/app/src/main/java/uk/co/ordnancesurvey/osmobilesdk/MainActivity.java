@@ -26,6 +26,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.os.Bundle;
 import android.os.Handler;
+import android.widget.Toast;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
@@ -119,6 +120,16 @@ public class MainActivity extends Activity {
                         map.removePolyOverlay(polygon);
                     }
                 }, 2000);
+            }
+        });
+
+        map.addOnMapTouchListener(new OSMap.OnMapTouchListener() {
+            @Override
+            public void onMapTouch(Point point) {
+                Toast.makeText(MainActivity.this,
+                        "New point: " + point.getX() + ", " + point.getY(),
+                        Toast.LENGTH_SHORT)
+                        .show();
             }
         });
     }

@@ -48,7 +48,7 @@ public class GLProgramService {
     }
 
     public void setActiveProgram(GLProgramType programType) {
-        if(programType == mLastType) {
+        if (programType == mLastType) {
             return;
         }
 

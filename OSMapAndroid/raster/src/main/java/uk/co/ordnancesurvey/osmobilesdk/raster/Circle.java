@@ -53,7 +53,7 @@ public final class Circle extends ShapeOverlay {
 	private Point mCenter;
 	private double mRadius;
 
-	Circle(CircleOptions options, GLMapRenderer map) {
+	public Circle(CircleOptions options, GLMapRenderer map) {
 		super(options, map);
 
 		mCenter = options.getCenter();
@@ -106,7 +106,7 @@ public final class Circle extends ShapeOverlay {
 	}
 
 
-	void glDraw(PointF tempPoint, FloatBuffer tempFloatBuffer, ShaderCircleProgram program) {
+	public void glDraw(PointF tempPoint, FloatBuffer tempFloatBuffer, ShaderCircleProgram program) {
 		GLMapRenderer map = getMap();
 		if (map == null)
 		{

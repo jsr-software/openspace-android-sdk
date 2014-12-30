@@ -60,7 +60,9 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileServiceDelegate;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.CircleRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLProgramService;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.RendererListener;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.TileRenderer;
 
 import static android.opengl.GLES20.GL_BACK;
@@ -73,7 +75,6 @@ import static android.opengl.GLES20.glClearColor;
 import static android.opengl.GLES20.glCullFace;
 import static android.opengl.GLES20.glEnable;
 import static android.opengl.GLES20.glReleaseShaderCompiler;
-import static android.opengl.GLES20.glUniformMatrix4fv;
 import static android.opengl.GLES20.glViewport;
 
 /**
@@ -87,14 +88,14 @@ import static android.opengl.GLES20.glViewport;
  * Tiles are rendered in tile coordinates, which have the origin at the bottom left of the grid (not the screen). The units are tiles (i.e. a tile always has dimensions 1x1) and the
  * actual size of a tile is set up by modifying the projection transform.
  */
-public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMapPrivate {
+public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMapPrivate, RendererListener {
 
     private static final String TAG = GLMapRenderer.class.getSimpleName();
 
     private final Context mContext;
     private final PositionManager mPositionManager = new PositionManager();
 
-    // Renderere
+    // Renderers
     private final TileRenderer mTileRenderer;
     private final CircleRenderer mCircleRenderer;
 
@@ -167,7 +168,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mScrollController = scrollController;
 
         mTileRenderer = new TileRenderer(mContext, this, mGLTileCache);
-        mCircleRenderer = new CircleRenderer(this);
+        mCircleRenderer = new CircleRenderer(this, this);
 
         mProgramService = new GLProgramService();
     }
@@ -364,14 +365,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     @Override
     public final Circle addCircle(CircleOptions circleOptions) {
-        Circle circle = mCircleRenderer.addCircle(circleOptions);
-        requestRender();
-        return circle;
+        return mCircleRenderer.addCircle(circleOptions);
     }
 
     void removeCircle(Circle circle) {
         mCircleRenderer.removeCircle(circle);
-        requestRender();
     }
 
     void removeOverlay(ShapeOverlay shapeOverlay) {
@@ -432,19 +430,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         //assert Math.abs(Math.IEEEremainder((float)(tileRect.left-mapCenterX/mapTileSize)*screenTileSize, 1)) < 1.0e-4f;
         //assert Math.abs(Math.IEEEremainder((float)(tileRect.top-mapCenterY/mapTileSize)*screenTileSize, 1)) < 1.0e-4f;
     }
-
-//    void setProgram(GLProgram program) {
-//        if (program == mLastProgram) {
-//            return;
-//        }
-//
-//        if (mLastProgram != null) {
-//            mLastProgram.stopUsing();
-//        }
-//
-//        program.use();
-//        mLastProgram = program;
-//    }
 
     @Override
     public void onDrawFrame(GL10 unused) {
@@ -510,7 +495,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
         Utils.throwIfErrors();
 
-        mCircleRenderer.onDrawFrame(mProgramService);
+        mCircleRenderer.onDrawFrame(mProgramService, mGLViewportWidth, mGLViewportHeight, rTempMatrix, mMVPOrthoMatrix, rTempPoint, rTempFloatBuffer);
 
         mProgramService.setActiveProgram(GLProgramService.GLProgramType.SHADER);
 
@@ -662,6 +647,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             updateMarkerPosition(marker, screenx, screeny);
         }
     }
+
+
 
     private interface MarkerCallable<T> {
         // Return true if iteration should stop.
@@ -911,6 +898,16 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mTileRenderer.init(mMapConfiguration);
     }
 
+
+    /**
+     * Renderer Listeners
+     */
+    @Override
+    public void onRenderRequested() {
+        requestRender();
+    }
+
+
     private class PositionManager {
         // POSITION CACHE
         private static final String POSITION_EASTINGS = "position_eastings";
@@ -971,54 +968,4 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             return isValid(easting) && isValid(northing) && isValid(zoom);
         }
     }
-
-    private class CircleRenderer {
-        private final LinkedList<Circle> mCircleOverlays = new LinkedList<>();
-        private final GLMapRenderer mMapRenderer;
-
-        public CircleRenderer(GLMapRenderer mapRenderer) {
-            mMapRenderer = mapRenderer;
-        }
-
-        public Circle addCircle(CircleOptions circleOptions) {
-            Circle circle = new Circle(circleOptions, mMapRenderer);
-            synchronized (mCircleOverlays) {
-                mCircleOverlays.add(circle);
-            }
-            return circle;
-        }
-
-        public void clear() {
-            synchronized (mCircleOverlays) {
-                mCircleOverlays.clear();
-            }
-        }
-
-        public void onDrawFrame(GLProgramService programService) {
-            programService.setActiveProgram(GLProgramService.GLProgramType.CIRCLE);
-            ShaderCircleProgram program = programService.getShaderCircleProgram();
-
-            // TODO: Render circles in screen coordinates!
-            float[] tempMatrix = rTempMatrix;
-            Matrix.translateM(tempMatrix, 0, mMVPOrthoMatrix, 0, mGLViewportWidth / 2.0f, mGLViewportHeight / 2.0f, 0);
-            Matrix.scaleM(tempMatrix, 0, 1, -1, 1);
-            glUniformMatrix4fv(program.uniformMVP, 1, false, tempMatrix, 0);
-
-            Utils.throwIfErrors();
-            synchronized (mCircleOverlays) {
-                for (Circle circle : mCircleOverlays) {
-                    circle.glDraw(rTempPoint, rTempFloatBuffer, program);
-                }
-            }
-            Utils.throwIfErrors();
-        }
-
-        public void removeCircle(Circle circle) {
-            synchronized (mCircleOverlays) {
-                mCircleOverlays.remove(circle);
-            }
-        }
-    }
-
-
 }

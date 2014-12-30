@@ -25,7 +25,7 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 import static android.opengl.GLES20.*;
 
 public class ShaderCircleProgram extends GLProgram {
-	final int uniformMVP;
+	public final int uniformMVP;
 	final int uniformFillColor;
 	final int uniformStrokeColor;
 	final int uniformCenterRadius;

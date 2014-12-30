@@ -56,7 +56,7 @@ public class MarkerRenderer extends BaseRenderer {
 
     private interface MarkerDrawRunnable {
         // Return true if iteration should stop.
-        boolean run(GLProgramService programService, Marker marker, PointF tempPoint, float[] tempMatrix, float[] mvpMatrix, GLImageCache glImageCache);
+        boolean run(GLProgramService programService, GLMatrixHandler matrixHandler, Marker marker, GLImageCache glImageCache);
     }
 
     private interface MarkerClickRunnable {
@@ -69,9 +69,8 @@ public class MarkerRenderer extends BaseRenderer {
     private final Context mContext;
     private final MarkerDrawRunnable mDrawMarkerRunnable = new MarkerDrawRunnable() {
         @Override
-        public boolean run(GLProgramService programService, Marker marker, PointF tempPoint, float[] tempMatrix, float[] mvpMatrix, GLImageCache glImageCache) {
-            marker.glDraw(mvpMatrix, tempMatrix, glImageCache, tempPoint,
-                    programService.getShaderProgram());
+        public boolean run(GLProgramService programService, GLMatrixHandler matrixHandler, Marker marker, GLImageCache glImageCache) {
+            marker.glDraw(programService, matrixHandler, glImageCache);
             return false;
         }
     };
@@ -118,10 +117,10 @@ public class MarkerRenderer extends BaseRenderer {
         updateMarkerPosition(projection, marker, screenx, screeny);
     }
 
-    public void onDrawFrame(GLProgramService programService, ScreenProjection projection, PointF tempPoint, float[] tempMatrix, float[] mvpMatrix, GLImageCache glImageCache) {
+    public void onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, ScreenProjection projection, GLImageCache glImageCache) {
         programService.setActiveProgram(GLProgramService.GLProgramType.SHADER);
 
-        drawMarkers(programService, projection, tempPoint, tempMatrix, mvpMatrix, glImageCache);
+        drawMarkers(programService, matrixHandler, projection, glImageCache);
     }
 
     // Callback from marker when show/hideInfoWindow is called
@@ -198,9 +197,9 @@ public class MarkerRenderer extends BaseRenderer {
         return handled;
     }
 
-    private void drawMarkers(GLProgramService programService, final ScreenProjection projection, PointF tempPoint, float[] tempMatrix, float[] mvpMatrix, GLImageCache glImageCache) {
+    private void drawMarkers(GLProgramService programService, GLMatrixHandler matrixHandler, final ScreenProjection projection, GLImageCache glImageCache) {
         // Draw from the bottom up, so that top most marker is fully visible even if overlapped
-        iterateVisibleMarkers(programService, projection, tempPoint, tempMatrix, mvpMatrix, glImageCache);
+        iterateVisibleMarkers(programService, matrixHandler, projection, glImageCache);
     }
 
     private Marker findMarker(final ScreenProjection projection, final PointF screenLocation, final boolean draggableOnly) {
@@ -248,8 +247,7 @@ public class MarkerRenderer extends BaseRenderer {
         return ret;
     }
 
-    private Marker iterateVisibleMarkers(GLProgramService programService, ScreenProjection projection, PointF tempPoint, float[] tempMatrix,
-                                             float[] mvpMatrix, GLImageCache glImageCache) {
+    private Marker iterateVisibleMarkers(GLProgramService programService, GLMatrixHandler matrixHandler, ScreenProjection projection, GLImageCache glImageCache) {
         Marker ret = null;
         // Look at more markers than are nominally visible, in case their bitmap covers the relevant area.
         // We extend to four times the actual screen area.
@@ -264,20 +262,19 @@ public class MarkerRenderer extends BaseRenderer {
         while (ret == null && iter.hasNext()) {
             marker = iter.next();
             // processMarker returns non-null if iteration should stop.
-            ret = processMarker(programService, marker, boundingBox, tempPoint, tempMatrix, mvpMatrix, glImageCache);
+            ret = processMarker(programService, matrixHandler, marker, boundingBox, glImageCache);
         }
 
         if (ret == null) {
-            ret = processMarker(programService, mExpandedMarker, boundingBox, tempPoint, tempMatrix, mvpMatrix,  glImageCache);
+            ret = processMarker(programService, matrixHandler, mExpandedMarker, boundingBox, glImageCache);
         }
 
         mMarkersLock.readLock().unlock();
         return ret;
     }
 
-    private Marker processMarker(GLProgramService programService, Marker marker,
-                                     BoundingBox boundingBox, PointF tempPoint, float[] tempMatrix,
-                                     float[] mvpMatrix, GLImageCache glImageCache) {
+    private Marker processMarker(GLProgramService programService, GLMatrixHandler matrixHandler, Marker marker,
+                                     BoundingBox boundingBox, GLImageCache glImageCache) {
         // Check bounds
         if (marker == null) {
             return null;
@@ -290,7 +287,7 @@ public class MarkerRenderer extends BaseRenderer {
             return null;
         }
 
-        if (mDrawMarkerRunnable.run(programService, marker, tempPoint, tempMatrix, mvpMatrix, glImageCache)) {
+        if (mDrawMarkerRunnable.run(programService, matrixHandler, marker, glImageCache)) {
             return marker;
         }
 

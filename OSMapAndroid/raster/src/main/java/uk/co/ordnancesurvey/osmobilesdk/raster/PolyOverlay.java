@@ -33,6 +33,7 @@ import java.util.List;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMatrixHandler;
 
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_LINE_STRIP;
@@ -82,7 +83,7 @@ public abstract class PolyOverlay extends ShapeOverlay {
 		return mPoints;
 	}
 
-	public final void glDraw(float[] orthoMatrix, float[] tempMatrix, PointF tempPoint, float metresPerPixel, ShaderOverlayProgram program) {
+	public final void glDraw(GLMatrixHandler matrixHandler, float metresPerPixel, ShaderOverlayProgram program) {
 		GLMapRenderer map = getMap();
 		if (map == null)
 		{
@@ -94,7 +95,8 @@ public abstract class PolyOverlay extends ShapeOverlay {
 		// Read mPoints once; it could change in another thread!
 		PolyPoints points = getPolyPoints();
 		
-		glSetMatrix(program.uniformMVP, orthoMatrix, tempMatrix, projection, points, metresPerPixel);
+		glSetMatrix(program.uniformMVP, matrixHandler.getMVPOrthoMatrix(),
+                matrixHandler.getTempMatrix(), projection, points, metresPerPixel);
 
 
 		// Set up the line coordinates.

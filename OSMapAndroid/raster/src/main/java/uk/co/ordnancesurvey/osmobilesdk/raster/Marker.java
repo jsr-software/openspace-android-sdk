@@ -30,6 +30,8 @@ import android.opengl.Matrix;
 import android.view.View;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMatrixHandler;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLProgramService;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.MarkerRenderer;
 
 import static android.opengl.GLES20.GL_FLOAT;
@@ -320,7 +322,9 @@ public final class Marker {
         showInfoWindow();
     }
 
-    public void glDraw(float[] ortho, float[] mvpTempMatrix, GLImageCache imageCache, PointF temp, ShaderProgram shaderProgram) {
+    public void glDraw(GLProgramService programService, GLMatrixHandler matrixHandler, GLImageCache imageCache) {
+        ShaderProgram shaderProgram = programService.getShaderProgram();
+
         glUniform4f(shaderProgram.uniformTintColor, mIconTintR, mIconTintG, mIconTintB, 1);
 
         // Render the marker. For the moment, use the standard marker - and load it every time too!!
@@ -333,18 +337,19 @@ public final class Marker {
         glVertexAttribPointer(shaderProgram.attribVCoord, 2, GL_FLOAT, false, 0, tex.vertexCoords);
 
         ScreenProjection projection = mMap.getProjection();
-        projection.toScreenLocation(mPoint, temp);
-        PointF screenLocation = temp;
+        projection.toScreenLocation(mPoint, matrixHandler.getTempPoint());
+        PointF screenLocation = matrixHandler.getTempPoint();
         final float OFFSET = 1 / 3.0f;
         float xPixels = (float) Math.rint(screenLocation.x + OFFSET);
         float yPixels = (float) Math.rint(screenLocation.y + OFFSET);
+        float[] tempMatrix = matrixHandler.getTempMatrix();
 
-        Matrix.translateM(mvpTempMatrix, 0, ortho, 0, xPixels, yPixels, 0);
+        Matrix.translateM(tempMatrix, 0, matrixHandler.getMVPOrthoMatrix(), 0, xPixels, yPixels, 0);
         if (mBearing != 0) {
-            Matrix.rotateM(mvpTempMatrix, 0, mBearing, 0, 0, 1);
+            Matrix.rotateM(tempMatrix, 0, mBearing, 0, 0, 1);
         }
 
-        glUniformMatrix4fv(shaderProgram.uniformMVP, 1, false, mvpTempMatrix, 0);
+        glUniformMatrix4fv(shaderProgram.uniformMVP, 1, false, tempMatrix, 0);
 
         int height = mIconBitmap.getHeight();
         int width = mIconBitmap.getWidth();
@@ -360,10 +365,10 @@ public final class Marker {
         Bitmap infoBitmap = mVolatileInfoBitmap;
         if (infoBitmap != null) {
             if (mBearing != 0) {
-                Matrix.rotateM(mvpTempMatrix, 0, -mBearing, 0, 0, 1);
+                Matrix.rotateM(tempMatrix, 0, -mBearing, 0, 0, 1);
             }
 
-            glUniformMatrix4fv(shaderProgram.uniformMVP, 1, false, mvpTempMatrix, 0);
+            glUniformMatrix4fv(shaderProgram.uniformMVP, 1, false, tempMatrix, 0);
 
             // Draw centered above the marker
             tex = imageCache.bindTextureForBitmap(infoBitmap);

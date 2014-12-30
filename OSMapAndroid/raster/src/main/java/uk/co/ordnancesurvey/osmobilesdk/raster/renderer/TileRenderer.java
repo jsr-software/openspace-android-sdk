@@ -22,7 +22,6 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
 
-
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
@@ -35,6 +34,7 @@ import java.nio.FloatBuffer;
 import java.util.Arrays;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
+import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLTileCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapScrollController;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
@@ -103,9 +103,8 @@ public class TileRenderer {
         }
     }
 
-    public boolean onDrawFrame(GLProgramService programService, ScreenProjection projection, long nowUptimeMillis,
-                               MapScrollController.ScrollPosition scrollPosition,
-                               float[] tempMatrix, float[] mvpMatrix) {
+    public boolean onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, ScreenProjection projection, long nowUptimeMillis,
+                               MapScrollController.ScrollPosition scrollPosition) {
         //leakGPUMemory();
         // At the start of each frame, mark each tile as off-screen.
         // They are marked on-screen as part of tile drawing.
@@ -208,14 +207,14 @@ public class TileRenderer {
         if (fadingToLayer != null) {
             mFetchQuota.setNoAsyncFetches();
         }
-        needRedraw |= drawLayerWithFallbacks(shaderProgram, projection, baseLayer, mFetchQuota, alpha, depth, tempMatrix, mvpMatrix);
+        needRedraw |= drawLayerWithFallbacks(shaderProgram, projection, baseLayer, mFetchQuota, alpha, depth, matrixHandler);
         depth = 0.0f;
         alpha = fadeToAlpha;
         if (!mDirtyArea.didDraw()) {
             Log.v(CLASS_TAG, "Failed to draw any tiles!");
         }
         mDirtyArea.reset(projection);
-        drawLayerWithFallbacks(shaderProgram, projection, fadingToLayer, mFetchQuota, fadeToAlpha, depth, tempMatrix, mvpMatrix);
+        drawLayerWithFallbacks(shaderProgram, projection, fadingToLayer, mFetchQuota, fadeToAlpha, depth, matrixHandler);
 
         glDisable(GL_DEPTH_TEST);
 
@@ -263,7 +262,7 @@ public class TileRenderer {
         return textureId;
     }
 
-    private boolean drawLayer(ShaderProgram shaderProgram, ScreenProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, float[] tempMatrix, float[] mvpMatrix) {
+    private boolean drawLayer(ShaderProgram shaderProgram, ScreenProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, GLMatrixHandler matrixHandler) {
         if (layer == null) {
             return false;
         }
@@ -300,8 +299,8 @@ public class TileRenderer {
 
         // Set up projection matrix	so we can refer to things in tile coordinates.
         {
-            float[] mvpTempMatrix = tempMatrix;
-            Matrix.scaleM(mvpTempMatrix, 0, mvpMatrix, 0, screenTileSize, screenTileSize, 1);
+            float[] mvpTempMatrix = matrixHandler.getTempMatrix();
+            Matrix.scaleM(mvpTempMatrix, 0, matrixHandler.getMVPOrthoMatrix(), 0, screenTileSize, screenTileSize, 1);
             glUniformMatrix4fv(shaderProgram.uniformMVP, 1, false, mvpTempMatrix, 0);
         }
 
@@ -385,14 +384,14 @@ public class TileRenderer {
     }
 
 
-    private boolean drawLayerWithFallbacks(ShaderProgram shaderProgram, ScreenProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, float[] tempMatrix, float[] mvpMatrix) {
+    private boolean drawLayerWithFallbacks(ShaderProgram shaderProgram, ScreenProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, GLMatrixHandler matrixHandler) {
         if (layer == null) {
             return false;
         }
 
         int baseLayerIndex = indexForMapLayerOrNegative(layer);
 
-        boolean needsRedraw = drawLayer(shaderProgram, projection, layer, quota, alpha, depth, tempMatrix, mvpMatrix);
+        boolean needsRedraw = drawLayer(shaderProgram, projection, layer, quota, alpha, depth, matrixHandler);
 
         Layer fallbackLayer = null;
         // Fallback in preference to +1, -1, -2, -3.
@@ -410,7 +409,7 @@ public class TileRenderer {
 
 
             fallbackLayer = mapLayerForIndexOrNull(baseLayerIndex + i);
-            needsRedraw |= drawLayer(shaderProgram, projection, fallbackLayer, quota, alpha, depth, tempMatrix, mvpMatrix);
+            needsRedraw |= drawLayer(shaderProgram, projection, fallbackLayer, quota, alpha, depth, matrixHandler);
         }
 
         return needsRedraw;

@@ -1,7 +1,5 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
 
-import android.graphics.PointF;
-
 import java.util.LinkedList;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
@@ -47,8 +45,7 @@ public class OverlayRenderer extends BaseRenderer {
         }
     }
 
-    public void onDrawFrame(GLProgramService programService, float[] tempMatrix,
-                            float[] mvpMatrix, PointF tempPoint, float metresPerPixel) {
+    public void onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, float metresPerPixel) {
         // Enable alpha-blending
         glEnable(GL_BLEND);
 
@@ -57,8 +54,7 @@ public class OverlayRenderer extends BaseRenderer {
 
         synchronized (mPolyOverlays) {
             for (PolyOverlay poly : mPolyOverlays) {
-                poly.glDraw(mvpMatrix, tempMatrix, tempPoint, metresPerPixel,
-                        programService.getShaderOverlayProgram());
+                poly.glDraw(matrixHandler, metresPerPixel, programService.getShaderOverlayProgram());
             }
         }
         Utils.throwIfErrors();

@@ -59,20 +59,20 @@ public class CircleRenderer extends BaseRenderer {
         }
     }
 
-    public void onDrawFrame(GLProgramService programService, int viewportWidth, int viewportHeight, float[] tempMatrix, float[] mvpMatrix, PointF tempPoint, FloatBuffer tempBuffer) {
+    public void onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, int viewportWidth, int viewportHeight) {
         programService.setActiveProgram(GLProgramService.GLProgramType.CIRCLE);
         ShaderCircleProgram program = programService.getShaderCircleProgram();
 
         // TODO: Render circles in screen coordinates!
-        float[] innerMatrix = tempMatrix;
-        Matrix.translateM(innerMatrix, 0, mvpMatrix, 0, viewportWidth / 2.0f, viewportHeight / 2.0f, 0);
+        float[] innerMatrix = matrixHandler.getTempMatrix();
+        Matrix.translateM(innerMatrix, 0, matrixHandler.getMVPOrthoMatrix(), 0, viewportWidth / 2.0f, viewportHeight / 2.0f, 0);
         Matrix.scaleM(innerMatrix, 0, 1, -1, 1);
         glUniformMatrix4fv(program.uniformMVP, 1, false, innerMatrix, 0);
 
         Utils.throwIfErrors();
         synchronized (mCircleOverlays) {
             for (Circle circle : mCircleOverlays) {
-                circle.glDraw(tempPoint, tempBuffer, program);
+                circle.glDraw(matrixHandler.getTempPoint(), matrixHandler.getTempBuffer(), program);
             }
         }
         Utils.throwIfErrors();

@@ -45,8 +45,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.nio.FloatBuffer;
-
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -56,6 +54,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileServiceDelegate;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.CircleRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMatrixHandler;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLProgramService;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.MarkerRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.OverlayRenderer;
@@ -99,6 +98,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final TileRenderer mTileRenderer;
 
     private final GLProgramService mProgramService;
+    private final GLMatrixHandler mGLMatrixHandler;
 
     private MapConfiguration mMapConfiguration;
 
@@ -172,6 +172,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mTileRenderer = new TileRenderer(mContext, this, mGLTileCache);
 
         mProgramService = new GLProgramService();
+        mGLMatrixHandler = new GLMatrixHandler();
     }
 
     private final GLTileCache mGLTileCache;
@@ -181,13 +182,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     // TODO: This is an icky default, but ensures that it's not null.
     // This does not actually need to be volatile, but it encourages users to read it once.
     private volatile ScreenProjection mVolatileProjection = new ScreenProjection(320, 320, mScrollState);
-    final float[] mMVPOrthoMatrix = new float[16];
     private int mGLViewportWidth, mGLViewportHeight;
-
-    // Render thread temporaries. Do not use these outside of the GL thread.
-    private final float[] rTempMatrix = new float[32];
-    private final PointF rTempPoint = new PointF();
-    private final FloatBuffer rTempFloatBuffer = Utils.directFloatBuffer(8);
 
     private final Handler mHandler;
     private final Runnable mCameraChangeRunnable = new Runnable() {
@@ -422,17 +417,13 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
                     " dy=" + (projection.getCenter().getY() - oldProjection.getCenter().getY()));
         }
         mVolatileProjection = projection;
-
-        boolean needRedraw = mTileRenderer.onDrawFrame(mProgramService, projection, nowUptimeMillis, mScrollState, rTempMatrix, mMVPOrthoMatrix);
-
         float metresPerPixel = projection.getMetresPerPixel();
         boolean animating = (mScrollState.animatingScroll || mScrollState.animatingZoom);
 
-        mOverlayRenderer.onDrawFrame(mProgramService, rTempMatrix, mMVPOrthoMatrix, rTempPoint, metresPerPixel);
-
-        mCircleRenderer.onDrawFrame(mProgramService, mGLViewportWidth, mGLViewportHeight, rTempMatrix, mMVPOrthoMatrix, rTempPoint, rTempFloatBuffer);
-
-        mMarkerRenderer.onDrawFrame(mProgramService, projection, rTempPoint, rTempMatrix, mMVPOrthoMatrix, mGLImageCache);
+        boolean needRedraw = mTileRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection, nowUptimeMillis, mScrollState);
+        mOverlayRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, metresPerPixel);
+        mCircleRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, mGLViewportWidth, mGLViewportHeight);
+        mMarkerRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection, mGLImageCache);
 
         if (needRedraw) {
             requestRender();
@@ -649,7 +640,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         glViewport(0, 0, width, height);
 
         // The nominal order is "near,far", but somehow we need to list them backwards.
-        Matrix.orthoM(mMVPOrthoMatrix, 0, 0, width, height, 0, 1, -1);
+        Matrix.orthoM(mGLMatrixHandler.getMVPOrthoMatrix(), 0, 0, width, height, 0, 1, -1);
 
         mScrollController.setWidthHeight(width, height);
     }

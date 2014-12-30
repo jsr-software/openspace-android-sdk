@@ -83,7 +83,7 @@ import static android.opengl.GLES20.glViewport;
  * Tiles are rendered in tile coordinates, which have the origin at the bottom left of the grid (not the screen). The units are tiles (i.e. a tile always has dimensions 1x1) and the
  * actual size of a tile is set up by modifying the projection transform.
  */
-public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMapPrivate, RendererListener, MarkerRenderer.MarkerRendererListener {
+public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMapPrivate {
 
     private static final String CLASS_TAG = GLMapRenderer.class.getSimpleName();
     private static final int MARKER_DRAG_OFFSET = 70;
@@ -91,7 +91,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final Context mContext;
     private final PositionManager mPositionManager = new PositionManager();
 
-    // Renderers
+    // Renderers and Helpers
     private final CircleRenderer mCircleRenderer;
     private final MarkerRenderer mMarkerRenderer;
     private final OverlayRenderer mOverlayRenderer;
@@ -99,6 +99,55 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private final GLProgramService mProgramService;
     private final GLMatrixHandler mGLMatrixHandler;
+
+    private final MarkerRenderer.MarkerRendererListener mMarkerRendererListener = new MarkerRenderer.MarkerRendererListener() {
+        @Override
+        public void onInfoWindowClick(Marker marker) {
+            if (mOnInfoWindowClickListener != null) {
+                mOnInfoWindowClickListener.onInfoWindowClick(marker);
+            }
+        }
+
+        @Override
+        public boolean onMarkerClick(Marker marker) {
+            if (mOnMarkerClickListener != null) {
+                return mOnMarkerClickListener.onMarkerClick(marker);
+            }
+            return false;
+        }
+
+        @Override
+        public void onMarkerDrag(Marker marker) {
+            if (mOnMarkerDragListener != null) {
+                mOnMarkerDragListener.onMarkerDrag(marker);
+            }
+        }
+
+        @Override
+        public void onMarkerDragEnd(Marker marker) {
+            if (mOnMarkerDragListener != null) {
+                mOnMarkerDragListener.onMarkerDragEnd(marker);
+            }
+        }
+
+        @Override
+        public void onMarkerDragStart(Marker marker) {
+            if (mOnMarkerDragListener != null) {
+                mOnMarkerDragListener.onMarkerDragStart(marker);
+            }
+        }
+
+        @Override
+        public void onRenderRequested() {
+            requestRender();
+        }
+    };
+    private final RendererListener mRendererListener = new RendererListener() {
+        @Override
+        public void onRenderRequested() {
+            requestRender();
+        }
+    };
 
     private MapConfiguration mMapConfiguration;
 
@@ -166,9 +215,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         mScrollController = scrollController;
 
-        mCircleRenderer = new CircleRenderer(this, this);
-        mMarkerRenderer = new MarkerRenderer(mContext, this, this);
-        mOverlayRenderer = new OverlayRenderer(this, this);
+        mCircleRenderer = new CircleRenderer(this, mRendererListener);
+        mMarkerRenderer = new MarkerRenderer(mContext, this, mMarkerRendererListener);
+        mOverlayRenderer = new OverlayRenderer(this, mRendererListener);
         mTileRenderer = new TileRenderer(mContext, this, mGLTileCache);
 
         mProgramService = new GLProgramService();
@@ -656,51 +705,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     public void setMapConfiguration(MapConfiguration mapConfiguration) {
         mMapConfiguration = mapConfiguration;
         mTileRenderer.init(mMapConfiguration);
-    }
-
-
-    /**
-     * Renderer Listeners
-     */
-    @Override
-    public void onRenderRequested() {
-        requestRender();
-    }
-
-    @Override
-    public void onInfoWindowClick(Marker marker) {
-        if (mOnInfoWindowClickListener != null) {
-            mOnInfoWindowClickListener.onInfoWindowClick(marker);
-        }
-    }
-
-    @Override
-    public boolean onMarkerClick(Marker marker) {
-        if (mOnMarkerClickListener != null) {
-            return mOnMarkerClickListener.onMarkerClick(marker);
-        }
-        return false;
-    }
-
-    @Override
-    public void onMarkerDrag(Marker marker) {
-        if (mOnMarkerDragListener != null) {
-            mOnMarkerDragListener.onMarkerDrag(marker);
-        }
-    }
-
-    @Override
-    public void onMarkerDragEnd(Marker marker) {
-        if (mOnMarkerDragListener != null) {
-            mOnMarkerDragListener.onMarkerDragEnd(marker);
-        }
-    }
-
-    @Override
-    public void onMarkerDragStart(Marker marker) {
-        if (mOnMarkerDragListener != null) {
-            mOnMarkerDragListener.onMarkerDragStart(marker);
-        }
     }
 
     private class PositionManager {

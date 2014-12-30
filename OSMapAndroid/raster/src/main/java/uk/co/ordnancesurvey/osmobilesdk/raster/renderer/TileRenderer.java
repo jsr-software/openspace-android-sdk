@@ -35,7 +35,6 @@ import java.nio.FloatBuffer;
 import java.util.Arrays;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLTileCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapScrollController;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
@@ -104,7 +103,7 @@ public class TileRenderer {
         }
     }
 
-    public boolean onDrawFrame(GLMapRenderer.GLProgramService programService, ScreenProjection projection, long nowUptimeMillis,
+    public boolean onDrawFrame(GLProgramService programService, ScreenProjection projection, long nowUptimeMillis,
                                MapScrollController.ScrollPosition scrollPosition,
                                float[] tempMatrix, float[] mvpMatrix) {
         //leakGPUMemory();
@@ -117,8 +116,8 @@ public class TileRenderer {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        programService.setProgramType(GLMapRenderer.GLProgramType.SHADER);
-        ShaderProgram shaderProgram = (ShaderProgram) programService.getCurrentProgram();
+        programService.setActiveProgram(GLProgramService.GLProgramType.SHADER);
+        ShaderProgram shaderProgram = programService.getShaderProgram();
 
         Utils.throwIfErrors();
 

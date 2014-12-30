@@ -60,6 +60,7 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileServiceDelegate;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLProgramService;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.TileRenderer;
 
 import static android.opengl.GLES20.GL_BACK;
@@ -500,18 +501,18 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         glEnable(GL_BLEND);
 
         // Draw overlays
-        mProgramService.setProgramType(GLProgramType.OVERLAY);
+        mProgramService.setActiveProgram(GLProgramService.GLProgramType.OVERLAY);
 
         synchronized (mPolyOverlays) {
             for (PolyOverlay poly : mPolyOverlays) {
-                poly.glDraw(mMVPOrthoMatrix, rTempMatrix, rTempPoint, metresPerPixel, (ShaderOverlayProgram) mProgramService.getCurrentProgram());
+                poly.glDraw(mMVPOrthoMatrix, rTempMatrix, rTempPoint, metresPerPixel, mProgramService.getShaderOverlayProgram());
             }
         }
         Utils.throwIfErrors();
 
         mCircleRenderer.onDrawFrame(mProgramService);
 
-        mProgramService.setProgramType(GLProgramType.SHADER);
+        mProgramService.setActiveProgram(GLProgramService.GLProgramType.SHADER);
 
         drawMarkers(projection);
 
@@ -773,7 +774,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final MarkerCallable<PointF> mDrawMarkerCallable = new MarkerCallable<PointF>() {
         @Override
         public boolean run(Marker marker, PointF tempPoint) {
-            marker.glDraw(mMVPOrthoMatrix, rTempMatrix, mGLImageCache, tempPoint, (ShaderProgram) mProgramService.getCurrentProgram());
+            marker.glDraw(mMVPOrthoMatrix, rTempMatrix, mGLImageCache, tempPoint, mProgramService.getShaderProgram());
             return false;
         }
     };
@@ -994,8 +995,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
 
         public void onDrawFrame(GLProgramService programService) {
-            programService.setProgramType(GLProgramType.CIRCLE);
-            ShaderCircleProgram program = (ShaderCircleProgram) programService.getCurrentProgram();
+            programService.setActiveProgram(GLProgramService.GLProgramType.CIRCLE);
+            ShaderCircleProgram program = programService.getShaderCircleProgram();
 
             // TODO: Render circles in screen coordinates!
             float[] tempMatrix = rTempMatrix;
@@ -1019,58 +1020,5 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     }
 
-    public enum GLProgramType {
-        CIRCLE,
-        OVERLAY,
-        SHADER
-    }
 
-    public class GLProgramService {
-
-        private ShaderProgram mShaderProgram;
-        private ShaderOverlayProgram mShaderOverlayProgram;
-        private ShaderCircleProgram mShaderCircleProgram;
-        private GLProgram mLastProgram = null;
-        private GLProgramType mLastType = null;
-
-        public void onSurfaceCreated() {
-            mShaderProgram = new ShaderProgram();
-            mShaderOverlayProgram = new ShaderOverlayProgram();
-            mShaderCircleProgram = new ShaderCircleProgram();
-        }
-
-        public void setProgramType(GLProgramType programType) {
-            if(programType == mLastType) {
-                return;
-            }
-
-            if (mLastProgram != null) {
-                mLastProgram.stopUsing();
-            }
-
-            switch (programType) {
-                case CIRCLE: {
-                    mShaderCircleProgram.use();
-                    mLastProgram = mShaderCircleProgram;
-                    break;
-                }
-                case OVERLAY: {
-                    mShaderOverlayProgram.use();
-                    mLastProgram = mShaderOverlayProgram;
-                    break;
-                }
-                case SHADER: {
-                    mShaderProgram.use();
-                    mLastProgram = mShaderProgram;
-                    break;
-                }
-                default:
-                    throw new IllegalStateException("Unknown program type");
-            }
-        }
-
-        public GLProgram getCurrentProgram() {
-            return mLastProgram;
-        }
-    }
 }

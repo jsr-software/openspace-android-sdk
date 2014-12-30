@@ -42,7 +42,7 @@ public class ShaderProgram extends GLProgram {
 			1, 0,
 	});
 	
-	ShaderProgram()
+	public ShaderProgram()
 	{
 		super(Shaders.shader_vsh, Shaders.shader_fsh);
 		uniformMVP = glGetUniformLocation(program, "uMVPMatrix");

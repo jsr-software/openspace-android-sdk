@@ -24,12 +24,12 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import static android.opengl.GLES20.*;
 
-class ShaderOverlayProgram extends GLProgram {
+public class ShaderOverlayProgram extends GLProgram {
 	final int uniformMVP;
 	final int uniformColor;
 	final int attribVCoord;
 
-	ShaderOverlayProgram()
+	public ShaderOverlayProgram()
 	{		
 		super(Shaders.shader_overlay_vsh, Shaders.shader_overlay_fsh);
 		uniformMVP = glGetUniformLocation(program, "uMVPMatrix");

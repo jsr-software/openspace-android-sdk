@@ -24,14 +24,14 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import static android.opengl.GLES20.*;
 
-class ShaderCircleProgram extends GLProgram {
+public class ShaderCircleProgram extends GLProgram {
 	final int uniformMVP;
 	final int uniformFillColor;
 	final int uniformStrokeColor;
 	final int uniformCenterRadius;
 	final int attribVCoord;
 
-	ShaderCircleProgram()
+	public ShaderCircleProgram()
 	{
 		super(Shaders.shader_overlay_vsh, Shaders.shader_circle_fsh);
 		uniformMVP = glGetUniformLocation(program, "uMVPMatrix");

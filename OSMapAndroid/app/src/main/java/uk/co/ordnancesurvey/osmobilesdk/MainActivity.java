@@ -5,6 +5,7 @@ import android.app.Fragment;
 import android.os.Bundle;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.CircleOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Marker;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MarkerOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
@@ -50,6 +51,20 @@ public class MainActivity extends Activity {
                         .snippet("Some snippet");
                 map.addMarker(options);
                 return false;
+            }
+        });
+
+        map.setOnMapLongClickListener(new OSMap.OnMapLongClickListener() {
+            @Override
+            public void onMapLongClick(Point point) {
+                CircleOptions options = new CircleOptions()
+                        .center(point)
+                        .radius(3000)
+                        .fillColor(getResources().getColor(android.R.color.white))
+                        .strokeColor(getResources().getColor(android.R.color.black))
+                        .strokeWidth(3);
+
+                map.addCircle(options);
             }
         });
     }

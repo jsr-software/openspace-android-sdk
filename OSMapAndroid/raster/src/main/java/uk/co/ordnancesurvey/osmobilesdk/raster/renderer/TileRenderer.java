@@ -35,7 +35,7 @@ import java.nio.FloatBuffer;
 import java.util.Arrays;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLTileCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapScrollController;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
@@ -88,8 +88,6 @@ public class TileRenderer {
     private Layer[] mLayers;
     private Layer mPreviousLayer;
     private Layer mFadingOutLayer;
-    private GLProgram mLastProgram;
-    private ShaderProgram mShaderProgram;
 
     private long mFadingInStartUptimeMillis;
 
@@ -106,11 +104,7 @@ public class TileRenderer {
         }
     }
 
-    public void onSurfaceCreated(ShaderProgram shaderProgram) {
-        mShaderProgram = shaderProgram;
-    }
-
-    public boolean onDrawFrame(ScreenProjection projection, long nowUptimeMillis,
+    public boolean onDrawFrame(GLMapRenderer.GLProgramService programService, ScreenProjection projection, long nowUptimeMillis,
                                MapScrollController.ScrollPosition scrollPosition,
                                float[] tempMatrix, float[] mvpMatrix) {
         //leakGPUMemory();
@@ -121,15 +115,15 @@ public class TileRenderer {
 
         Utils.throwIfErrors();
 
-
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        setProgram(mShaderProgram);
+        programService.setProgramType(GLMapRenderer.GLProgramType.SHADER);
+        ShaderProgram shaderProgram = (ShaderProgram) programService.getCurrentProgram();
 
         Utils.throwIfErrors();
 
         glActiveTexture(GL_TEXTURE0);
-        glUniform1i(mShaderProgram.uniformTexture, 0);
+        glUniform1i(shaderProgram.uniformTexture, 0);
 
         float metresPerPixel = projection.getMetresPerPixel();
 
@@ -209,20 +203,20 @@ public class TileRenderer {
         float alpha = 1.0f;
 
         mDirtyArea.reset(projection);
-        glVertexAttribPointer(mShaderProgram.attribVCoord, 2, GL_FLOAT, false, 0, VERTEX_BUFFER);
+        glVertexAttribPointer(shaderProgram.attribVCoord, 2, GL_FLOAT, false, 0, VERTEX_BUFFER);
 
         // Don't execute any fetches on a layer that is fading out.
         if (fadingToLayer != null) {
             mFetchQuota.setNoAsyncFetches();
         }
-        needRedraw |= drawLayerWithFallbacks(projection, baseLayer, mFetchQuota, alpha, depth, tempMatrix, mvpMatrix);
+        needRedraw |= drawLayerWithFallbacks(shaderProgram, projection, baseLayer, mFetchQuota, alpha, depth, tempMatrix, mvpMatrix);
         depth = 0.0f;
         alpha = fadeToAlpha;
         if (!mDirtyArea.didDraw()) {
             Log.v(CLASS_TAG, "Failed to draw any tiles!");
         }
         mDirtyArea.reset(projection);
-        drawLayerWithFallbacks(projection, fadingToLayer, mFetchQuota, fadeToAlpha, depth, tempMatrix, mvpMatrix);
+        drawLayerWithFallbacks(shaderProgram, projection, fadingToLayer, mFetchQuota, fadeToAlpha, depth, tempMatrix, mvpMatrix);
 
         glDisable(GL_DEPTH_TEST);
 
@@ -270,7 +264,7 @@ public class TileRenderer {
         return textureId;
     }
 
-    private boolean drawLayer(ScreenProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, float[] tempMatrix, float[] mvpMatrix) {
+    private boolean drawLayer(ShaderProgram shaderProgram, ScreenProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, float[] tempMatrix, float[] mvpMatrix) {
         if (layer == null) {
             return false;
         }
@@ -296,7 +290,7 @@ public class TileRenderer {
 
 
         // Set alpha.
-        glUniform4f(mShaderProgram.uniformTintColor, -1, -1, -1, alpha);
+        glUniform4f(shaderProgram.uniformTintColor, -1, -1, -1, alpha);
 
         // Blend if alpha is not 1.
         if (alpha == 1.0f) {
@@ -309,7 +303,7 @@ public class TileRenderer {
         {
             float[] mvpTempMatrix = tempMatrix;
             Matrix.scaleM(mvpTempMatrix, 0, mvpMatrix, 0, screenTileSize, screenTileSize, 1);
-            glUniformMatrix4fv(mShaderProgram.uniformMVP, 1, false, mvpTempMatrix, 0);
+            glUniformMatrix4fv(shaderProgram.uniformMVP, 1, false, mvpTempMatrix, 0);
         }
 
         // Render from the centre, spiralling out.
@@ -341,7 +335,7 @@ public class TileRenderer {
                 if (bindTextureForTile(tile, quota) != 0) {
                     // Draw this texture in the correct place. The offset is expressed in tiles (and can be a fraction of a tile).
                     // tchan: We cast to float at the end to avoid losing too much precision.
-                    glVertexAttrib4f(mShaderProgram.attribVOffset, (float) (tile.x - mapTopLeftX / mapTileSize), -(float) (tile.y - mapTopLeftY / mapTileSize), depth, 1);
+                    glVertexAttrib4f(shaderProgram.attribVOffset, (float) (tile.x - mapTopLeftX / mapTileSize), -(float) (tile.y - mapTopLeftY / mapTileSize), depth, 1);
                     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
                     // Note that we drew something
                     mDirtyArea.drewRect();
@@ -392,14 +386,14 @@ public class TileRenderer {
     }
 
 
-    private boolean drawLayerWithFallbacks(ScreenProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, float[] tempMatrix, float[] mvpMatrix) {
+    private boolean drawLayerWithFallbacks(ShaderProgram shaderProgram, ScreenProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, float[] tempMatrix, float[] mvpMatrix) {
         if (layer == null) {
             return false;
         }
 
         int baseLayerIndex = indexForMapLayerOrNegative(layer);
 
-        boolean needsRedraw = drawLayer(projection, layer, quota, alpha, depth, tempMatrix, mvpMatrix);
+        boolean needsRedraw = drawLayer(shaderProgram, projection, layer, quota, alpha, depth, tempMatrix, mvpMatrix);
 
         Layer fallbackLayer = null;
         // Fallback in preference to +1, -1, -2, -3.
@@ -417,7 +411,7 @@ public class TileRenderer {
 
 
             fallbackLayer = mapLayerForIndexOrNull(baseLayerIndex + i);
-            needsRedraw |= drawLayer(projection, fallbackLayer, quota, alpha, depth, tempMatrix, mvpMatrix);
+            needsRedraw |= drawLayer(shaderProgram, projection, fallbackLayer, quota, alpha, depth, tempMatrix, mvpMatrix);
         }
 
         return needsRedraw;
@@ -439,19 +433,6 @@ public class TileRenderer {
             return layers[index];
         }
         return null;
-    }
-
-    void setProgram(GLProgram program) {
-        if (program == mLastProgram) {
-            return;
-        }
-
-        if (mLastProgram != null) {
-            mLastProgram.stopUsing();
-        }
-
-        program.use();
-        mLastProgram = program;
     }
 
     private static class FetchQuota {

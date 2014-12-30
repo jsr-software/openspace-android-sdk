@@ -328,9 +328,8 @@ public final class Marker {
         showInfoWindow();
     }
 
-    void glDraw(float[] ortho, float[] mvpTempMatrix, GLImageCache imageCache, PointF temp) {
-        ShaderProgram program = mMap.shaderProgram;
-        glUniform4f(program.uniformTintColor, mIconTintR, mIconTintG, mIconTintB, 1);
+    void glDraw(float[] ortho, float[] mvpTempMatrix, GLImageCache imageCache, PointF temp, ShaderProgram shaderProgram) {
+        glUniform4f(shaderProgram.uniformTintColor, mIconTintR, mIconTintG, mIconTintB, 1);
 
         // Render the marker. For the moment, use the standard marker - and load it every time too!!
         GLImageCache.ImageTexture tex = imageCache.bindTextureForBitmap(mIconBitmap);
@@ -339,7 +338,7 @@ public final class Marker {
         }
 
         // Draw this texture in the correct place
-        glVertexAttribPointer(program.attribVCoord, 2, GL_FLOAT, false, 0, tex.vertexCoords);
+        glVertexAttribPointer(shaderProgram.attribVCoord, 2, GL_FLOAT, false, 0, tex.vertexCoords);
 
         ScreenProjection projection = mMap.getProjection();
         projection.toScreenLocation(mPoint, temp);
@@ -353,7 +352,7 @@ public final class Marker {
             Matrix.rotateM(mvpTempMatrix, 0, mBearing, 0, 0, 1);
         }
 
-        glUniformMatrix4fv(program.uniformMVP, 1, false, mvpTempMatrix, 0);
+        glUniformMatrix4fv(shaderProgram.uniformMVP, 1, false, mvpTempMatrix, 0);
 
         int height = mIconBitmap.getHeight();
         int width = mIconBitmap.getWidth();
@@ -361,7 +360,7 @@ public final class Marker {
         // Render the marker, anchored at the correct position.
         xPixels = -width * mAnchorU;
         yPixels = -height * mAnchorV;
-        glVertexAttrib4f(program.attribVOffset, xPixels, yPixels, 0, 1);
+        glVertexAttrib4f(shaderProgram.attribVOffset, xPixels, yPixels, 0, 1);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         Utils.throwIfErrors();
 
@@ -372,7 +371,7 @@ public final class Marker {
                 Matrix.rotateM(mvpTempMatrix, 0, -mBearing, 0, 0, 1);
             }
 
-            glUniformMatrix4fv(program.uniformMVP, 1, false, mvpTempMatrix, 0);
+            glUniformMatrix4fv(shaderProgram.uniformMVP, 1, false, mvpTempMatrix, 0);
 
             // Draw centered above the marker
             tex = imageCache.bindTextureForBitmap(infoBitmap);
@@ -383,10 +382,10 @@ public final class Marker {
             yPixels -= tex.height;
             xPixels -= ((tex.width / 2) - (width * mAnchorU));
 
-            glUniform4f(program.uniformTintColor, -1, -1, -1, 1);
+            glUniform4f(shaderProgram.uniformTintColor, -1, -1, -1, 1);
 
-            glVertexAttribPointer(program.attribVCoord, 2, GL_FLOAT, false, 0, tex.vertexCoords);
-            glVertexAttrib4f(program.attribVOffset, xPixels, yPixels, 0, 1);
+            glVertexAttribPointer(shaderProgram.attribVCoord, 2, GL_FLOAT, false, 0, tex.vertexCoords);
+            glVertexAttrib4f(shaderProgram.attribVOffset, xPixels, yPixels, 0, 1);
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             Utils.throwIfErrors();
         }

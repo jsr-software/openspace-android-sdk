@@ -82,7 +82,7 @@ abstract class PolyOverlay extends ShapeOverlay {
 		return mPoints;
 	}
 
-	final void glDraw(float[] orthoMatrix, float[] tempMatrix, PointF tempPoint, float metresPerPixel) {
+	final void glDraw(float[] orthoMatrix, float[] tempMatrix, PointF tempPoint, float metresPerPixel, ShaderOverlayProgram program) {
 		GLMapRenderer map = getMap();
 		if (map == null)
 		{
@@ -93,8 +93,6 @@ abstract class PolyOverlay extends ShapeOverlay {
 
 		// Read mPoints once; it could change in another thread!
 		PolyPoints points = getPolyPoints();
-
-		ShaderOverlayProgram program = map.shaderOverlayProgram;
 		
 		glSetMatrix(program.uniformMVP, orthoMatrix, tempMatrix, projection, points, metresPerPixel);
 

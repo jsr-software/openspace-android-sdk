@@ -106,7 +106,7 @@ public final class Circle extends ShapeOverlay {
 	}
 
 
-	void glDraw(PointF tempPoint, FloatBuffer tempFloatBuffer) {
+	void glDraw(PointF tempPoint, FloatBuffer tempFloatBuffer, ShaderCircleProgram program) {
 		GLMapRenderer map = getMap();
 		if (map == null)
 		{
@@ -122,8 +122,6 @@ public final class Circle extends ShapeOverlay {
 		int fillColor = getFillColor();
 		int strokeColor = getStrokeColor();
 		float strokeWidth = getStrokeWidth();
-		
-		ShaderCircleProgram program = map.shaderCircleProgram;
 
 		Utils.setUniformPremultipliedColorARGB(program.uniformFillColor, fillColor);
 		Utils.setUniformPremultipliedColorARGB(program.uniformStrokeColor, strokeColor);

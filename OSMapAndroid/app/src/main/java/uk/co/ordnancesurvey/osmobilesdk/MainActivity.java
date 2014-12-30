@@ -3,12 +3,17 @@ package uk.co.ordnancesurvey.osmobilesdk;
 import android.app.Activity;
 import android.app.Fragment;
 import android.os.Bundle;
+import android.os.Handler;
 
+import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Circle;
 import uk.co.ordnancesurvey.osmobilesdk.raster.CircleOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Marker;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MarkerOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Polygon;
+import uk.co.ordnancesurvey.osmobilesdk.raster.PolygonOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapFragment;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Basemap;
@@ -49,7 +54,14 @@ public class MainActivity extends Activity {
                         .setPoint(point)
                         .title("Some title")
                         .snippet("Some snippet");
-                map.addMarker(options);
+                final Marker marker = map.addMarker(options);
+
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        map.removeMarker(marker);
+                    }
+                }, 2000);
                 return false;
             }
         });
@@ -57,6 +69,18 @@ public class MainActivity extends Activity {
         map.setOnMapLongClickListener(new OSMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(Point point) {
+
+                PolygonOptions polygonOptions = new PolygonOptions()
+                        .add(new Point(point.getX() - 10000, point.getY() - 10000, Point.BNG))
+                        .add(new Point(point.getX() - 10000, point.getY() + 10000, Point.BNG))
+                        .add(new Point(point.getX() + 10000, point.getY() + 10000, Point.BNG))
+                        .add(new Point(point.getX() + 10000, point.getY() - 10000, Point.BNG))
+                        .fillColor(getResources().getColor(android.R.color.white))
+                        .strokeColor(getResources().getColor(android.R.color.black))
+                        .strokeWidth(3);
+
+                final Polygon polygon = map.addPolygon(polygonOptions);
+
                 CircleOptions options = new CircleOptions()
                         .center(point)
                         .radius(3000)
@@ -64,7 +88,15 @@ public class MainActivity extends Activity {
                         .strokeColor(getResources().getColor(android.R.color.black))
                         .strokeWidth(3);
 
-                map.addCircle(options);
+                final Circle circle = map.addCircle(options);
+
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        map.removeCircle(circle);
+                        map.removePolyOverlay(polygon);
+                    }
+                }, 2000);
             }
         });
     }

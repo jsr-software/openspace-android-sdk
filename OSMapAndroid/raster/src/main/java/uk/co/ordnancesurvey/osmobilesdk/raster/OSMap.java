@@ -216,6 +216,8 @@ public interface OSMap {
 	 * @return The Marker that was added to the map.
 	 */
 	public Marker addMarker(MarkerOptions options);
+
+    public void removeMarker(Marker marker);
 	
 	/**
 	 * Removes all markers, overlays, and polylines from the map.
@@ -235,6 +237,8 @@ public interface OSMap {
 	 * @return The Polygon object that is added to the map.
 	 */
 	Polygon addPolygon(PolygonOptions options);
+
+    void removePolyOverlay(PolyOverlay polyOverlay);
 	
 	/**
 	 * Add a circle to this map.
@@ -242,6 +246,8 @@ public interface OSMap {
 	 * @return The Circle object that is added to the map
 	 */
 	Circle addCircle(CircleOptions options);
+
+    void removeCircle(Circle circle);
 
 	/**
 	 * Sets a custom renderer for the contents of info windows.

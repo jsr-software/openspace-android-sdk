@@ -23,7 +23,7 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 public final class Polyline extends PolyOverlay {
-	Polyline(PolylineOptions options, GLMapRenderer map) 
+	public Polyline(PolylineOptions options, GLMapRenderer map)
 	{
 		super(options, map, false);		
 	}

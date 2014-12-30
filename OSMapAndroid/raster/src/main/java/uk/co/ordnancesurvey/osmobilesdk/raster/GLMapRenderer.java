@@ -62,11 +62,11 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileServiceDelegate;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.CircleRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLProgramService;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.OverlayRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.RendererListener;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.TileRenderer;
 
 import static android.opengl.GLES20.GL_BACK;
-import static android.opengl.GLES20.GL_BLEND;
 import static android.opengl.GLES20.GL_CULL_FACE;
 import static android.opengl.GLES20.GL_ONE;
 import static android.opengl.GLES20.GL_ONE_MINUS_SRC_ALPHA;
@@ -98,7 +98,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     // Renderers
     private final TileRenderer mTileRenderer;
     private final CircleRenderer mCircleRenderer;
-
+    private final OverlayRenderer mOverlayRenderer;
     private final GLProgramService mProgramService;
 
     private MapConfiguration mMapConfiguration;
@@ -169,7 +169,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         mTileRenderer = new TileRenderer(mContext, this, mGLTileCache);
         mCircleRenderer = new CircleRenderer(this, this);
-
+        mOverlayRenderer = new OverlayRenderer(this, this);
         mProgramService = new GLProgramService();
     }
 
@@ -182,10 +182,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private volatile ScreenProjection mVolatileProjection = new ScreenProjection(320, 320, mScrollState);
     final float[] mMVPOrthoMatrix = new float[16];
     private int mGLViewportWidth, mGLViewportHeight;
-//    ShaderProgram shaderProgram;
-//    ShaderOverlayProgram shaderOverlayProgram;
-//    ShaderCircleProgram shaderCircleProgram;
-//    GLProgram mLastProgram = null;
 
     // Render thread temporaries. Do not use these outside of the GL thread.
     private final float[] rTempMatrix = new float[32];
@@ -218,8 +214,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private OnInfoWindowClickListener mOnInfoWindowClickListener;
     private OnCameraChangeListener mOnCameraChangeListener;
     private Marker mExpandedMarker = null;
-    // Overlays
-    private final LinkedList<PolyOverlay> mPolyOverlays = new LinkedList<>();
 
     // FPS limiter
     private final int mMinFramePeriodMillis;
@@ -301,12 +295,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             mMarkersLock.writeLock().unlock();
         }
 
-        synchronized (mPolyOverlays) {
-            mPolyOverlays.clear();
-        }
-
+        mOverlayRenderer.clear();
         mCircleRenderer.clear();
-
         requestRender();
     }
 
@@ -323,6 +313,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         return marker;
     }
 
+    @Override
     public void removeMarker(Marker marker) {
         mMarkersLock.writeLock().lock();
         try {
@@ -338,29 +329,17 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     @Override
     public final Polyline addPolyline(PolylineOptions polylineOptions) {
-        Polyline polyline = new Polyline(polylineOptions, this);
-        synchronized (mPolyOverlays) {
-            mPolyOverlays.add(polyline);
-        }
-        requestRender();
-        return polyline;
+        return mOverlayRenderer.addPolyline(polylineOptions);
     }
 
     @Override
     public final Polygon addPolygon(PolygonOptions polygonOptions) {
-        Polygon polygon = new Polygon(polygonOptions, this);
-        synchronized (mPolyOverlays) {
-            mPolyOverlays.add(polygon);
-        }
-        requestRender();
-        return polygon;
+        return mOverlayRenderer.addPolygon(polygonOptions);
     }
 
-    void removePolyOverlay(PolyOverlay polygon) {
-        synchronized (mPolyOverlays) {
-            mPolyOverlays.remove(polygon);
-        }
-        requestRender();
+    @Override
+    public void removePolyOverlay(PolyOverlay polygon) {
+        mOverlayRenderer.removePolyOverlay(polygon);
     }
 
     @Override
@@ -368,16 +347,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         return mCircleRenderer.addCircle(circleOptions);
     }
 
-    void removeCircle(Circle circle) {
+    @Override
+    public void removeCircle(Circle circle) {
         mCircleRenderer.removeCircle(circle);
-    }
-
-    void removeOverlay(ShapeOverlay shapeOverlay) {
-        if (shapeOverlay instanceof Circle) {
-            removeCircle((Circle) shapeOverlay);
-        } else {
-            removePolyOverlay((PolyOverlay) shapeOverlay);
-        }
     }
 
     @Override
@@ -482,18 +454,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         float metresPerPixel = projection.getMetresPerPixel();
         boolean animating = (mScrollState.animatingScroll || mScrollState.animatingZoom);
 
-        // Enable alpha-blending
-        glEnable(GL_BLEND);
-
-        // Draw overlays
-        mProgramService.setActiveProgram(GLProgramService.GLProgramType.OVERLAY);
-
-        synchronized (mPolyOverlays) {
-            for (PolyOverlay poly : mPolyOverlays) {
-                poly.glDraw(mMVPOrthoMatrix, rTempMatrix, rTempPoint, metresPerPixel, mProgramService.getShaderOverlayProgram());
-            }
-        }
-        Utils.throwIfErrors();
+        mOverlayRenderer.onDrawFrame(mProgramService, rTempMatrix, mMVPOrthoMatrix, rTempPoint, metresPerPixel);
 
         mCircleRenderer.onDrawFrame(mProgramService, mGLViewportWidth, mGLViewportHeight, rTempMatrix, mMVPOrthoMatrix, rTempPoint, rTempFloatBuffer);
 
@@ -647,8 +608,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             updateMarkerPosition(marker, screenx, screeny);
         }
     }
-
-
 
     private interface MarkerCallable<T> {
         // Return true if iteration should stop.
@@ -906,7 +865,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     public void onRenderRequested() {
         requestRender();
     }
-
 
     private class PositionManager {
         // POSITION CACHE

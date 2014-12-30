@@ -169,14 +169,4 @@ abstract class ShapeOverlay {
 			map.requestRender();
 		}
 	}
-
-	/**
-	 * Removes this shape from the map.
-	 */
-	public final void remove() {
-		GLMapRenderer map = getMap();
-		if (map != null) {
-			map.removeOverlay(this);
-		}
-	}
 }

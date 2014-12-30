@@ -25,7 +25,7 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 import static android.opengl.GLES20.*;
 
 public final class Polygon extends PolyOverlay {
-	Polygon(PolygonOptions options, GLMapRenderer map) {
+	public Polygon(PolygonOptions options, GLMapRenderer map) {
 		super(options, map, true);
 	}
 

@@ -36,15 +36,12 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 
 import static android.opengl.GLES20.glUniformMatrix4fv;
 
-public class CircleRenderer {
+public class CircleRenderer extends BaseRenderer {
 
-    private final GLMapRenderer mMapRenderer;
     private final LinkedList<Circle> mCircleOverlays = new LinkedList<>();
-    private final RendererListener mRendererListener;
 
     public CircleRenderer(GLMapRenderer mapRenderer, RendererListener rendererListener) {
-        mMapRenderer = mapRenderer;
-        mRendererListener = rendererListener;
+        super(mapRenderer, rendererListener);
     }
 
     public Circle addCircle(CircleOptions circleOptions) {
@@ -86,11 +83,5 @@ public class CircleRenderer {
             mCircleOverlays.remove(circle);
         }
         emitRenderRequest();
-    }
-
-    private void emitRenderRequest() {
-        if(mRendererListener != null) {
-            mRendererListener.onRenderRequested();
-        }
     }
 }

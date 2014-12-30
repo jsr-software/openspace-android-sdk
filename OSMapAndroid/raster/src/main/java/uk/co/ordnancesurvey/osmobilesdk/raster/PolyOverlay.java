@@ -42,7 +42,7 @@ import static android.opengl.GLES20.glLineWidth;
 import static android.opengl.GLES20.glUniformMatrix4fv;
 import static android.opengl.GLES20.glVertexAttribPointer;
 
-abstract class PolyOverlay extends ShapeOverlay {
+public abstract class PolyOverlay extends ShapeOverlay {
 	private volatile PolyPoints mPoints;
 	private final boolean mClosed;
 	// mRotation and mPixelCoordinates were originally used for the location marker. They are left in for future convenience and possible future developer
@@ -82,7 +82,7 @@ abstract class PolyOverlay extends ShapeOverlay {
 		return mPoints;
 	}
 
-	final void glDraw(float[] orthoMatrix, float[] tempMatrix, PointF tempPoint, float metresPerPixel, ShaderOverlayProgram program) {
+	public final void glDraw(float[] orthoMatrix, float[] tempMatrix, PointF tempPoint, float metresPerPixel, ShaderOverlayProgram program) {
 		GLMapRenderer map = getMap();
 		if (map == null)
 		{

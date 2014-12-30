@@ -45,7 +45,9 @@ public class MainActivity extends Activity {
             @Override
             public boolean onMapClick(Point point) {
                 MarkerOptions options = new MarkerOptions()
-                        .setPoint(point);
+                        .setPoint(point)
+                        .title("Some title")
+                        .snippet("Some snippet");
                 map.addMarker(options);
                 return false;
             }

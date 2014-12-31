@@ -35,6 +35,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapScrollController;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMapPrivate;
+import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.LayerCatalog;
 
 public final class MapView extends FrameLayout {
@@ -70,8 +71,10 @@ public final class MapView extends FrameLayout {
             @Override
             public Object onDragBegin(MotionEvent e) {
                 // TODO Auto-generated method stub
+                // TODO: drag code!
                 Log.v("Drag", "Start!");
-                return mMap.longClick(e.getX(), e.getY());
+                mMap.processLongPress(e.getX(), e.getY());
+                return null;
             }
 
             @Override
@@ -95,10 +98,20 @@ public final class MapView extends FrameLayout {
                 // TODO: Should this be an interface method?
                 mMapRenderer.requestRender();
             }
+        }, new MapGestureListener() {
+            @Override
+            public void onLongPress(float screenX, float screenY) {
+                mMap.processLongPress(screenX, screenY);
+            }
 
             @Override
-            public boolean onSingleTapConfirmed(MotionEvent e) {
-                return mMap.singleClick(e.getX(), e.getY());
+            public void onSingleTap(float screenX, float screenY) {
+                mMap.processSingleTap(screenX, screenY);
+            }
+
+            @Override
+            public void onTouch(float screenX, float screenY) {
+                mMap.processTouch(screenX, screenY);
             }
         });
         setOnTouchListener(scrollController);

@@ -34,11 +34,11 @@ import android.widget.Scroller;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
 
 public final class MapScrollController extends CombinedGestureDetector {
 	public interface ScrollListener {
 		public void onScrollScaleFling(MapScrollController detector);
-		public boolean onSingleTapConfirmed(MotionEvent e);
 	}
 
 	private static final String TAG = "MapScrollController";
@@ -72,8 +72,8 @@ public final class MapScrollController extends CombinedGestureDetector {
 	private float statLagSumSq;
 	private long statLastReportFrameTime;
 
-	public MapScrollController(Context context, DragListener dragListener, ScrollListener aListener) {
-		super(context, dragListener);
+	public MapScrollController(Context context, DragListener dragListener, ScrollListener aListener, MapGestureListener mapGestureListener) {
+		super(context, dragListener, mapGestureListener);
 		listener = aListener;
 		mScroller = new Scroller(context);
 		mZoomer = new Zoomer(context);
@@ -234,11 +234,6 @@ public final class MapScrollController extends CombinedGestureDetector {
 
 		zoomToScale(e, bestMPP);
 		return true;
-	}
-
-	@Override
-	protected boolean onSingleTapConfirmed(MotionEvent e) {
-		return listener.onSingleTapConfirmed(e);
 	}
 
 	@Override

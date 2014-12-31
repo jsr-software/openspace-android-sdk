@@ -30,6 +30,8 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewConfiguration;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
+
 abstract class CombinedGestureDetector implements View.OnTouchListener {
 	//private static final String TAG = "CombinedGestureDetector";
 
@@ -41,6 +43,7 @@ abstract class CombinedGestureDetector implements View.OnTouchListener {
 	}
 	private final GestureDetector mGestureDetector;
 	private final ScaleGestureDetector mScaleGestureDetector;
+    private final MapGestureListener mMapGestureListener;
 	private final float mTouchSlopSq;
 
 	private boolean consumingScaleEvents;
@@ -62,7 +65,7 @@ abstract class CombinedGestureDetector implements View.OnTouchListener {
 	private float mPrevScaleFocusX;
 	private float mPrevScaleFocusY;
 
-	public CombinedGestureDetector(Context context, DragListener dragListener) {
+	public CombinedGestureDetector(Context context, DragListener dragListener,  MapGestureListener mapGestureListener) {
 		GestureListener listener = new GestureListener();
 		mGestureDetector = new GestureDetector(context, listener);
 		mScaleGestureDetector = new ScaleGestureDetector(context, listener);
@@ -74,14 +77,13 @@ abstract class CombinedGestureDetector implements View.OnTouchListener {
 		mTouchSlopSq = touchSlop*touchSlop;
 
 		mDragListener = dragListener;
+        mMapGestureListener = mapGestureListener;
 	}
 
 	/**
 	* Combined scroll/zoom/fling method.
 	*/
 	protected abstract void onScroll(float dx, float dy, float dScale, float scaleOffsetX, float scaleOffsetY, float flingVX, float flingVY, long eventTime);
-
-	protected abstract boolean onSingleTapConfirmed(MotionEvent e);
 	protected abstract void onTwoFingerTap(MotionEvent e);
 	protected abstract boolean onDoubleTap(MotionEvent e, float offsetX, float offsetY);
 
@@ -161,11 +163,11 @@ abstract class CombinedGestureDetector implements View.OnTouchListener {
 		return consumingScaleEvents || consumedGestureEvent || twoFingerTap;
 	}
 
-	class GestureListener implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener, ScaleGestureDetector.OnScaleGestureListener {
+	class GestureListener extends GestureDetector.SimpleOnGestureListener implements ScaleGestureDetector.OnScaleGestureListener {
 		private boolean mScaleStarted;
 
 		@Override
-		public boolean onDown(MotionEvent e) {
+		public boolean onDown(MotionEvent event) {
 			if (mIgnoreFurtherGestures) {
 				return false;
 			}
@@ -175,8 +177,11 @@ abstract class CombinedGestureDetector implements View.OnTouchListener {
 			//  - Cancel any fling.
 			consumingScaleEvents = true;
 			mTwoFingerTapPossible = false;
-			CombinedGestureDetector.this.onScroll(0, 0, 1, 0, 0, 0, 0, e.getEventTime());
-			return false;
+			//CombinedGestureDetector.this.onScroll(0, 0, 1, 0, 0, 0, 0, event.getEventTime());
+            if(mMapGestureListener != null) {
+                mMapGestureListener.onTouch(event.getX(), event.getY());
+            }
+			return true;
 		}
 
 		@Override
@@ -278,11 +283,14 @@ abstract class CombinedGestureDetector implements View.OnTouchListener {
 		}
 
 		@Override
-		public boolean onSingleTapConfirmed(MotionEvent e) {
+		public boolean onSingleTapConfirmed(MotionEvent event) {
 			if (mIgnoreFurtherGestures) {
 				return false;
 			}
-			return CombinedGestureDetector.this.onSingleTapConfirmed(e);
+            if(mMapGestureListener != null) {
+                mMapGestureListener.onSingleTap(event.getX(), event.getY());
+            }
+            return true;
 		}
 
 		@Override
@@ -301,28 +309,22 @@ abstract class CombinedGestureDetector implements View.OnTouchListener {
 		}
 
 		@Override
-		public void onLongPress(MotionEvent e) {
+		public void onLongPress(MotionEvent event) {
 			if (mIgnoreFurtherGestures) {
 				return;
 			}
-			Object dragObject = mDragListener.onDragBegin(e);
+            // Drag code
+			Object dragObject = mDragListener.onDragBegin(event);
 			mDragObject = dragObject;
 			mDragStarted = false;
-			mDragInitialX = e.getX();
-			mDragInitialY = e.getY();
+			mDragInitialX = event.getX();
+			mDragInitialY = event.getY();
 			mIgnoreFurtherGestures = (dragObject != null);
-		}
+            // End Drag code
 
-		@Override
-		public boolean onDoubleTapEvent(MotionEvent e) {
-			return false;
-		}
-		@Override
-		public boolean onSingleTapUp(MotionEvent e) {
-			return false;
-		}
-		@Override
-		public void onShowPress(MotionEvent e) {
+            if(mMapGestureListener != null) {
+                mMapGestureListener.onLongPress(event.getX(), event.getY());
+            }
 		}
 	}
 

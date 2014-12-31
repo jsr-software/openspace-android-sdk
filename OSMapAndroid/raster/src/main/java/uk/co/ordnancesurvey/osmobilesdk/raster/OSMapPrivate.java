@@ -23,8 +23,12 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 public interface OSMapPrivate extends OSMap {
-	boolean singleClick(float screenx, float screeny);
-	Object longClick(float screenx, float screeny);
+    // TODO: temp interface
+    void processLongPress(float screenX, float screenY);
+	void processSingleTap(float screenX, float screenY);
+    void processTouch(float screenX, float screenY);
+
+	//Object longClick(float screenx, float screeny);
 
 	//boolean zoomInStep(MotionEvent e, float offsetX, float offsetY);
 	//boolean zoomOutStep(MotionEvent e);

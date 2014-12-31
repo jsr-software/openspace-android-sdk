@@ -110,38 +110,6 @@ public interface OSMap {
 		 */
 		public abstract View getInfoWindow(Marker marker);
 	}
-	
-	/**
-	 * Callback interface for when the user taps on the map. 
-	 * <p>
-	 * Listeners will be invoked on the main thread.
-	 */
-	interface OnMapClickListener
-	{
-		/**
-		 * 	Called when the user makes a tap gesture on the map, but only if none of the overlays of the map handled the gesture. 
-		 * Implementations of this method are always invoked on the main thread.
-		 * 
-		 * @param gp The point on the ground (projected from the screen point) that was tapped.
-		 */
-		public abstract boolean onMapClick(Point gp);
-	}
-
-	/**
-	 * Callback interface for when the user long presses on the map. 
-	 * <p>
-	 * Listeners will be invoked on the main thread.
-	 */
-	interface OnMapLongClickListener
-	{
-		/**
-		 * Called when the user makes a long-press gesture on the map, but only if none of the overlays of the map handled the gesture. 
-		 * Implementations of this method are always invoked on the main thread.
-		 * 
- 		 * @param gp The point on the ground (projected from the screen point) that was tapped.
-		 */
-		public abstract void onMapLongClick(Point gp);
-	}
 
 	/**
 	 * Defines signatures for methods that are called when a marker is clicked or tapped.
@@ -263,18 +231,6 @@ public interface OSMap {
 	 * @param listener	The callback that's invoked when a marker info window is clicked. To unset the callback, use null.
 	 */
 	public void setOnInfoWindowClickListener(OnInfoWindowClickListener listener);
-	
-	/**
-	 * Sets a callback that's invoked when the map is tapped
-	 * @param listener	The callback that's invoked when the map is tapped. To unset the callback, use null.
-	 */
-	public void setOnMapClickListener(OnMapClickListener listener);
-
-	/**
-	 * Sets a callback that's invoked when the map is long pressed.
-	 * @param listener	The callback that's invoked when the map is long pressed. To unset the callback, use null.
-	 */
-	public void setOnMapLongClickListener(OnMapLongClickListener listener);
 
 	/**
 	 * Sets a callback that's invoked when a marker is clicked.
@@ -314,9 +270,59 @@ public interface OSMap {
     /**
      * NEW INTERFACE
      */
+
+    /**
+     * Callback interface for when the user makes a long press gesture on the map.
+     * <p>
+     * Listeners will be invoked on the main thread.
+     */
+    public interface OnLongPressListener {
+        /**
+         * Called when the user makes a long press gesture on the map.
+         * Implementations of this method are always invoked on the main thread.
+         *
+         * @param point The point on the ground (projected from the screen point) that was long
+         *              pressed.
+         */
+        void onLongPress(Point point);
+    }
+
+    /**
+     * Callback interface for when the user touches on the map.
+     * <p>
+     * Listeners will be invoked on the main thread.
+     */
     public interface OnMapTouchListener {
+        /**
+         * Called when the user makes or begins a touch gesture on the map.
+         * Implementations of this method are always invoked on the main thread.
+         *
+         * @param point The point on the ground (projected from the screen point) that was touched.
+         */
         void onMapTouch(Point point);
     }
+
+    /**
+     * Callback interface for when the user makes a single tap on the map.
+     * <p>
+     * Listeners will be invoked on the main thread.
+     */
+    public interface OnSingleTapListener {
+        /**
+         * Called when the user makes a single tap gesture on the map.
+         * Implementations of this method are always invoked on the main thread.
+         *
+         * @param point The point on the ground (projected from the screen point) that was tapped.
+         */
+        void onSingleTap(Point point);
+    }
+
+    /**
+     * Sets a callback object for when the Map is touched. Note that there can be multiple callbacks
+     * added. Each callback will receive the touch event.
+     * @param onLongPressListener The callback that will be invoked on a Map long press event
+     */
+    public void addOnLongPressListener(OnLongPressListener onLongPressListener);
 
     /**
      * Sets a callback object for when the Map is touched. Note that there can be multiple callbacks
@@ -326,8 +332,28 @@ public interface OSMap {
     public void addOnMapTouchListener(OnMapTouchListener onMapTouchListener);
 
     /**
+     * Sets a callback object for when the Map is single tapped.
+     * Note that there can be multiple callbacks added.
+     * Each callback will receive the single tap event.
+     * @param onSingleTapListener The callback that will be invoked on a Map single tap event
+     */
+    public void addOnSingleTapListener(OnSingleTapListener onSingleTapListener);
+
+    /**
+     * Removes a callback object for when the Map is long pressed.
+     * @param onLongPressListener The callback that will be removed
+     */
+    public void removeOnLongPressListener(OnLongPressListener onLongPressListener);
+
+    /**
      * Removes a callback object for when the Map is touched.
      * @param onMapTouchListener The callback that will be removed
      */
     public void removeOnMapTouchListener(OnMapTouchListener onMapTouchListener);
+
+    /**
+     * Removes a callback object for when the Map is single tapped.
+     * @param onSingleTapListener The callback that will be removed
+     */
+    public void removeOnSingleTapListener(OnSingleTapListener onSingleTapListener);
 }

@@ -38,7 +38,6 @@ import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Gravity;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
@@ -55,8 +54,6 @@ import javax.microedition.khronos.opengles.GL10;
 import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
-import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureDetector;
-import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileServiceDelegate;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.CircleRenderer;
@@ -105,15 +102,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private final GLProgramService mProgramService;
     private final GLMatrixHandler mGLMatrixHandler;
-
-    // New Gesture Handling
-    private final MapGestureDetector mGestureDetector;
-    private final MapGestureListener mGestureListener = new MapGestureListener() {
-        @Override
-        public void onTouch(float screenX, float screenY) {
-            emitMapTouch(screenX, screenY);
-        }
-    };
 
     private final MarkerRenderer.MarkerRendererListener mMarkerRendererListener = new MarkerRenderer.MarkerRendererListener() {
         @Override
@@ -238,7 +226,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mProgramService = new GLProgramService();
         mGLMatrixHandler = new GLMatrixHandler();
 
-        mGestureDetector = new MapGestureDetector(context, mGestureListener);
+//        mGestureDetector = new MapGestureDetector(context, mGestureListener);
     }
 
     private final GLTileCache mGLTileCache;
@@ -266,8 +254,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     };
 
     private InfoWindowAdapter mInfoWindowAdapter;
-    private OnMapClickListener mOnMapClickListener;
-    private OnMapLongClickListener mOnMapLongClickListener;
     private OnMarkerClickListener mOnMarkerClickListener;
     private OnMarkerDragListener mOnMarkerDragListener;
     private OnInfoWindowClickListener mOnInfoWindowClickListener;
@@ -300,14 +286,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     public void setInfoWindowAdapter(InfoWindowAdapter adapter) {
         mInfoWindowAdapter = adapter;
-    }
-
-    public void setOnMapClickListener(OnMapClickListener listener) {
-        mOnMapClickListener = listener;
-    }
-
-    public void setOnMapLongClickListener(OnMapLongClickListener listener) {
-        mOnMapLongClickListener = listener;
     }
 
     public void setOnMarkerClickListener(OnMarkerClickListener listener) {
@@ -511,49 +489,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     }
 
-    public boolean singleClick(float screenx, float screeny) {
-        ScreenProjection projection = mVolatileProjection;
-        PointF screenLocation = new PointF(screenx, screeny);
-
-        boolean handled = mMarkerRenderer.singleClick(projection, screenLocation);
-
-        if (!handled) {
-            if (mOnMapClickListener != null) {
-                Point point = projection.fromScreenLocation(screenx, screeny);
-                handled = mOnMapClickListener.onMapClick(point);
-            }
-            if (!handled) {
-                // TODO move camera here
-            }
-        }
-        return handled;
-    }
-
-
-    /**
-     * Return the object handling the long click, if we want to initiate a drag
-     */
-    public Object longClick(float screenx, float screeny) {
-        ScreenProjection projection = mVolatileProjection;
-        Point gp = projection.fromScreenLocation(screenx, screeny);
-        Point gp2 = projection.fromScreenLocation(screenx, screeny - MARKER_DRAG_OFFSET);
-
-        // Check gp2 as well, because we don't want to lift a marker out of bounds.
-        if (!BngUtil.isInBngBounds(gp) || !BngUtil.isInBngBounds(gp2)) {
-            return null;
-        }
-
-        Marker marker = mMarkerRenderer.longClick(projection, new PointF(screenx, screeny));
-        if (marker != null) {
-            return marker;
-        }
-
-        if (mOnMapLongClickListener != null) {
-            mOnMapLongClickListener.onMapLongClick(gp);
-        }
-        return null;
-    }
-
     public void drag(float screenx, float screeny, Object draggable) {
         if (draggable instanceof Marker) {
             mMarkerRenderer.onDrag(mVolatileProjection, screenx, screeny, (Marker) draggable);
@@ -726,6 +661,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
 
 
+
     private class PositionManager {
         // POSITION CACHE
         private static final String POSITION_EASTINGS = "position_eastings";
@@ -791,8 +727,14 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     /**
      * NEW INTERFACE
      */
+    private final List<OnLongPressListener> mLongPressListeners = new ArrayList<>();
+    private final List<OnSingleTapListener> mSingleTapListeners = new ArrayList<>();
     private final List<OnMapTouchListener> mTouchListeners = new ArrayList<>();
 
+    @Override
+    public void addOnLongPressListener(OnLongPressListener onLongPressListener) {
+        mLongPressListeners.add(onLongPressListener);
+    }
 
     @Override
     public void addOnMapTouchListener(OnMapTouchListener onMapTouchListener) {
@@ -800,22 +742,77 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     @Override
+    public void addOnSingleTapListener(OnSingleTapListener onSingleTapListener) {
+        mSingleTapListeners.add(onSingleTapListener);
+    }
+
+    @Override
+    public void removeOnLongPressListener(OnLongPressListener onLongPressListener) {
+        mLongPressListeners.remove(onLongPressListener);
+    }
+
+    @Override
     public void removeOnMapTouchListener(OnMapTouchListener onMapTouchListener) {
         mTouchListeners.remove(onMapTouchListener);
     }
 
-    private void emitMapTouch(float screenX, float screenY) {
+    @Override
+    public void removeOnSingleTapListener(OnSingleTapListener onSingleTapListener) {
+        mSingleTapListeners.remove(onSingleTapListener);
+    }
+
+
+    // TODO: make the below interface private
+
+
+    @Override
+    public void processLongPress(float screenX, float screenY) {
+        ScreenProjection projection = mVolatileProjection;
+        Point point = projection.fromScreenLocation(screenX, screenY);
+        Point offSetPoint = projection.fromScreenLocation(screenX, screenY - MARKER_DRAG_OFFSET);
+
+        // Check offSetPoint as well, because we don't want to lift a marker out of bounds.
+        if (!BngUtil.isInBngBounds(point) || !BngUtil.isInBngBounds(offSetPoint)) {
+            //mDragObject = null;
+        }
+
+        Marker marker = mMarkerRenderer.longPress(projection, new PointF(screenX, screenY));
+        if (marker != null) {
+            //mDragObject = marker;
+            // TODO: return drag object here?
+            return;
+        }
+
+        for(OnLongPressListener listener : mLongPressListeners) {
+            listener.onLongPress(point);
+        }
+
+        requestRender();
+    }
+
+    @Override
+    public void processSingleTap(float screenx, float screeny) {
+        ScreenProjection projection = mVolatileProjection;
+        PointF screenLocation = new PointF(screenx, screeny);
+
+        boolean handled = mMarkerRenderer.singleTap(projection, screenLocation);
+
+        if (!handled) {
+            Point point = projection.fromScreenLocation(screenx, screeny);
+            for(OnSingleTapListener listener : mSingleTapListeners) {
+                listener.onSingleTap(point);
+            }
+        }
+
+        requestRender();
+    }
+
+    @Override
+    public void processTouch(float screenX, float screenY) {
         ScreenProjection projection = mVolatileProjection;
         Point point = projection.fromScreenLocation(screenX, screenY);
         for(OnMapTouchListener listener : mTouchListeners) {
             listener.onMapTouch(point);
         }
-    }
-
-
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        boolean gestureHandled = mGestureDetector.onTouch(event);
-        return super.onTouchEvent(event);
     }
 }

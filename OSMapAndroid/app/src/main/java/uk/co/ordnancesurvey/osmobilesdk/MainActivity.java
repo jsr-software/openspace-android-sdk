@@ -23,12 +23,10 @@
 package uk.co.ordnancesurvey.osmobilesdk;
 
 import android.app.Activity;
-import android.app.Fragment;
 import android.os.Bundle;
 import android.os.Handler;
 import android.widget.Toast;
 
-import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Circle;
 import uk.co.ordnancesurvey.osmobilesdk.raster.CircleOptions;
@@ -39,7 +37,6 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.Polygon;
 import uk.co.ordnancesurvey.osmobilesdk.raster.PolygonOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapFragment;
-import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Basemap;
 
 public class MainActivity extends Activity {
 
@@ -70,9 +67,20 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         final OSMap map = mMapFragment.getMap().getMap();
-        map.setOnMapClickListener(new OSMap.OnMapClickListener() {
+
+        map.addOnMapTouchListener(new OSMap.OnMapTouchListener() {
             @Override
-            public boolean onMapClick(Point point) {
+            public void onMapTouch(Point point) {
+                Toast.makeText(MainActivity.this,
+                        "New point: " + point.getX() + ", " + point.getY(),
+                        Toast.LENGTH_SHORT)
+                        .show();
+            }
+        });
+
+        map.addOnSingleTapListener(new OSMap.OnSingleTapListener() {
+            @Override
+            public void onSingleTap(Point point) {
                 MarkerOptions options = new MarkerOptions()
                         .setPoint(point)
                         .title("Some title")
@@ -85,14 +93,12 @@ public class MainActivity extends Activity {
                         map.removeMarker(marker);
                     }
                 }, 2000);
-                return true;
             }
         });
 
-        map.setOnMapLongClickListener(new OSMap.OnMapLongClickListener() {
+        map.addOnLongPressListener(new OSMap.OnLongPressListener() {
             @Override
-            public void onMapLongClick(Point point) {
-
+            public void onLongPress(Point point) {
                 PolygonOptions polygonOptions = new PolygonOptions()
                         .add(new Point(point.getX() - 10000, point.getY() - 10000, Point.BNG))
                         .add(new Point(point.getX() - 10000, point.getY() + 10000, Point.BNG))
@@ -120,16 +126,6 @@ public class MainActivity extends Activity {
                         map.removePolyOverlay(polygon);
                     }
                 }, 2000);
-            }
-        });
-
-        map.addOnMapTouchListener(new OSMap.OnMapTouchListener() {
-            @Override
-            public void onMapTouch(Point point) {
-                Toast.makeText(MainActivity.this,
-                        "New point: " + point.getX() + ", " + point.getY(),
-                        Toast.LENGTH_SHORT)
-                        .show();
             }
         });
     }

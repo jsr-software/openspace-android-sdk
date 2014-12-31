@@ -154,7 +154,7 @@ public class MarkerRenderer extends BaseRenderer {
         emitRenderRequest();
     }
 
-    public Marker longClick(ScreenProjection projection, PointF screenLocation) {
+    public Marker longPress(ScreenProjection projection, PointF screenLocation) {
         // TODO do we need to handle stacked markers where one marker declines the touch?
         Marker marker = findDraggableMarker(projection, screenLocation);
         if (marker == null) {
@@ -169,7 +169,7 @@ public class MarkerRenderer extends BaseRenderer {
         return marker;
     }
 
-    public boolean singleClick(ScreenProjection projection, PointF screenLocation) {
+    public boolean singleTap(ScreenProjection projection, PointF screenLocation) {
         // Check for a click on an info window first.
         if (mExpandedMarker != null) {
             if (mExpandedMarker.isClickOnInfoWindow(screenLocation)) {

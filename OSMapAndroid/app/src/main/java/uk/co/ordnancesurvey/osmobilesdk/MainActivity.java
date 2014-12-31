@@ -41,7 +41,54 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapFragment;
 public class MainActivity extends Activity {
 
     private static final String MAP_TAG = "map_tag";
+
+    private static final long DEMO_DELAY = 2000;
+
+    private static final double CIRCLE_RADIUS = 3000;
+    private static final double SQUARE_OFFSET = 10000;
+
+    private static final float STROKE_WIDTH = 3;
+
+    private final OSMap.OnMapTouchListener mTouchListener = new OSMap.OnMapTouchListener() {
+        @Override
+        public void onMapTouch(Point point) {
+            Toast.makeText(MainActivity.this,
+                    "New point: " + point.getX() + ", " + point.getY(),
+                    Toast.LENGTH_SHORT)
+                    .show();
+        }
+    };
+    private final OSMap.OnSingleTapListener mSingleTapListener = new OSMap.OnSingleTapListener() {
+        @Override
+        public void onSingleTap(Point point) {
+            final Marker marker = drawMarker(point);
+
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mMap.removeMarker(marker);
+                }
+            }, DEMO_DELAY);
+        }
+    };
+    private final OSMap.OnLongPressListener mLongPressListener = new OSMap.OnLongPressListener() {
+        @Override
+        public void onLongPress(Point point) {
+            final Polygon polygon = drawSquare(point);
+            final Circle circle = drawCircle(point);
+
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mMap.removeCircle(circle);
+                    mMap.removePolyOverlay(polygon);
+                }
+            }, DEMO_DELAY);
+        }
+    };
+
     private MapFragment mMapFragment;
+    private OSMap mMap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,67 +113,55 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        final OSMap map = mMapFragment.getMap().getMap();
-
-        map.addOnMapTouchListener(new OSMap.OnMapTouchListener() {
-            @Override
-            public void onMapTouch(Point point) {
-                Toast.makeText(MainActivity.this,
-                        "New point: " + point.getX() + ", " + point.getY(),
-                        Toast.LENGTH_SHORT)
-                        .show();
-            }
-        });
-
-        map.addOnSingleTapListener(new OSMap.OnSingleTapListener() {
-            @Override
-            public void onSingleTap(Point point) {
-                MarkerOptions options = new MarkerOptions()
-                        .setPoint(point)
-                        .title("Some title")
-                        .snippet("Some snippet");
-                final Marker marker = map.addMarker(options);
-
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        map.removeMarker(marker);
-                    }
-                }, 2000);
-            }
-        });
-
-        map.addOnLongPressListener(new OSMap.OnLongPressListener() {
-            @Override
-            public void onLongPress(Point point) {
-                PolygonOptions polygonOptions = new PolygonOptions()
-                        .add(new Point(point.getX() - 10000, point.getY() - 10000, Point.BNG))
-                        .add(new Point(point.getX() - 10000, point.getY() + 10000, Point.BNG))
-                        .add(new Point(point.getX() + 10000, point.getY() + 10000, Point.BNG))
-                        .add(new Point(point.getX() + 10000, point.getY() - 10000, Point.BNG))
-                        .fillColor(getResources().getColor(android.R.color.white))
-                        .strokeColor(getResources().getColor(android.R.color.black))
-                        .strokeWidth(3);
-
-                final Polygon polygon = map.addPolygon(polygonOptions);
-
-                CircleOptions options = new CircleOptions()
-                        .center(point)
-                        .radius(3000)
-                        .fillColor(getResources().getColor(android.R.color.white))
-                        .strokeColor(getResources().getColor(android.R.color.black))
-                        .strokeWidth(3);
-
-                final Circle circle = map.addCircle(options);
-
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        map.removeCircle(circle);
-                        map.removePolyOverlay(polygon);
-                    }
-                }, 2000);
-            }
-        });
+        // Add listeners
+        mMap = mMapFragment.getMap().getMap();
+        mMap.addOnMapTouchListener(mTouchListener);
+        mMap.addOnSingleTapListener(mSingleTapListener);
+        mMap.addOnLongPressListener(mLongPressListener);
     }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Remove listeners
+        mMap.removeOnMapTouchListener(mTouchListener);
+        mMap.removeOnSingleTapListener(mSingleTapListener);
+        mMap.removeOnLongPressListener(mLongPressListener);
+    }
+
+    private Circle drawCircle(Point point) {
+        CircleOptions options = new CircleOptions()
+                .center(point)
+                .radius(CIRCLE_RADIUS)
+                .fillColor(getResources().getColor(android.R.color.white))
+                .strokeColor(getResources().getColor(android.R.color.black))
+                .strokeWidth(STROKE_WIDTH);
+
+        return mMap.addCircle(options);
+    }
+
+    private Marker drawMarker(Point point) {
+        MarkerOptions options = new MarkerOptions()
+                .setPoint(point)
+                .title("Some title")
+                .snippet("Some snippet");
+        return mMap.addMarker(options);
+    }
+
+    private Polygon drawSquare(Point point) {
+
+        final double x = point.getX();
+        final double y = point.getY();
+
+        PolygonOptions polygonOptions = new PolygonOptions()
+                .add(new Point(x - SQUARE_OFFSET, y - SQUARE_OFFSET, Point.BNG))
+                .add(new Point(x - SQUARE_OFFSET, y + SQUARE_OFFSET, Point.BNG))
+                .add(new Point(x + SQUARE_OFFSET, y + SQUARE_OFFSET, Point.BNG))
+                .add(new Point(x + SQUARE_OFFSET, y - SQUARE_OFFSET, Point.BNG))
+                .fillColor(getResources().getColor(android.R.color.white))
+                .strokeColor(getResources().getColor(android.R.color.black))
+                .strokeWidth(STROKE_WIDTH);
+
+        return mMap.addPolygon(polygonOptions);
+    } 
 }

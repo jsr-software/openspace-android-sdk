@@ -222,8 +222,12 @@ public final class MapScrollController extends CombinedGestureDetector {
         zoomOutStep();
     }
 
+    public void onFling(float velocityX, float velocityY) {
+        onScroll(0, 0, 1, 0, 0, -velocityX, -velocityY);
+    }
+
     @Override
-    protected void onScroll(float dX, float dY, float dScale, float scaleOffsetX, float scaleOffsetY, float flingVX, float flingVY, long eventTime) {
+    protected void onScroll(float dX, float dY, float dScale, float scaleOffsetX, float scaleOffsetY, float flingVX, float flingVY) {
         synchronized (this) {
             dX += scaleOffsetX * (dScale - 1);
             dY += scaleOffsetY * (dScale - 1);

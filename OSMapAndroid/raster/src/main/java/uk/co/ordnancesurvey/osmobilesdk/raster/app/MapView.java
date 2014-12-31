@@ -105,6 +105,11 @@ public final class MapView extends FrameLayout {
             }
 
             @Override
+            public void onFling(float velocityX, float velocityY) {
+                mMap.processFling(velocityX, velocityY);
+            }
+
+            @Override
             public void onLongPress(float screenX, float screenY) {
                 mMap.processLongPress(screenX, screenY);
             }

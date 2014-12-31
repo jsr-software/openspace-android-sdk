@@ -660,8 +660,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
 
-
-
     private class PositionManager {
         // POSITION CACHE
         private static final String POSITION_EASTINGS = "position_eastings";
@@ -727,9 +725,22 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     /**
      * NEW INTERFACE
      */
+    private final List<OnDoubleTapListener> mDoubleTapListeners = new ArrayList<>();
+    private final List<OnFlingListener> mFlingListeners = new ArrayList<>();
     private final List<OnLongPressListener> mLongPressListeners = new ArrayList<>();
     private final List<OnSingleTapListener> mSingleTapListeners = new ArrayList<>();
     private final List<OnMapTouchListener> mTouchListeners = new ArrayList<>();
+
+
+    @Override
+    public void addOnDoubleTapListener(OnDoubleTapListener onDoubleTapListener) {
+        mDoubleTapListeners.add(onDoubleTapListener);
+    }
+
+    @Override
+    public void addOnFlingListener(OnFlingListener onFlingListener) {
+        mFlingListeners.add(onFlingListener);
+    }
 
     @Override
     public void addOnLongPressListener(OnLongPressListener onLongPressListener) {
@@ -744,6 +755,16 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void addOnSingleTapListener(OnSingleTapListener onSingleTapListener) {
         mSingleTapListeners.add(onSingleTapListener);
+    }
+
+    @Override
+    public void removeOnDoubleTapListener(OnDoubleTapListener onDoubleTapListener) {
+        mDoubleTapListeners.remove(onDoubleTapListener);
+    }
+
+    @Override
+    public void removeOnFlingListener(OnFlingListener onFlingListener) {
+        mFlingListeners.remove(onFlingListener);
     }
 
     @Override
@@ -767,7 +788,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     @Override
     public void processDoubleTap(float screenX, float screenY) {
-
         float scaleOffsetX = screenX - mGLViewportWidth / 2;
         float scaleOffsetY = screenY - mGLViewportHeight / 2;
 
@@ -776,6 +796,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 //        }
 
         mScrollController.zoomInStep(scaleOffsetX, scaleOffsetY);
+    }
+
+    @Override
+    public void processFling(float velocityX, float velocityY) {
+        mScrollController.onFling(velocityX, velocityY);
     }
 
     @Override

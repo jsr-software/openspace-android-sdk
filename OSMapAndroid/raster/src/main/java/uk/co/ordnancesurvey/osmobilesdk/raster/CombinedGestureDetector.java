@@ -86,7 +86,7 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
     /**
      * Combined scroll/zoom/fling method.
      */
-    protected abstract void onScroll(float dx, float dy, float dScale, float scaleOffsetX, float scaleOffsetY, float flingVX, float flingVY, long eventTime);
+    protected abstract void onScroll(float dx, float dy, float dScale, float scaleOffsetX, float scaleOffsetY, float flingVX, float flingVY);
 
     protected abstract void onTwoFingerTap();
 
@@ -167,7 +167,6 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
         //  - Cancel any fling.
         consumingScaleEvents = true;
         mTwoFingerTapPossible = false;
-        //CombinedGestureDetector.this.onScroll(0, 0, 1, 0, 0, 0, 0, event.getEventTime());
         if (mMapGestureListener != null) {
             mMapGestureListener.onTouch(event.getX(), event.getY());
         }
@@ -180,7 +179,10 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
             return false;
         }
         assert !mScaleStarted;
-        CombinedGestureDetector.this.onScroll(0, 0, 1, 0, 0, -velocityX, -velocityY, e2.getEventTime());
+
+        if (mMapGestureListener != null) {
+            mMapGestureListener.onFling(velocityX, velocityY);
+        }
         return true;
     }
 
@@ -203,7 +205,7 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
             // Don't scroll; it's already handled by onScale().
             return false;
         }
-        CombinedGestureDetector.this.onScroll(distanceX, distanceY, 1, 0, 0, 0, 0, e2.getEventTime());
+        CombinedGestureDetector.this.onScroll(distanceX, distanceY, 1, 0, 0, 0, 0);
         return true;
     }
 
@@ -261,7 +263,7 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
         float scaleOffsetX = x - v.getWidth() / 2;
         float scaleOffsetY = y - v.getHeight() / 2;
 
-        CombinedGestureDetector.this.onScroll(-dX, -dY, dScale, scaleOffsetX, scaleOffsetY, 0, 0, detector.getEventTime());
+        CombinedGestureDetector.this.onScroll(-dX, -dY, dScale, scaleOffsetX, scaleOffsetY, 0, 0);
         return true;
     }
 

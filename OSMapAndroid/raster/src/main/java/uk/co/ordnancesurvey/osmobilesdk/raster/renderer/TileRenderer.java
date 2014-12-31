@@ -34,7 +34,6 @@ import java.nio.FloatBuffer;
 import java.util.Arrays;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLTileCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapScrollController;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;

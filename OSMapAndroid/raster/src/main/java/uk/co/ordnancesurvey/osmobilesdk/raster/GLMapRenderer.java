@@ -729,6 +729,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final List<OnFlingListener> mFlingListeners = new ArrayList<>();
     private final List<OnLongPressListener> mLongPressListeners = new ArrayList<>();
     private final List<OnPanListener> mPanListeners = new ArrayList<>();
+    private final List<OnPinchListener> mPinchListeners = new ArrayList<>();
     private final List<OnSingleTapListener> mSingleTapListeners = new ArrayList<>();
     private final List<OnMapTouchListener> mTouchListeners = new ArrayList<>();
 
@@ -756,6 +757,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void addOnPanListener(OnPanListener onPanListener) {
         mPanListeners.add(onPanListener);
+    }
+
+    @Override
+    public void addOnPinchListener(OnPinchListener onPinchListener) {
+        mPinchListeners.add(onPinchListener);
     }
 
     @Override
@@ -789,6 +795,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     @Override
+    public void removeOnPinchListener(OnPinchListener onPinchListener) {
+        mPinchListeners.remove(onPinchListener);
+    }
+
+    @Override
     public void removeOnSingleTapListener(OnSingleTapListener onSingleTapListener) {
         mSingleTapListeners.remove(onSingleTapListener);
     }
@@ -806,7 +817,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 //            mScrollController.zoomToCenterScale(e, new Point(437500, 115500, Point.BNG), 0.875f, true);
 //        }
 
-        mScrollController.zoomInStep(scaleOffsetX, scaleOffsetY);
+        mScrollController.onZoomIn(scaleOffsetX, scaleOffsetY);
     }
 
     @Override
@@ -848,6 +859,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         for(OnPanListener listener : mPanListeners) {
             listener.onPan(distanceX, distanceY);
         }
+    }
+
+    @Override
+    public void processPinch(float distanceX, float distanceY, float scale, float scaleOffsetX, float scaleOffsetY) {
+        mScrollController.onPinch(distanceX, distanceY, scale, scaleOffsetX, scaleOffsetY);
     }
 
     @Override

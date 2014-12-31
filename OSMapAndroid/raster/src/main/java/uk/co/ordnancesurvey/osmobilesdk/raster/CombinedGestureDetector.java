@@ -67,12 +67,13 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
     private float mPrevScaleFocusY;
     private boolean mScaleStarted;
 
-    public CombinedGestureDetector(Context context, DragListener dragListener, MapGestureListener mapGestureListener) {
+    public CombinedGestureDetector(Context context, DragListener dragListener,
+                                   MapGestureListener mapGestureListener) {
         mGestureDetector = new GestureDetector(context, this);
-        mScaleGestureDetector = new ScaleGestureDetector(context, this);
-
         mGestureDetector.setIsLongpressEnabled(true);
         mGestureDetector.setOnDoubleTapListener(this);
+
+        mScaleGestureDetector = new ScaleGestureDetector(context, this);
 
         float touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         mTouchSlopSq = touchSlop * touchSlop;
@@ -91,7 +92,6 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
 
         if (!isDraggingItem()) {
             consumedGestureEvent = mGestureDetector.onTouchEvent(e);
-            ;
         }
 
         mCurrentEventCalledOnScaleBegin = false;
@@ -228,7 +228,9 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
         float scaleOffsetX = x - v.getWidth() / 2;
         float scaleOffsetY = y - v.getHeight() / 2;
 
-        //CombinedGestureDetector.this.onScroll(-dX, -dY, dScale, scaleOffsetX, scaleOffsetY, 0, 0);
+        if (mMapGestureListener != null) {
+            mMapGestureListener.onPinch(dX, dY, dScale, scaleOffsetX, scaleOffsetY);
+        }
         return true;
     }
 

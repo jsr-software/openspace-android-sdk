@@ -34,46 +34,6 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
  * <p/>
  * <b>Note:</b> Similar to a android.view.View View object, an {@link OSMap} can only be read and modified from the main thread.
  * Calling {@link OSMap} methods from another thread may result in an exception.
- * <p/>
- * <b>Developer Guide</b>
- * <p/>
- * To get started, read  <a href="https://developers.google.com/maps/documentation/android/">Google Maps Developer Guide</a>
- * {@link OSMap} closely follows the Google Maps Android v2 interface, and therefore the documentation for that API
- * is the best starting point for users of this class.
- * <p/>
- * The following classes in Google Maps have no equivalent in OS Map
- * <ul>
- * <li>	GoogleMap.CancelableCallback
- * <li>	LocationSource
- * <li>	CameraUpdate
- * <li>	CameraUpdateFactory
- * <li>	MapsInitializer (a map can only be used as part of an activity or a fragment)
- * <li>	UiSettings
- * <li>		CameraPosition.Builder
- * <li>	GroundOverlay
- * <li>	GroundOverlayOptions
- * <li>	LatLng is replaced by Point
- * <li>	LatLngBounds
- * <li>	LatLngBounds.Builder
- * <li>	Tile
- * <li>	TileOverlay
- * <li>	TileOverlayOptions
- * <li>	UrlTileProvider
- * <li>	VisibleRegion is replaced by BoundingBox
- * </ul>
- * <p/>
- * In, the following features of Google Maps are not supported
- * <ul>
- * <li>	z-index for overlays
- * <li>	map types other than the a normal 2D OS map
- * <li>	customisable animations
- * <li>	traffic
- * <li>	only a perpendicular view is supported
- * <li>	compass
- * <li>	zoom controls (zoom gestures are supported, visible controls are not)
- * <li>	tilt/rotate
- * <li>	my location button
- * </ul>
  */
 public interface OSMap {
 
@@ -362,6 +322,20 @@ public interface OSMap {
     }
 
     /**
+     * Callback interface for when the user makes a pinch in or pinch out gesture on the map.
+     * <p/>
+     * Listeners will be invoked on the main thread.
+     */
+    public interface OnPinchListener {
+        /**
+         * Called when the user makes a pinch in or pinch out on the map.
+         * Implementations of this method are always invoked on the main thread.
+         *
+         */
+        void onPinch();
+    }
+
+    /**
      * Callback interface for when the user makes a single tap on the map.
      * <p/>
      * Listeners will be invoked on the main thread.
@@ -417,6 +391,14 @@ public interface OSMap {
     public void addOnPanListener(OnPanListener onPanListener);
 
     /**
+     * Sets a callback object for when the Map is pinched in or out. Note that there can be multiple
+     * callbacks added. Each callback will receive the touch event.
+     *
+     * @param onPinchListener The callback that will be invoked on a Map pinch event
+     */
+    public void addOnPinchListener(OnPinchListener onPinchListener);
+
+    /**
      * Sets a callback object for when the Map is single tapped.
      * Note that there can be multiple callbacks added.
      * Each callback will receive the single tap event.
@@ -459,6 +441,13 @@ public interface OSMap {
      * @param onPanListener The callback that will be removed
      */
     public void removeOnPanListener(OnPanListener onPanListener);
+
+    /**
+     * Removes a callback object for when the Map is pinched in or out.
+     *
+     * @param onPinchListener The callback that will be removed
+     */
+    public void removeOnPinchListener(OnPinchListener onPinchListener);
 
     /**
      * Removes a callback object for when the Map is single tapped.

@@ -28,6 +28,7 @@ public interface OSMapPrivate extends OSMap {
     void processFling(float velocityX, float velocityY);
     void processLongPress(float screenX, float screenY);
     void processPan(float distanceX, float distanceY);
+    void processPinch(float distanceX, float distanceY, float scale, float scaleOffsetX, float scaleOffsetY);
 	void processSingleTap(float screenX, float screenY);
     void processTouch(float screenX, float screenY);
 

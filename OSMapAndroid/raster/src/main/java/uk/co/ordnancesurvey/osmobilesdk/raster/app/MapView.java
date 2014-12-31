@@ -120,6 +120,11 @@ public final class MapView extends FrameLayout {
             }
 
             @Override
+            public void onPinch(float distanceX, float distanceY, float scale, float scaleOffsetX, float scaleOffsetY) {
+                mMap.processPinch(distanceX, distanceY, scale, scaleOffsetX, scaleOffsetY);
+            }
+
+            @Override
             public void onSingleTap(float screenX, float screenY) {
                 mMap.processSingleTap(screenX, screenY);
             }

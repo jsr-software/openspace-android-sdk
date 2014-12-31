@@ -156,26 +156,7 @@ public final class MapScrollController extends CombinedGestureDetector {
         }
     }
 
-    public boolean zoomInStep(float offsetX, float offsetY) {
-        float currentFinalMPP = getFinalMPP();
-        float[] zoomScales = mZoomScales;
 
-        int index = Arrays.binarySearch(zoomScales, currentFinalMPP);
-        // index is "the non-negative index of the element, or a negative index which is -index - 1 where the element would be inserted."
-        int prevIndex = (index >= 0 ? index - 1 : -(index + 1) - 1);
-        assert prevIndex < zoomScales.length;
-        if (prevIndex < 0) {
-            return false;
-        }
-
-        float bestMPP = zoomScales[prevIndex];
-        assert !(Float.isInfinite(bestMPP) || Float.isNaN(bestMPP));
-
-        assert bestMPP < currentFinalMPP;
-
-        zoomToScale(bestMPP, offsetX, offsetY);
-        return true;
-    }
 
     public boolean zoomOutStep() {
         float currentFinalMPP = getFinalMPP();
@@ -222,15 +203,9 @@ public final class MapScrollController extends CombinedGestureDetector {
         zoomOutStep();
     }
 
-    public void onFling(float velocityX, float velocityY) {
-        onScroll(0, 0, 1, 0, 0, -velocityX, -velocityY);
-    }
 
-    public void onPan(float distanceX, float distanceY) {
-        onScroll(distanceX, distanceY, 1, 0, 0, 0, 0);
-    }
 
-    private void onScroll(float dX, float dY, float dScale, float scaleOffsetX, float scaleOffsetY, float flingVX, float flingVY) {
+    private void scrollMap(float dX, float dY, float dScale, float scaleOffsetX, float scaleOffsetY, float flingVX, float flingVY) {
         synchronized (this) {
             dX += scaleOffsetX * (dScale - 1);
             dY += scaleOffsetY * (dScale - 1);
@@ -420,4 +395,36 @@ public final class MapScrollController extends CombinedGestureDetector {
      *
      * NEW STUFF
      */
+    public void onFling(float velocityX, float velocityY) {
+        scrollMap(0, 0, 1, 0, 0, -velocityX, -velocityY);
+    }
+
+    public void onPan(float distanceX, float distanceY) {
+        scrollMap(distanceX, distanceY, 1, 0, 0, 0, 0);
+    }
+
+    public void onPinch(float distanceX, float distanceY, float scale, float scaleOffsetX, float scaleOffsetY){
+        scrollMap(-distanceX, -distanceY, scale, scaleOffsetX, scaleOffsetY, 0, 0);
+    }
+
+    public boolean onZoomIn(float offsetX, float offsetY) {
+        float currentFinalMPP = getFinalMPP();
+        float[] zoomScales = mZoomScales;
+
+        int index = Arrays.binarySearch(zoomScales, currentFinalMPP);
+        // index is "the non-negative index of the element, or a negative index which is -index - 1 where the element would be inserted."
+        int prevIndex = (index >= 0 ? index - 1 : -(index + 1) - 1);
+        assert prevIndex < zoomScales.length;
+        if (prevIndex < 0) {
+            return false;
+        }
+
+        float bestMPP = zoomScales[prevIndex];
+        assert !(Float.isInfinite(bestMPP) || Float.isNaN(bestMPP));
+
+        assert bestMPP < currentFinalMPP;
+
+        zoomToScale(bestMPP, offsetX, offsetY);
+        return true;
+    }
 }

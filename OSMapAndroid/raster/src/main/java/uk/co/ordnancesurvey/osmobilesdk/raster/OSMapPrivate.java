@@ -24,6 +24,7 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 public interface OSMapPrivate extends OSMap {
     // TODO: temp interface
+    void processDoubleTap(float screenX, float screenY);
     void processLongPress(float screenX, float screenY);
 	void processSingleTap(float screenX, float screenY);
     void processTouch(float screenX, float screenY);

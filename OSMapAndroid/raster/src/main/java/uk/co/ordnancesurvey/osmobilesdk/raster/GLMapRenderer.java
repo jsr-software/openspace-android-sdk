@@ -308,7 +308,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     @Override
     public void moveCamera(CameraPosition camera, boolean animated) {
-        mScrollController.zoomToCenterScale(null, camera.target, camera.zoom, animated);
+        mScrollController.zoomToCenterScale(camera.target, camera.zoom, animated);
     }
 
     public void onDestroy() {
@@ -764,6 +764,19 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     // TODO: make the below interface private
 
+
+    @Override
+    public void processDoubleTap(float screenX, float screenY) {
+
+        float scaleOffsetX = screenX - mGLViewportWidth / 2;
+        float scaleOffsetY = screenY - mGLViewportHeight / 2;
+
+//        if (TEST_ZOOMING) {
+//            mScrollController.zoomToCenterScale(e, new Point(437500, 115500, Point.BNG), 0.875f, true);
+//        }
+
+        mScrollController.zoomInStep(scaleOffsetX, scaleOffsetY);
+    }
 
     @Override
     public void processLongPress(float screenX, float screenY) {

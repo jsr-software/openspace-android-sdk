@@ -100,6 +100,11 @@ public final class MapView extends FrameLayout {
             }
         }, new MapGestureListener() {
             @Override
+            public void onDoubleTap(float screenX, float screenY) {
+                mMap.processDoubleTap(screenX, screenY);
+            }
+
+            @Override
             public void onLongPress(float screenX, float screenY) {
                 mMap.processLongPress(screenX, screenY);
             }

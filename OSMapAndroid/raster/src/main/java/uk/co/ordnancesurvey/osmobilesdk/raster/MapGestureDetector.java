@@ -31,44 +31,27 @@ import android.view.ViewConfiguration;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
 
-abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureListener
+abstract class MapGestureDetector extends GestureDetector.SimpleOnGestureListener
         implements ScaleGestureDetector.OnScaleGestureListener, View.OnTouchListener {
-
-    public interface DragListener {
-        public Object onDragBegin(MotionEvent e);
-
-        public void onDrag(MotionEvent e, Object dragObject);
-
-        public void onDragEnd(MotionEvent e, Object dragObject);
-
-        public void onDragCancel(MotionEvent e, Object dragObject);
-    }
 
     private final GestureDetector mGestureDetector;
     private final ScaleGestureDetector mScaleGestureDetector;
     private final MapGestureListener mMapGestureListener;
     private final float mTouchSlopSq;
 
-    private boolean consumingScaleEvents;
-
-    private View mCurrentView;
+    private boolean mConsumingScaleEvents;
     private boolean mCurrentEventCalledOnScaleBegin;
-
     private boolean mTwoFingerTapPossible;
     private boolean mScaleAlreadyHasTouchSlop;
-
-    private final DragListener mDragListener;
-    private boolean mDragStarted;
-    private float mDragInitialX, mDragInitialY;
-    private Object mDragObject;
 
     private float mScaleInitialSpan;
     private float mPrevScaleFocusX;
     private float mPrevScaleFocusY;
-    private boolean mScaleStarted;
 
-    public CombinedGestureDetector(Context context, DragListener dragListener,
-                                   MapGestureListener mapGestureListener) {
+    private boolean mScaleStarted;
+    private boolean mIsDragging;
+
+    public MapGestureDetector(Context context, MapGestureListener mapGestureListener) {
         mGestureDetector = new GestureDetector(context, this);
         mGestureDetector.setIsLongpressEnabled(true);
         mGestureDetector.setOnDoubleTapListener(this);
@@ -78,7 +61,6 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
         float touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         mTouchSlopSq = touchSlop * touchSlop;
 
-        mDragListener = dragListener;
         mMapGestureListener = mapGestureListener;
     }
 
@@ -86,68 +68,41 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
 
     @Override
     public boolean onTouch(View v, MotionEvent e) {
-        mCurrentView = v;
-
-        boolean consumedGestureEvent = false;
-
         if (!isDraggingItem()) {
-            consumedGestureEvent = mGestureDetector.onTouchEvent(e);
-        }
+            boolean consumedGestureEvent = mGestureDetector.onTouchEvent(e);
 
-        mCurrentEventCalledOnScaleBegin = false;
-        if (consumingScaleEvents) {
-            consumingScaleEvents = mScaleGestureDetector.onTouchEvent(e);
-        }
-        mCurrentView = null;
-
-        int action = e.getActionMasked();
-        boolean actionIsSecondaryDown = (action == MotionEvent.ACTION_POINTER_DOWN);
-        boolean actionIsFinalUp = (action == MotionEvent.ACTION_UP);
-        boolean actionIsCancel = action == MotionEvent.ACTION_CANCEL;
-        assert !actionIsFinalUp || e.getPointerCount() == 1 : "actionIsFinalUp should imply only one pointer";
-
-        if (actionIsSecondaryDown && e.getPointerCount() == 2) {
-            // OS-44: On some Android versions, ScaleGestureDetector already applies touch slop.
-            // We detect this by the lack of an onScaleBegin() callback on a secondary touch down.
-            // On such a device, set mTwoFingerTapPossible here and clear it on onScaleBegin().
-            boolean gotScaleBegin = mCurrentEventCalledOnScaleBegin;
-            mScaleAlreadyHasTouchSlop = !gotScaleBegin;
-            if (!gotScaleBegin) {
-                mTwoFingerTapPossible = true;
+            mCurrentEventCalledOnScaleBegin = false;
+            if (mConsumingScaleEvents) {
+                mConsumingScaleEvents = mScaleGestureDetector.onTouchEvent(e);
             }
-        }
 
-        boolean twoFingerTap = !isDraggingItem() && mTwoFingerTapPossible && actionIsFinalUp && e.getEventTime() - e.getDownTime() < ViewConfiguration.getDoubleTapTimeout();
-        //Log.v(TAG, String.format(Locale.ENGLISH, "%d isd=%b ifg=%b ttp=%b ifu=%b tt=%b", action, actionIsSecondaryDown, mIgnoreFurtherGestures, mTwoFingerTapPossible, actionIsFinalUp, twoFingerTap));
-        if (twoFingerTap) {
-            // TODO: This should cancel other gestures (e.g. double tap).
-            mTwoFingerTapPossible = false;
-            onTwoFingerTap();
-        }
+            int action = e.getActionMasked();
+            boolean actionIsSecondaryDown = (action == MotionEvent.ACTION_POINTER_DOWN);
+            boolean actionIsFinalUp = (action == MotionEvent.ACTION_UP);
+            assert !actionIsFinalUp || e.getPointerCount() == 1 : "actionIsFinalUp should imply only one pointer";
 
-        boolean dragging = (mDragObject != null);
-        if (dragging) {
-            if (actionIsFinalUp) {
-                mDragListener.onDragEnd(e, mDragObject);
-                mDragObject = null;
-            } else if (actionIsCancel) {
-                mDragListener.onDragCancel(e, mDragObject);
-                mDragObject = null;
-            } else {
-                if (!mDragStarted) {
-                    float dx = e.getX() - mDragInitialX;
-                    float dy = e.getY() - mDragInitialY;
-                    if (dx * dx + dy * dy > mTouchSlopSq) {
-                        mDragStarted = true;
-                    }
-                }
-                if (mDragStarted) {
-                    mDragListener.onDrag(e, mDragObject);
+            if (actionIsSecondaryDown && e.getPointerCount() == 2) {
+                // OS-44: On some Android versions, ScaleGestureDetector already applies touch slop.
+                // We detect this by the lack of an onScaleBegin() callback on a secondary touch down.
+                // On such a device, set mTwoFingerTapPossible here and clear it on onScaleBegin().
+                boolean gotScaleBegin = mCurrentEventCalledOnScaleBegin;
+                mScaleAlreadyHasTouchSlop = !gotScaleBegin;
+                if (!gotScaleBegin) {
+                    mTwoFingerTapPossible = true;
                 }
             }
-        }
 
-        return consumingScaleEvents || consumedGestureEvent || twoFingerTap;
+            boolean twoFingerTap = !isDraggingItem() && mTwoFingerTapPossible && actionIsFinalUp && e.getEventTime() - e.getDownTime() < ViewConfiguration.getDoubleTapTimeout();
+            //Log.v(TAG, String.format(Locale.ENGLISH, "%d isd=%b ifg=%b ttp=%b ifu=%b tt=%b", action, actionIsSecondaryDown, mIgnoreFurtherGestures, mTwoFingerTapPossible, actionIsFinalUp, twoFingerTap));
+            if (twoFingerTap) {
+                // TODO: This should cancel other gestures (e.g. double tap).
+                mTwoFingerTapPossible = false;
+                onTwoFingerTap();
+            }
+
+            return mConsumingScaleEvents || consumedGestureEvent || twoFingerTap;
+        }
+        return false;
     }
 
     @Override
@@ -156,7 +111,7 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
         //  - Start consuming scale events.
         //  - Cancel any pending two-finger tap.
         //  - Cancel any fling.
-        consumingScaleEvents = true;
+        mConsumingScaleEvents = true;
         mTwoFingerTapPossible = false;
         if (mMapGestureListener != null) {
             mMapGestureListener.onTouch(event.getX(), event.getY());
@@ -224,12 +179,8 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
         mPrevScaleFocusX = x;
         mPrevScaleFocusY = y;
 
-        View v = mCurrentView;
-        float scaleOffsetX = x - v.getWidth() / 2;
-        float scaleOffsetY = y - v.getHeight() / 2;
-
         if (mMapGestureListener != null) {
-            mMapGestureListener.onPinch(dX, dY, dScale, scaleOffsetX, scaleOffsetY);
+            mMapGestureListener.onPinch(x, y, dX, dY, dScale);
         }
         return true;
     }
@@ -257,21 +208,17 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
 
     @Override
     public void onLongPress(MotionEvent event) {
-        // Drag code
-//        Object dragObject = mDragListener.onDragBegin(event);
-//        mDragObject = dragObject;
-//        mDragStarted = false;
-//        mDragInitialX = event.getX();
-//        mDragInitialY = event.getY();
-        // End Drag code
-
         if (mMapGestureListener != null) {
             mMapGestureListener.onLongPress(event.getX(), event.getY());
         }
     }
 
+    public void setDragging(boolean dragging) {
+        mIsDragging = dragging;
+    }
+
     private boolean isDraggingItem() {
-        return mDragObject != null;
+        return mIsDragging;
     }
 }
 

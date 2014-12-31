@@ -23,19 +23,11 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 public interface OSMapPrivate extends OSMap {
-    // TODO: temp interface
     void processDoubleTap(float screenX, float screenY);
     void processFling(float velocityX, float velocityY);
     void processLongPress(float screenX, float screenY);
     void processPan(float distanceX, float distanceY);
-    void processPinch(float distanceX, float distanceY, float scale, float scaleOffsetX, float scaleOffsetY);
+    void processPinch(float focusX, float focusY, float focusChangeX, float focusChangeY, float scale);
 	void processSingleTap(float screenX, float screenY);
     void processTouch(float screenX, float screenY);
-
-
-	//boolean zoomInStep(MotionEvent e, float offsetX, float offsetY);
-	//boolean zoomOutStep(MotionEvent e);
-	void drag(float screenx, float screeny, Object draggable);
-	void dragEnded(float screenx, float screeny, Object draggable);
-
 }

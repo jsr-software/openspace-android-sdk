@@ -29,6 +29,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 import android.widget.FrameLayout;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
@@ -67,32 +68,7 @@ public final class MapView extends FrameLayout {
     private GLMapRenderer init(Context context, MapConfiguration mapConfiguration) {
         LayoutParams fill = new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, Gravity.FILL);
 
-        final MapScrollController scrollController = new MapScrollController(context, new MapScrollController.DragListener() {
-            @Override
-            public Object onDragBegin(MotionEvent e) {
-                // TODO Auto-generated method stub
-                // TODO: drag code!
-                Log.v("Drag", "Start!");
-                mMap.processLongPress(e.getX(), e.getY());
-                return null;
-            }
-
-            @Override
-            public void onDrag(MotionEvent e, Object dragObject) {
-                mMap.drag(e.getX(), e.getY(), dragObject);
-            }
-
-            @Override
-            public void onDragEnd(MotionEvent e, Object dragObject) {
-                mMap.dragEnded(e.getX(), e.getY(), dragObject);
-            }
-
-            @Override
-            public void onDragCancel(MotionEvent e, Object dragObject) {
-                // TODO Auto-generated method stub
-                Log.v("Drag", "Cancel!");
-            }
-        }, new MapScrollController.ScrollListener() {
+        final MapScrollController scrollController = new MapScrollController(context, new MapScrollController.ScrollListener() {
             @Override
             public void onScrollScaleFling(MapScrollController detector) {
                 // TODO: Should this be an interface method?
@@ -120,8 +96,8 @@ public final class MapView extends FrameLayout {
             }
 
             @Override
-            public void onPinch(float distanceX, float distanceY, float scale, float scaleOffsetX, float scaleOffsetY) {
-                mMap.processPinch(distanceX, distanceY, scale, scaleOffsetX, scaleOffsetY);
+            public void onPinch(float focusX, float focusY, float focusChangeX, float focusChangeY, float scale) {
+                mMap.processPinch(focusX, focusY, focusChangeX, focusChangeY, scale);
             }
 
             @Override
@@ -135,7 +111,6 @@ public final class MapView extends FrameLayout {
             }
         });
         setOnTouchListener(scrollController);
-
 
         GLMapRenderer map = new GLMapRenderer(context, scrollController, mapConfiguration);
         map.setLayoutParams(fill);

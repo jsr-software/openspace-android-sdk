@@ -31,7 +31,8 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
 
-public final class MapScrollController extends CombinedGestureDetector {
+public final class MapScrollController extends MapGestureDetector {
+
     public interface ScrollListener {
         public void onScrollScaleFling(MapScrollController detector);
     }
@@ -60,8 +61,8 @@ public final class MapScrollController extends CombinedGestureDetector {
     private double mY = 115500;
     private float mScale = 1;
 
-    public MapScrollController(Context context, DragListener dragListener, ScrollListener aListener, MapGestureListener mapGestureListener) {
-        super(context, dragListener, mapGestureListener);
+    public MapScrollController(Context context, ScrollListener aListener, MapGestureListener mapGestureListener) {
+        super(context, mapGestureListener);
         listener = aListener;
         mScroller = new Scroller(context);
         mZoomer = new Zoomer(context);
@@ -98,8 +99,6 @@ public final class MapScrollController extends CombinedGestureDetector {
             mHeightPx = height;
             mMaximumMPP = Math.min(BngUtil.GRID_WIDTH / (float) width, BngUtil.GRID_HEIGHT / (float) height);
         }
-        // This should not be necessary since the map needs to re-render on a size change.
-        //listener.onScrollScaleFling(this);
     }
 
     public void zoomToScale(float scale, float offsetX, float offsetY) {
@@ -395,6 +394,8 @@ public final class MapScrollController extends CombinedGestureDetector {
      *
      * NEW STUFF
      */
+
+
     public void onFling(float velocityX, float velocityY) {
         scrollMap(0, 0, 1, 0, 0, -velocityX, -velocityY);
     }
@@ -427,4 +428,6 @@ public final class MapScrollController extends CombinedGestureDetector {
         zoomToScale(bestMPP, offsetX, offsetY);
         return true;
     }
+
+
 }

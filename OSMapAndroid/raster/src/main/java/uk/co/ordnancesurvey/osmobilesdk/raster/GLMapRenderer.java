@@ -38,7 +38,9 @@ import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
@@ -94,7 +96,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final Context mContext;
     private final PositionManager mPositionManager = new PositionManager();
 
-    // Renderers and Helpers
     private final CircleRenderer mCircleRenderer;
     private final MarkerRenderer mMarkerRenderer;
     private final OverlayRenderer mOverlayRenderer;
@@ -102,6 +103,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private final GLProgramService mProgramService;
     private final GLMatrixHandler mGLMatrixHandler;
+    private final MarkerDragHandler mDragHandler;
 
     private final MarkerRenderer.MarkerRendererListener mMarkerRendererListener = new MarkerRenderer.MarkerRendererListener() {
         @Override
@@ -151,6 +153,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             requestRender();
         }
     };
+
 
     private MapConfiguration mMapConfiguration;
 
@@ -226,7 +229,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mProgramService = new GLProgramService();
         mGLMatrixHandler = new GLMatrixHandler();
 
-//        mGestureDetector = new MapGestureDetector(context, mGestureListener);
+        mDragHandler = new MarkerDragHandler(mContext);
     }
 
     private final GLTileCache mGLTileCache;
@@ -489,20 +492,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     }
 
-    public void drag(float screenx, float screeny, Object draggable) {
-        if (draggable instanceof Marker) {
-            mMarkerRenderer.onDrag(mVolatileProjection, screenx, screeny, (Marker) draggable);
-        }
-    }
-
-    public void dragEnded(float screenx, float screeny, Object draggable) {
-        if (draggable instanceof Marker) {
-            mMarkerRenderer.onDragEnded(mVolatileProjection, screenx, screeny, (Marker) draggable);
-        }
-    }
-
-
-
     public View getInfoWindow(Marker marker) {
         View view = null;
         View contentView = null;
@@ -722,6 +711,79 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
 
+    private class MarkerDragHandler {
+
+        private final float mTouchSlopSq;
+
+        private Marker mDraggingMarker;
+        private boolean mDragStarted;
+        private float mDragInitialX;
+        private float mDragInitialY;
+
+        public MarkerDragHandler(Context context) {
+            float touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+            mTouchSlopSq = touchSlop * touchSlop;
+        }
+
+        public void startDrag(Marker marker, float screenX, float screenY) {
+
+            mDraggingMarker = marker;
+            mDragStarted = false;
+            mDragInitialX = screenX;
+            mDragInitialY = screenY;
+        }
+
+        public boolean onTouch(MotionEvent event) {
+
+            int action = event.getActionMasked();
+
+            switch(action) {
+                case MotionEvent.ACTION_UP: {
+                    endDrag(event);
+                    break;
+                }
+                case MotionEvent.ACTION_CANCEL: {
+                    endDrag(event);
+                    break;
+                }
+                default: {
+                    if (mDragStarted) {
+                        mMarkerRenderer.onDrag(mVolatileProjection,
+                                event.getX(), event.getY(), mDraggingMarker);
+                    } else {
+                        float dx = event.getX() - mDragInitialX;
+                        float dy = event.getY() - mDragInitialY;
+                        if (dx * dx + dy * dy > mTouchSlopSq) {
+                            mDragStarted = true;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        public void endDrag(MotionEvent event) {
+            mMarkerRenderer.onDragEnded(mVolatileProjection, event.getX(), event.getY(), mDraggingMarker);
+            mScrollController.setDragging(false);
+            mDraggingMarker = null;
+        }
+
+        public boolean isDragging() {
+            return mDraggingMarker != null;
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
     /**
      * NEW INTERFACE
      */
@@ -832,18 +894,19 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     public void processLongPress(float screenX, float screenY) {
         ScreenProjection projection = mVolatileProjection;
         Point point = projection.fromScreenLocation(screenX, screenY);
-        Point offSetPoint = projection.fromScreenLocation(screenX, screenY - MARKER_DRAG_OFFSET);
-
-        // Check offSetPoint as well, because we don't want to lift a marker out of bounds.
-        if (!BngUtil.isInBngBounds(point) || !BngUtil.isInBngBounds(offSetPoint)) {
-            //mDragObject = null;
-        }
 
         Marker marker = mMarkerRenderer.longPress(projection, new PointF(screenX, screenY));
         if (marker != null) {
-            //mDragObject = marker;
-            // TODO: return drag object here?
-            return;
+
+            Point offSetPoint = projection.fromScreenLocation(screenX, screenY - MARKER_DRAG_OFFSET);
+            // Check offSetPoint as well, because we don't want to lift a marker out of bounds.
+            if (BngUtil.isInBngBounds(point) && BngUtil.isInBngBounds(offSetPoint)) {
+                mScrollController.setDragging(true);
+                mDragHandler.startDrag(marker, screenX, screenY);
+                //mDragObject = marker;
+                // TODO: return drag object here?
+                return;
+            }
         }
 
         for(OnLongPressListener listener : mLongPressListeners) {
@@ -862,8 +925,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     @Override
-    public void processPinch(float distanceX, float distanceY, float scale, float scaleOffsetX, float scaleOffsetY) {
-        mScrollController.onPinch(distanceX, distanceY, scale, scaleOffsetX, scaleOffsetY);
+    public void processPinch(float focusX, float focusY, float focusChangeX, float focusChangeY, float scale) {
+        float scaleOffsetX = focusX - mGLViewportWidth / 2;
+        float scaleOffsetY = focusY - mGLViewportHeight / 2;
+
+        mScrollController.onPinch(focusChangeX, focusChangeY, scale, scaleOffsetX, scaleOffsetY);
     }
 
     @Override
@@ -890,5 +956,13 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         for(OnMapTouchListener listener : mTouchListeners) {
             listener.onMapTouch(point);
         }
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if(mDragHandler.isDragging()) {
+            return mDragHandler.onTouch(event);
+        }
+        return super.onTouchEvent(event);
     }
 }

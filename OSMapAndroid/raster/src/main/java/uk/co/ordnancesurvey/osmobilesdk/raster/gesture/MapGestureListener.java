@@ -5,10 +5,9 @@ public interface MapGestureListener {
     void onFling(float velocityX, float velocityY);
     void onLongPress(float screenX, float screenY);
     void onPan(float distanceX, float distanceY);
-    void onPinch(float distanceX, float distanceY, float scale, float scaleOffsetX, float scaleOffsetY);
+    void onPinch(float focusX, float focusY, float focusChangeX, float focusChangeY, float scale);
     void onSingleTap(float screenX, float screenY);
     void onTouch(float screenX, float screenY);
-    //void onPinch();
     //void onRotate();
     //void onDoubleTapAndHold();
 }

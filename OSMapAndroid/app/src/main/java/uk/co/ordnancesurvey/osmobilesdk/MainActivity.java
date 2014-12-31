@@ -89,6 +89,7 @@ public class MainActivity extends Activity {
 
     private MapFragment mMapFragment;
     private OSMap mMap;
+    private Marker mDraggableMarker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,6 +119,17 @@ public class MainActivity extends Activity {
         mMap.addOnMapTouchListener(mTouchListener);
         mMap.addOnSingleTapListener(mSingleTapListener);
         mMap.addOnLongPressListener(mLongPressListener);
+
+        drawDraggableMarker();
+    }
+
+    private void drawDraggableMarker() {
+        MarkerOptions options = new MarkerOptions()
+                .setPoint(new Point(250000,250000, Point.BNG))
+                .title("Some title")
+                .draggable(true)
+                .snippet("Some snippet");
+        mDraggableMarker = mMap.addMarker(options);
     }
 
     @Override

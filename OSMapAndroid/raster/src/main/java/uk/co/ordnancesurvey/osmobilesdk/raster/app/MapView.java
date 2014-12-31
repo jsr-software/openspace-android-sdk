@@ -26,22 +26,16 @@ package uk.co.ordnancesurvey.osmobilesdk.raster.app;
 import android.content.Context;
 import android.os.Bundle;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.Gravity;
-import android.view.MotionEvent;
-import android.view.ViewConfiguration;
 import android.widget.FrameLayout;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
-import uk.co.ordnancesurvey.osmobilesdk.raster.MapScrollController;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
-import uk.co.ordnancesurvey.osmobilesdk.raster.OSMapPrivate;
-import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.LayerCatalog;
 
 public final class MapView extends FrameLayout {
     private final GLMapRenderer mMapRenderer;
-    private final OSMapPrivate mMap;
+    private final OSMap mMap;
 
     public MapView(Context context, AttributeSet set) {
         super(context, set);
@@ -68,51 +62,7 @@ public final class MapView extends FrameLayout {
     private GLMapRenderer init(Context context, MapConfiguration mapConfiguration) {
         LayoutParams fill = new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, Gravity.FILL);
 
-        final MapScrollController scrollController = new MapScrollController(context, new MapScrollController.ScrollListener() {
-            @Override
-            public void onScrollScaleFling(MapScrollController detector) {
-                // TODO: Should this be an interface method?
-                mMapRenderer.requestRender();
-            }
-        }, new MapGestureListener() {
-            @Override
-            public void onDoubleTap(float screenX, float screenY) {
-                mMap.processDoubleTap(screenX, screenY);
-            }
-
-            @Override
-            public void onFling(float velocityX, float velocityY) {
-                mMap.processFling(velocityX, velocityY);
-            }
-
-            @Override
-            public void onLongPress(float screenX, float screenY) {
-                mMap.processLongPress(screenX, screenY);
-            }
-
-            @Override
-            public void onPan(float distanceX, float distanceY) {
-                mMap.processPan(distanceX, distanceY);
-            }
-
-            @Override
-            public void onPinch(float focusX, float focusY, float focusChangeX, float focusChangeY, float scale) {
-                mMap.processPinch(focusX, focusY, focusChangeX, focusChangeY, scale);
-            }
-
-            @Override
-            public void onSingleTap(float screenX, float screenY) {
-                mMap.processSingleTap(screenX, screenY);
-            }
-
-            @Override
-            public void onTouch(float screenX, float screenY) {
-                mMap.processTouch(screenX, screenY);
-            }
-        });
-        setOnTouchListener(scrollController);
-
-        GLMapRenderer map = new GLMapRenderer(context, scrollController, mapConfiguration);
+        GLMapRenderer map = new GLMapRenderer(context, mapConfiguration);
         map.setLayoutParams(fill);
         addView(map);
 

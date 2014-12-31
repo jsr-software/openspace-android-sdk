@@ -56,6 +56,7 @@ import javax.microedition.khronos.opengles.GL10;
 import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
+import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileServiceDelegate;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.CircleRenderer;
@@ -88,7 +89,7 @@ import static android.opengl.GLES20.glViewport;
  * Tiles are rendered in tile coordinates, which have the origin at the bottom left of the grid (not the screen). The units are tiles (i.e. a tile always has dimensions 1x1) and the
  * actual size of a tile is set up by modifying the projection transform.
  */
-public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMapPrivate {
+public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMap {
 
     private static final String CLASS_TAG = GLMapRenderer.class.getSimpleName();
     private static final int MARKER_DRAG_OFFSET = 70;
@@ -96,6 +97,10 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final Context mContext;
     private final PositionManager mPositionManager = new PositionManager();
 
+    private final GLTileCache mGLTileCache;
+    private final GLImageCache mGLImageCache;
+
+    private final ScrollRenderer mScrollRenderer;
     private final CircleRenderer mCircleRenderer;
     private final MarkerRenderer mMarkerRenderer;
     private final OverlayRenderer mOverlayRenderer;
@@ -154,11 +159,94 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     };
 
+    private final MapGestureDetector mMapGestureDetector;
+    private final MapGestureListener mMapGestureListener = new MapGestureListener() {
+        @Override
+        public void onDoubleTap(float screenX, float screenY) {
+            processDoubleTap(screenX, screenY);
+        }
+
+        @Override
+        public void onFling(float velocityX, float velocityY) {
+            processFling(velocityX, velocityY);
+        }
+
+        @Override
+        public void onLongPress(float screenX, float screenY) {
+            processLongPress(screenX, screenY);
+        }
+
+        @Override
+        public void onPan(float distanceX, float distanceY) {
+            processPan(distanceX, distanceY);
+        }
+
+        @Override
+        public void onPinch(float focusX, float focusY, float focusChangeX, float focusChangeY, float scale) {
+            processPinch(focusX, focusY, focusChangeX, focusChangeY, scale);
+        }
+
+        @Override
+        public void onSingleTap(float screenX, float screenY) {
+            processSingleTap(screenX, screenY);
+        }
+
+        @Override
+        public void onTouch(float screenX, float screenY) {
+            processTouch(screenX, screenY);
+        }
+
+        @Override
+        public void onTwoFingerTap() {
+            processTwoFingerTap();
+        }
+    };
+
+    private final Handler mHandler;
+    private final Runnable mCameraChangeRunnable = new Runnable() {
+        public void run() {
+            ScreenProjection projection = getProjection();
+            CameraPosition position = new CameraPosition(projection.getCenter(), projection.getMetresPerPixel());
+            // Cache position;
+            mPositionManager.storePosition(position);
+            // TODO: move the position code
+            // This listener is set on the main thread, so no problem using it like this.
+            if (mOnCameraChangeListener != null) {
+                mOnCameraChangeListener.onCameraChange(position);
+            }
+        }
+    };
+
+    private final ScrollRenderer.ScrollPosition mScrollState = new ScrollRenderer.ScrollPosition();
 
     private MapConfiguration mMapConfiguration;
 
-    public GLMapRenderer(Context context, MapScrollController scrollController, MapConfiguration mapConfiguration) {
+    // TODO: This is an icky default, but ensures that it's not null.
+    // This does not actually need to be volatile, but it encourages users to read it once.
+    private volatile ScreenProjection mVolatileProjection = new ScreenProjection(320, 320, mScrollState);
+    private int mGLViewportWidth, mGLViewportHeight;
 
+    private InfoWindowAdapter mInfoWindowAdapter;
+    private OnMarkerClickListener mOnMarkerClickListener;
+    private OnMarkerDragListener mOnMarkerDragListener;
+    private OnInfoWindowClickListener mOnInfoWindowClickListener;
+    private OnCameraChangeListener mOnCameraChangeListener;
+
+    // FPS limiter
+    private final int mMinFramePeriodMillis;
+    private long mPreviousFrameUptimeMillis;
+
+    // Debug variables.
+    private final static boolean DEBUG_FRAME_TIMING = BuildConfig.DEBUG && false;
+    private long debugPreviousFrameUptimeMillis;
+    private long debugPreviousFrameNanoTime;
+
+    // Avoid issuing too many location callbacks
+    private double lastx;
+    private double lasty;
+    private float lastMPP;
+
+    public GLMapRenderer(Context context, MapConfiguration mapConfiguration) {
         super(context);
         mContext = context;
         if (mapConfiguration == null) {
@@ -219,7 +307,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mGLTileCache = new GLTileCache(memoryClass * (1048576 / 2));
         mGLImageCache = new GLImageCache();
 
-        mScrollController = scrollController;
+        mScrollRenderer = new ScrollRenderer(context, this, mRendererListener);
 
         mCircleRenderer = new CircleRenderer(this, mRendererListener);
         mMarkerRenderer = new MarkerRenderer(mContext, this, mMarkerRendererListener);
@@ -230,51 +318,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mGLMatrixHandler = new GLMatrixHandler();
 
         mDragHandler = new MarkerDragHandler(mContext);
+
+        mMapGestureDetector = new MapGestureDetector(context, mMapGestureListener);
     }
-
-    private final GLTileCache mGLTileCache;
-    private final GLImageCache mGLImageCache;
-    private final MapScrollController mScrollController;
-    private final MapScrollController.ScrollPosition mScrollState = new MapScrollController.ScrollPosition();
-    // TODO: This is an icky default, but ensures that it's not null.
-    // This does not actually need to be volatile, but it encourages users to read it once.
-    private volatile ScreenProjection mVolatileProjection = new ScreenProjection(320, 320, mScrollState);
-    private int mGLViewportWidth, mGLViewportHeight;
-
-    private final Handler mHandler;
-    private final Runnable mCameraChangeRunnable = new Runnable() {
-        public void run() {
-            ScreenProjection projection = getProjection();
-            CameraPosition position = new CameraPosition(projection.getCenter(), projection.getMetresPerPixel());
-            // Cache position;
-            mPositionManager.storePosition(position);
-            // TODO: move the position code
-            // This listener is set on the main thread, so no problem using it like this.
-            if (mOnCameraChangeListener != null) {
-                mOnCameraChangeListener.onCameraChange(position);
-            }
-        }
-    };
-
-    private InfoWindowAdapter mInfoWindowAdapter;
-    private OnMarkerClickListener mOnMarkerClickListener;
-    private OnMarkerDragListener mOnMarkerDragListener;
-    private OnInfoWindowClickListener mOnInfoWindowClickListener;
-    private OnCameraChangeListener mOnCameraChangeListener;
-
-    // FPS limiter
-    private final int mMinFramePeriodMillis;
-    private long mPreviousFrameUptimeMillis;
-
-    // Debug variables.
-    private final static boolean DEBUG_FRAME_TIMING = BuildConfig.DEBUG && false;
-    private long debugPreviousFrameUptimeMillis;
-    private long debugPreviousFrameNanoTime;
-
-    // Avoid issuing too many location callbacks
-    private double lastx;
-    private double lasty;
-    private float lastMPP;
 
     public void setMapLayers(Layer[] layers) {
         float[] mpps = new float[layers.length];
@@ -282,7 +328,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         for (Layer layer : layers) {
             mpps[i++] = layer.getMetresPerPixel();
         }
-        mScrollController.setZoomScales(mpps);
+        mScrollRenderer.setZoomScales(mpps);
 
         mTileRenderer.setLayers(layers);
     }
@@ -311,7 +357,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     @Override
     public void moveCamera(CameraPosition camera, boolean animated) {
-        mScrollController.zoomToCenterScale(camera.target, camera.zoom, animated);
+        mScrollRenderer.zoomToCenterScale(camera.target, camera.zoom, animated);
     }
 
     public void onDestroy() {
@@ -453,7 +499,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
 
         // Update the scroll position too, because it uses SystemClock.uptimeMillis() internally (ideally we'd pass it the timestamp we got above).
-        mScrollController.getScrollPosition(mScrollState, true);
+        mScrollRenderer.getScrollPosition(mScrollState, true);
         roundToPixelBoundary();
         // And create a new projection.
         ScreenProjection projection = new ScreenProjection(mGLViewportWidth, mGLViewportHeight, mScrollState);
@@ -632,7 +678,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         // The nominal order is "near,far", but somehow we need to list them backwards.
         Matrix.orthoM(mGLMatrixHandler.getMVPOrthoMatrix(), 0, 0, width, height, 0, 1, -1);
 
-        mScrollController.setWidthHeight(width, height);
+        mScrollRenderer.setWidthHeight(width, height);
     }
 
 
@@ -646,6 +692,15 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     public void setMapConfiguration(MapConfiguration mapConfiguration) {
         mMapConfiguration = mapConfiguration;
         mTileRenderer.init(mMapConfiguration);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if(mDragHandler.isDragging()) {
+            return mDragHandler.onTouch(event);
+        } else {
+            return mMapGestureDetector.onTouch(this, event);
+        }
     }
 
 
@@ -710,7 +765,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     }
 
-
     private class MarkerDragHandler {
 
         private final float mTouchSlopSq;
@@ -726,7 +780,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
 
         public void startDrag(Marker marker, float screenX, float screenY) {
-
+            mMapGestureDetector.setDragging(true);
             mDraggingMarker = marker;
             mDragStarted = false;
             mDragInitialX = screenX;
@@ -765,7 +819,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         public void endDrag(MotionEvent event) {
             mMarkerRenderer.onDragEnded(mVolatileProjection, event.getX(), event.getY(), mDraggingMarker);
-            mScrollController.setDragging(false);
+            mMapGestureDetector.setDragging(false);
             mDraggingMarker = null;
         }
 
@@ -773,14 +827,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             return mDraggingMarker != null;
         }
     }
-
-
-
-
-
-
-
-
 
 
 
@@ -866,32 +912,20 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mSingleTapListeners.remove(onSingleTapListener);
     }
 
-
-    // TODO: make the below interface private
-
-
-    @Override
-    public void processDoubleTap(float screenX, float screenY) {
+    private void processDoubleTap(float screenX, float screenY) {
         float scaleOffsetX = screenX - mGLViewportWidth / 2;
         float scaleOffsetY = screenY - mGLViewportHeight / 2;
-
-//        if (TEST_ZOOMING) {
-//            mScrollController.zoomToCenterScale(e, new Point(437500, 115500, Point.BNG), 0.875f, true);
-//        }
-
-        mScrollController.onZoomIn(scaleOffsetX, scaleOffsetY);
+        mScrollRenderer.onZoomIn(scaleOffsetX, scaleOffsetY);
     }
 
-    @Override
-    public void processFling(float velocityX, float velocityY) {
-        mScrollController.onFling(velocityX, velocityY);
+    private void processFling(float velocityX, float velocityY) {
+        mScrollRenderer.onFling(velocityX, velocityY);
         for(OnFlingListener listener : mFlingListeners) {
             listener.onFling(velocityX, velocityY);
         }
     }
 
-    @Override
-    public void processLongPress(float screenX, float screenY) {
+    private void processLongPress(float screenX, float screenY) {
         ScreenProjection projection = mVolatileProjection;
         Point point = projection.fromScreenLocation(screenX, screenY);
 
@@ -901,7 +935,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             Point offSetPoint = projection.fromScreenLocation(screenX, screenY - MARKER_DRAG_OFFSET);
             // Check offSetPoint as well, because we don't want to lift a marker out of bounds.
             if (BngUtil.isInBngBounds(point) && BngUtil.isInBngBounds(offSetPoint)) {
-                mScrollController.setDragging(true);
+
                 mDragHandler.startDrag(marker, screenX, screenY);
                 //mDragObject = marker;
                 // TODO: return drag object here?
@@ -916,24 +950,21 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         requestRender();
     }
 
-    @Override
-    public void processPan(float distanceX, float distanceY) {
-        mScrollController.onPan(distanceX, distanceY);
+    private void processPan(float distanceX, float distanceY) {
+        mScrollRenderer.onPan(distanceX, distanceY);
         for(OnPanListener listener : mPanListeners) {
             listener.onPan(distanceX, distanceY);
         }
     }
 
-    @Override
-    public void processPinch(float focusX, float focusY, float focusChangeX, float focusChangeY, float scale) {
+    private void processPinch(float focusX, float focusY, float focusChangeX, float focusChangeY, float scale) {
         float scaleOffsetX = focusX - mGLViewportWidth / 2;
         float scaleOffsetY = focusY - mGLViewportHeight / 2;
 
-        mScrollController.onPinch(focusChangeX, focusChangeY, scale, scaleOffsetX, scaleOffsetY);
+        mScrollRenderer.onPinch(focusChangeX, focusChangeY, scale, scaleOffsetX, scaleOffsetY);
     }
 
-    @Override
-    public void processSingleTap(float screenx, float screeny) {
+    private void processSingleTap(float screenx, float screeny) {
         ScreenProjection projection = mVolatileProjection;
         PointF screenLocation = new PointF(screenx, screeny);
 
@@ -949,8 +980,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         requestRender();
     }
 
-    @Override
-    public void processTouch(float screenX, float screenY) {
+    private void processTouch(float screenX, float screenY) {
         ScreenProjection projection = mVolatileProjection;
         Point point = projection.fromScreenLocation(screenX, screenY);
         for(OnMapTouchListener listener : mTouchListeners) {
@@ -958,11 +988,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     }
 
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        if(mDragHandler.isDragging()) {
-            return mDragHandler.onTouch(event);
-        }
-        return super.onTouchEvent(event);
+    private void processTwoFingerTap() {
+        mScrollRenderer.onTwoFingerTap();
     }
 }

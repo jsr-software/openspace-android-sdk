@@ -36,7 +36,7 @@ public final class ScreenProjection {
     private final float mMetresPerPixel;
     private final BoundingBox mVisibleBounds;
 
-    ScreenProjection(int width, int height, MapScrollController.ScrollPosition scrollpos) {
+    ScreenProjection(int width, int height, ScrollRenderer.ScrollPosition scrollpos) {
         mScreenWidth = width;
         mScreenHeight = height;
 

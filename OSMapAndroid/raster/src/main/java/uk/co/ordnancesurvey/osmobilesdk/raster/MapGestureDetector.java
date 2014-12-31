@@ -31,7 +31,7 @@ import android.view.ViewConfiguration;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
 
-abstract class MapGestureDetector extends GestureDetector.SimpleOnGestureListener
+public class MapGestureDetector extends GestureDetector.SimpleOnGestureListener
         implements ScaleGestureDetector.OnScaleGestureListener, View.OnTouchListener {
 
     private final GestureDetector mGestureDetector;
@@ -64,8 +64,6 @@ abstract class MapGestureDetector extends GestureDetector.SimpleOnGestureListene
         mMapGestureListener = mapGestureListener;
     }
 
-    protected abstract void onTwoFingerTap();
-
     @Override
     public boolean onTouch(View v, MotionEvent e) {
         if (!isDraggingItem()) {
@@ -97,7 +95,9 @@ abstract class MapGestureDetector extends GestureDetector.SimpleOnGestureListene
             if (twoFingerTap) {
                 // TODO: This should cancel other gestures (e.g. double tap).
                 mTwoFingerTapPossible = false;
-                onTwoFingerTap();
+                if (mMapGestureListener != null) {
+                    mMapGestureListener.onTwoFingerTap();
+                }
             }
 
             return mConsumingScaleEvents || consumedGestureEvent || twoFingerTap;
@@ -221,4 +221,3 @@ abstract class MapGestureDetector extends GestureDetector.SimpleOnGestureListene
         return mIsDragging;
     }
 }
-

@@ -35,7 +35,7 @@ import java.util.Arrays;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLTileCache;
-import uk.co.ordnancesurvey.osmobilesdk.raster.MapScrollController;
+import uk.co.ordnancesurvey.osmobilesdk.raster.ScrollRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderProgram;
@@ -103,7 +103,7 @@ public class TileRenderer {
     }
 
     public boolean onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, ScreenProjection projection, long nowUptimeMillis,
-                               MapScrollController.ScrollPosition scrollPosition) {
+                               ScrollRenderer.ScrollPosition scrollPosition) {
         //leakGPUMemory();
         // At the start of each frame, mark each tile as off-screen.
         // They are marked on-screen as part of tile drawing.

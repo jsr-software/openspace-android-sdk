@@ -65,6 +65,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLProgramService;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.MarkerRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.OverlayRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.RendererListener;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.ScrollRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.TileRenderer;
 
 import static android.opengl.GLES20.GL_BACK;
@@ -89,7 +90,8 @@ import static android.opengl.GLES20.glViewport;
  * Tiles are rendered in tile coordinates, which have the origin at the bottom left of the grid (not the screen). The units are tiles (i.e. a tile always has dimensions 1x1) and the
  * actual size of a tile is set up by modifying the projection transform.
  */
-public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer, TileServiceDelegate, OSMap {
+public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.Renderer,
+        TileServiceDelegate, OSMap {
 
     private static final String CLASS_TAG = GLMapRenderer.class.getSimpleName();
     private static final int MARKER_DRAG_OFFSET = 70;
@@ -110,7 +112,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final GLMatrixHandler mGLMatrixHandler;
     private final MarkerDragHandler mDragHandler;
 
-    private final MarkerRenderer.MarkerRendererListener mMarkerRendererListener = new MarkerRenderer.MarkerRendererListener() {
+    private final MarkerRenderer.MarkerRendererListener mMarkerRendererListener
+            = new MarkerRenderer.MarkerRendererListener() {
         @Override
         public void onInfoWindowClick(Marker marker) {
             if (mOnInfoWindowClickListener != null) {

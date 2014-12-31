@@ -35,7 +35,6 @@ import java.util.Arrays;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLTileCache;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ScrollRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderProgram;

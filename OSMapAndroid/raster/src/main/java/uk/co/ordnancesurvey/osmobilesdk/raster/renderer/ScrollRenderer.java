@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
 
 import android.content.Context;
 import android.widget.Scroller;
@@ -29,6 +29,8 @@ import java.util.Arrays;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BuildConfig;
+import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.BaseRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.RendererListener;
 
@@ -287,7 +289,8 @@ public class ScrollRenderer extends BaseRenderer {
     }
 
     public static final class ScrollPosition {
-        double x, y;
+        public double x;
+        public double y;
         public float metresPerPixel = 1;
         public boolean animatingScroll;
         public boolean animatingZoom;

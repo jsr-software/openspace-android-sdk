@@ -27,6 +27,7 @@ import android.graphics.PointF;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.ScrollRenderer;
 
 public final class ScreenProjection {
     private final int mScreenWidth;

@@ -728,6 +728,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final List<OnDoubleTapListener> mDoubleTapListeners = new ArrayList<>();
     private final List<OnFlingListener> mFlingListeners = new ArrayList<>();
     private final List<OnLongPressListener> mLongPressListeners = new ArrayList<>();
+    private final List<OnPanListener> mPanListeners = new ArrayList<>();
     private final List<OnSingleTapListener> mSingleTapListeners = new ArrayList<>();
     private final List<OnMapTouchListener> mTouchListeners = new ArrayList<>();
 
@@ -750,6 +751,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void addOnMapTouchListener(OnMapTouchListener onMapTouchListener) {
         mTouchListeners.add(onMapTouchListener);
+    }
+
+    @Override
+    public void addOnPanListener(OnPanListener onPanListener) {
+        mPanListeners.add(onPanListener);
     }
 
     @Override
@@ -778,6 +784,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     @Override
+    public void removeOnPanListener(OnPanListener onPanListener) {
+        mPanListeners.remove(onPanListener);
+    }
+
+    @Override
     public void removeOnSingleTapListener(OnSingleTapListener onSingleTapListener) {
         mSingleTapListeners.remove(onSingleTapListener);
     }
@@ -801,6 +812,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void processFling(float velocityX, float velocityY) {
         mScrollController.onFling(velocityX, velocityY);
+        for(OnFlingListener listener : mFlingListeners) {
+            listener.onFling(velocityX, velocityY);
+        }
     }
 
     @Override
@@ -826,6 +840,14 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
 
         requestRender();
+    }
+
+    @Override
+    public void processPan(float distanceX, float distanceY) {
+        mScrollController.onPan(distanceX, distanceY);
+        for(OnPanListener listener : mPanListeners) {
+            listener.onPan(distanceX, distanceY);
+        }
     }
 
     @Override

@@ -163,5 +163,5 @@ public class MainActivity extends Activity {
                 .strokeWidth(STROKE_WIDTH);
 
         return mMap.addPolygon(polygonOptions);
-    } 
+    }
 }

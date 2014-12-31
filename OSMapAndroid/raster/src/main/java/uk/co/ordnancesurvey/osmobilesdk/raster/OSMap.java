@@ -346,6 +346,22 @@ public interface OSMap {
     }
 
     /**
+     * Callback interface for when the user makes a pan gesture on the map.
+     * <p/>
+     * Listeners will be invoked on the main thread.
+     */
+    public interface OnPanListener {
+        /**
+         * Called when the user makes a pan gesture on the map.
+         * Implementations of this method are always invoked on the main thread.
+         *
+         * @param distanceX The distance to pan in the x direction
+         * @param distanceY The distance to pan in the x direction
+         */
+        void onPan(float distanceX, float distanceY);
+    }
+
+    /**
      * Callback interface for when the user makes a single tap on the map.
      * <p/>
      * Listeners will be invoked on the main thread.
@@ -393,6 +409,14 @@ public interface OSMap {
     public void addOnMapTouchListener(OnMapTouchListener onMapTouchListener);
 
     /**
+     * Sets a callback object for when the Map is panned. Note that there can be multiple
+     * callbacks added. Each callback will receive the touch event.
+     *
+     * @param onPanListener The callback that will be invoked on a Map pan event
+     */
+    public void addOnPanListener(OnPanListener onPanListener);
+
+    /**
      * Sets a callback object for when the Map is single tapped.
      * Note that there can be multiple callbacks added.
      * Each callback will receive the single tap event.
@@ -428,6 +452,13 @@ public interface OSMap {
      * @param onMapTouchListener The callback that will be removed
      */
     public void removeOnMapTouchListener(OnMapTouchListener onMapTouchListener);
+
+    /**
+     * Removes a callback object for when the Map is panned.
+     *
+     * @param onPanListener The callback that will be removed
+     */
+    public void removeOnPanListener(OnPanListener onPanListener);
 
     /**
      * Removes a callback object for when the Map is single tapped.

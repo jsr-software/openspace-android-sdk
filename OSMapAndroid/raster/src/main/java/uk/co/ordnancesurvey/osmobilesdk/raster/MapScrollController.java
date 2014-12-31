@@ -226,8 +226,11 @@ public final class MapScrollController extends CombinedGestureDetector {
         onScroll(0, 0, 1, 0, 0, -velocityX, -velocityY);
     }
 
-    @Override
-    protected void onScroll(float dX, float dY, float dScale, float scaleOffsetX, float scaleOffsetY, float flingVX, float flingVY) {
+    public void onPan(float distanceX, float distanceY) {
+        onScroll(distanceX, distanceY, 1, 0, 0, 0, 0);
+    }
+
+    private void onScroll(float dX, float dY, float dScale, float scaleOffsetX, float scaleOffsetY, float flingVX, float flingVY) {
         synchronized (this) {
             dX += scaleOffsetX * (dScale - 1);
             dY += scaleOffsetY * (dScale - 1);
@@ -411,4 +414,10 @@ public final class MapScrollController extends CombinedGestureDetector {
             startScroll(STEP_INITIAL_INT, 0, STEP_FINAL_INT - STEP_INITIAL_INT, 0, duration);
         }
     }
+
+
+    /**
+     *
+     * NEW STUFF
+     */
 }

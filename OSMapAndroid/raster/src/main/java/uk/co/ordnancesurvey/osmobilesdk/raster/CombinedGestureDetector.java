@@ -23,7 +23,6 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import android.content.Context;
-import android.os.Build;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -53,7 +52,6 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
     private boolean consumingScaleEvents;
 
     private View mCurrentView;
-    private MotionEvent mCurrentEvent;
     private boolean mCurrentEventCalledOnScaleBegin;
 
     private boolean mTwoFingerTapPossible;
@@ -83,27 +81,24 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
         mMapGestureListener = mapGestureListener;
     }
 
-    /**
-     * Combined scroll/zoom/fling method.
-     */
-    protected abstract void onScroll(float dx, float dy, float dScale, float scaleOffsetX, float scaleOffsetY, float flingVX, float flingVY);
-
     protected abstract void onTwoFingerTap();
 
     @Override
     public boolean onTouch(View v, MotionEvent e) {
         mCurrentView = v;
-        if (BuildConfig.DEBUG) {
-            // Only save this on debug builds. It's potentially dangerous, since the event can get recycled!
-            mCurrentEvent = e;
+
+        boolean consumedGestureEvent = false;
+
+        if (!isDraggingItem()) {
+            consumedGestureEvent = mGestureDetector.onTouchEvent(e);
+            ;
         }
-        boolean consumedGestureEvent = mGestureDetector.onTouchEvent(e);
+
         mCurrentEventCalledOnScaleBegin = false;
         if (consumingScaleEvents) {
             consumingScaleEvents = mScaleGestureDetector.onTouchEvent(e);
         }
         mCurrentView = null;
-        mCurrentEvent = null;
 
         int action = e.getActionMasked();
         boolean actionIsSecondaryDown = (action == MotionEvent.ACTION_POINTER_DOWN);
@@ -155,12 +150,8 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
         return consumingScaleEvents || consumedGestureEvent || twoFingerTap;
     }
 
-
     @Override
     public boolean onDown(MotionEvent event) {
-        if (isDraggingItem()) {
-            return false;
-        }
         // On the initial touch down,
         //  - Start consuming scale events.
         //  - Cancel any pending two-finger tap.
@@ -175,11 +166,6 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
 
     @Override
     public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-        if (isDraggingItem()) {
-            return false;
-        }
-        assert !mScaleStarted;
-
         if (mMapGestureListener != null) {
             mMapGestureListener.onFling(velocityX, velocityY);
         }
@@ -188,42 +174,24 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
 
     @Override
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-        if (isDraggingItem()) {
-            return false;
-        }
         if (mScaleStarted) {
-            // This appears to happen since Android 4.1. Observed on
-            //   Galaxy S III (GT-I9300, Android 4.1.2).
-            //   Nexus 7 (Android 4.2.x)
-            // Not observed on
-            //   HTC One (Android 4.0.x)
-            //   Galaxy S II (Android 4.0.x)
-            if (BuildConfig.DEBUG) {
-                assert Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN;
-                //DebugHelpers.logAndroidBuild();
-            }
             // Don't scroll; it's already handled by onScale().
             return false;
         }
-        CombinedGestureDetector.this.onScroll(distanceX, distanceY, 1, 0, 0, 0, 0);
+        if (mMapGestureListener != null) {
+            mMapGestureListener.onPan(distanceX, distanceY);
+        }
         return true;
     }
 
     @Override
     public boolean onScaleBegin(ScaleGestureDetector detector) {
         mCurrentEventCalledOnScaleBegin = true;
-        if (isDraggingItem()) {
-            return false;
-        }
         mScaleStarted = true;
 
-        // OS-44: On some Android versions, ScaleGestureDetector already applies touch slop.
-        if (BuildConfig.DEBUG) {
-            // On such devices, onScaleBegin() should happen on ACTION_MOVE, not ACTION_POINTER_DOWN
-            assert mScaleAlreadyHasTouchSlop == (mCurrentEvent.getActionMasked() == MotionEvent.ACTION_MOVE);
-        }
-        // If ScaleGestureDetector already applies touch slop, then we must have exceeded the threshold. Two-finger tap is no longer possible.
-        mTwoFingerTapPossible = (mScaleAlreadyHasTouchSlop ? false : true);
+        // If ScaleGestureDetector already applies touch slop, then we must have exceeded the
+        // threshold. Two-finger tap is no longer possible.
+        mTwoFingerTapPossible = !mScaleAlreadyHasTouchSlop;
 
         float x = detector.getFocusX();
         float y = detector.getFocusY();
@@ -235,9 +203,6 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
 
     @Override
     public boolean onScale(ScaleGestureDetector detector) {
-        if (isDraggingItem()) {
-            return false;
-        }
         float x = detector.getFocusX();
         float y = detector.getFocusY();
         float dX = x - mPrevScaleFocusX;
@@ -263,7 +228,7 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
         float scaleOffsetX = x - v.getWidth() / 2;
         float scaleOffsetY = y - v.getHeight() / 2;
 
-        CombinedGestureDetector.this.onScroll(-dX, -dY, dScale, scaleOffsetX, scaleOffsetY, 0, 0);
+        //CombinedGestureDetector.this.onScroll(-dX, -dY, dScale, scaleOffsetX, scaleOffsetY, 0, 0);
         return true;
     }
 
@@ -274,9 +239,6 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
 
     @Override
     public boolean onSingleTapConfirmed(MotionEvent event) {
-        if (isDraggingItem()) {
-            return false;
-        }
         if (mMapGestureListener != null) {
             mMapGestureListener.onSingleTap(event.getX(), event.getY());
         }
@@ -285,9 +247,6 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
 
     @Override
     public boolean onDoubleTap(MotionEvent event) {
-        if (isDraggingItem()) {
-            return false;
-        }
         if (mMapGestureListener != null) {
             mMapGestureListener.onDoubleTap(event.getX(), event.getY());
         }
@@ -296,15 +255,12 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
 
     @Override
     public void onLongPress(MotionEvent event) {
-        if (isDraggingItem()) {
-            return;
-        }
         // Drag code
-        Object dragObject = mDragListener.onDragBegin(event);
-        mDragObject = dragObject;
-        mDragStarted = false;
-        mDragInitialX = event.getX();
-        mDragInitialY = event.getY();
+//        Object dragObject = mDragListener.onDragBegin(event);
+//        mDragObject = dragObject;
+//        mDragStarted = false;
+//        mDragInitialX = event.getX();
+//        mDragInitialY = event.getY();
         // End Drag code
 
         if (mMapGestureListener != null) {
@@ -312,7 +268,6 @@ abstract class CombinedGestureDetector extends GestureDetector.SimpleOnGestureLi
         }
     }
 
-    // New stuff
     private boolean isDraggingItem() {
         return mDragObject != null;
     }

@@ -115,6 +115,11 @@ public final class MapView extends FrameLayout {
             }
 
             @Override
+            public void onPan(float distanceX, float distanceY) {
+                mMap.processPan(distanceX, distanceY);
+            }
+
+            @Override
             public void onSingleTap(float screenX, float screenY) {
                 mMap.processSingleTap(screenX, screenY);
             }

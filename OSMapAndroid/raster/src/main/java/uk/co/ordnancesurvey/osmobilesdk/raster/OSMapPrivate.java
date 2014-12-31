@@ -27,10 +27,10 @@ public interface OSMapPrivate extends OSMap {
     void processDoubleTap(float screenX, float screenY);
     void processFling(float velocityX, float velocityY);
     void processLongPress(float screenX, float screenY);
+    void processPan(float distanceX, float distanceY);
 	void processSingleTap(float screenX, float screenY);
     void processTouch(float screenX, float screenY);
 
-	//Object longClick(float screenx, float screeny);
 
 	//boolean zoomInStep(MotionEvent e, float offsetX, float offsetY);
 	//boolean zoomOutStep(MotionEvent e);

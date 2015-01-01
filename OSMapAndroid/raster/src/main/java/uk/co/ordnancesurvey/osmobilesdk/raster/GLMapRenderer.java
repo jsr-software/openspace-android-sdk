@@ -30,6 +30,7 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -99,6 +100,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private final GLProgramService mProgramService;
     private final GLMatrixHandler mGLMatrixHandler;
+    private final FrameHandler mFrameHandler;
 
     private final RendererListener mRendererListener = new RendererListener() {
         @Override
@@ -150,21 +152,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     };
 
-    private final Handler mHandler;
-    private final Runnable mCameraChangeRunnable = new Runnable() {
-        public void run() {
-            ScreenProjection projection = getProjection();
-            CameraPosition position = new CameraPosition(projection.getCenter(), projection.getMetresPerPixel());
-            // Cache position;
-            mPositionManager.storePosition(position);
-            // TODO: move the position code
-            // This listener is set on the main thread, so no problem using it like this.
-            if (mOnCameraChangeListener != null) {
-                mOnCameraChangeListener.onCameraChange(position);
-            }
-        }
-    };
-
     private final ScrollRenderer.ScrollPosition mScrollPosition = new ScrollRenderer.ScrollPosition();
 
     private MapConfiguration mMapConfiguration;
@@ -174,22 +161,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private volatile ScreenProjection mVolatileProjection = new ScreenProjection(320, 320, mScrollPosition);
     private int mGLViewportWidth, mGLViewportHeight;
 
-    private OnCameraChangeListener mOnCameraChangeListener;
-
-    // FPS limiter
-    private final int mMinFramePeriodMillis;
-    private long mPreviousFrameUptimeMillis;
-
-    // Debug variables.
-    private final static boolean DEBUG_FRAME_TIMING = BuildConfig.DEBUG && false;
-    private long debugPreviousFrameUptimeMillis;
-    private long debugPreviousFrameNanoTime;
-
-    // Avoid issuing too many location callbacks
-    private double lastx;
-    private double lasty;
-    private float lastMPP;
-
     public GLMapRenderer(Context context, MapConfiguration mapConfiguration) {
         super(context);
         mContext = context;
@@ -198,20 +169,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
 
         mMapConfiguration = mapConfiguration;
-
-        mHandler = new Handler(context.getMainLooper());
-
-        if (BuildConfig.DEBUG) {
-            if (GLMapRenderer.class.desiredAssertionStatus()) {
-                Log.v(CLASS_TAG, "Assertions are enabled!");
-            } else {
-                String s = "Assertions are disabled! To enable them, run \"adb shell setprop debug.assert 1\" and reinstall app";
-                Log.w(CLASS_TAG, s);
-                Toast.makeText(context, s, Toast.LENGTH_LONG).show();
-                // Sanity check that we have the test the right way around.
-                assert false;
-            }
-        }
 
         if (BuildConfig.DEBUG) {
             setDebugFlags(DEBUG_CHECK_GL_ERROR);
@@ -224,9 +181,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         setRenderer(this);
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
-        mMinFramePeriodMillis = (int) (1000 / ((WindowManager) mContext
-                .getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRefreshRate());
-
         mGLTileCache = new GLTileCache(mContext);
         mGLImageCache = new GLImageCache();
 
@@ -238,38 +192,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         mProgramService = new GLProgramService();
         mGLMatrixHandler = new GLMatrixHandler();
+        mFrameHandler = new FrameHandler(mContext);
 
         mMapGestureDetector = new MapGestureDetector(context, mMapGestureListener);
-    }
-
-    private void setEmulatorConfiguration() {
-        if (Utils.EMULATOR_GLES_WORKAROUNDS_ENABLED
-                && Build.FINGERPRINT.matches("generic\\/(?:google_)?sdk\\/generic\\:.*")
-                && Build.CPU_ABI.matches("armeabi(?:\\-.*)?")) {
-            // A bug in the ARM emulator causes it to fail to choose a config, possibly if the
-            // backing GL context does not support no alpha channel.
-            //
-            // 4.2 with Google APIs, ARM:
-            //  BOARD == BOOTLOADER == MANUFACTURER == SERIAL == unknown
-            //  BRAND == DEVICE == generic
-            //  CPU_ABI == armeabi-v7a
-            //  CPU_ABI2 == armeabi
-            //  DISPLAY == google_sdk-eng 4.2 JB_MR1 526865 test-keys
-            //  FINGERPRINT == generic/google_sdk/generic:4.2/JB_MR1/526865:eng/test-keys
-            //  HARDWARE == goldfish
-            //  HOST == android-mac-sl-10.mtv.corp.google.com
-            //  ID == JB_MR1
-            //  MODEL == PRODUCT == google_sdk
-            //  TAGS == test-keys
-            //  TIME == 1352427062000
-            //  TYPE == eng
-            //  USER == android-build
-
-            Log.w(CLASS_TAG, "Setting an emulator-compatible GL config; " +
-                    "this should not happen on devices!");
-            setEGLConfigChooser(8, 8, 8, 8, 8, 0);
-        }
-
     }
 
     public void setMapLayers(Layer[] layers) {
@@ -280,12 +205,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
         mScrollRenderer.setZoomScales(mpps);
         mTileRenderer.setLayers(layers);
-    }
-
-    // Called on main thread, and used on main thread
-    @Override
-    public void setOnCameraChangeListener(OnCameraChangeListener listener) {
-        mOnCameraChangeListener = listener;
     }
 
     @Override
@@ -362,42 +281,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         });
     }
 
-    private void roundToPixelBoundary() {
-        // OS-56: A better pixel-aligned-drawing algorithm.
-        float originalMPP = mScrollPosition.metresPerPixel;
-        Layer layer = mTileRenderer.mapLayerForMPP(originalMPP);
-        float originalSizeScreenPx = layer.getTileSizeInMetres() / originalMPP;
-        float roundedSizeScreenPx = (float) Math.ceil(originalSizeScreenPx);
-        float roundedMPP = layer.getTileSizeInMetres() / roundedSizeScreenPx;
-        if (mTileRenderer.mapLayerForMPP(roundedMPP) != layer) {
-            // If rounding up would switch layer boundaries, try rounding down.
-            roundedSizeScreenPx = (float) Math.floor(originalSizeScreenPx);
-            roundedMPP = layer.getTileSizeInMetres() / roundedSizeScreenPx;
-            // If that breaks too, we're in trouble.
-            if (roundedSizeScreenPx < 1 || mTileRenderer.mapLayerForMPP(roundedMPP) != layer) {
-                assert false : "This shouldn't happen!";
-                return;
-            }
-        }
-
-        double tileOriginX = Math.floor(mScrollPosition.x / layer.getTileSizeInMetres()) * layer.getTileSizeInMetres();
-        double tileOriginY = Math.floor(mScrollPosition.y / layer.getTileSizeInMetres()) * layer.getTileSizeInMetres();
-
-        // OS-57: Fudge the rounding by half a pixel if the screen width is odd.
-        double halfPixelX = (mGLViewportWidth % 2 == 0 ? 0 : 0.5);
-        double halfPixelY = (mGLViewportHeight % 2 == 0 ? 0 : 0.5);
-        double roundedOffsetPxX = Math.rint((mScrollPosition.x - tileOriginX) / roundedMPP - halfPixelX) + halfPixelX;
-        double roundedOffsetPxY = Math.rint((mScrollPosition.y - tileOriginY) / roundedMPP - halfPixelY) + halfPixelY;
-
-        mScrollPosition.metresPerPixel = roundedMPP;
-        mScrollPosition.x = tileOriginX + roundedOffsetPxX * roundedMPP;
-        mScrollPosition.y = tileOriginY + roundedOffsetPxY * roundedMPP;
-
-        // TODO: tchan: Check that it's rounded correctly, to within about 1e-4 of a pixel boundary. Something like this.
-        //assert Math.abs(Math.IEEEremainder((float)(tileRect.left-mapCenterX/mapTileSize)*screenTileSize, 1)) < 1.0e-4f;
-        //assert Math.abs(Math.IEEEremainder((float)(tileRect.top-mapCenterY/mapTileSize)*screenTileSize, 1)) < 1.0e-4f;
-    }
-
     public ScreenProjection getProjection() {
         // TODO: Is this allowed to return null in the Google Maps v2 API?
         return mVolatileProjection;
@@ -405,53 +288,22 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     @Override
     public void onDrawFrame(GL10 unused) {
-        // Get the timestamp ASAP. Future code might use this to time animations; we want them to be as smooth as possible.
-        final long nowUptimeMillis;
 
-        final boolean LIMIT_FRAMERATE = true;
-        if (LIMIT_FRAMERATE) {
-            // OS-62: This seems to make scrolling smoother.
-            long now = SystemClock.uptimeMillis();
-            long timeToSleep = mMinFramePeriodMillis - (now - mPreviousFrameUptimeMillis);
-            if (0 < timeToSleep && timeToSleep <= mMinFramePeriodMillis) {
-                SystemClock.sleep(timeToSleep);
-                now += timeToSleep;
-            }
-            nowUptimeMillis = now;
-            mPreviousFrameUptimeMillis = nowUptimeMillis;
-        } else {
-            nowUptimeMillis = SystemClock.uptimeMillis();
-        }
+        final long frameTime = mFrameHandler.getFrameTime();
 
-        final long debugDiffUptimeMillis, debugDiffNanoTime;
-        if (DEBUG_FRAME_TIMING) {
-            // OS-60: Support code. Do this "ASAP" too, so the times are as accurate as possible.
-            final long nowNanoTime = System.nanoTime();
-            debugDiffUptimeMillis = nowUptimeMillis - debugPreviousFrameUptimeMillis;
-            debugDiffNanoTime = nowNanoTime - debugPreviousFrameNanoTime;
-            debugPreviousFrameUptimeMillis = nowUptimeMillis;
-            debugPreviousFrameNanoTime = nowNanoTime;
-        } else {
-            debugDiffUptimeMillis = 0;
-            debugDiffNanoTime = 0;
-        }
-
-        // Update the scroll position too, because it uses SystemClock.uptimeMillis() internally (ideally we'd pass it the timestamp we got above).
+        // Update the scroll position too, because it uses SystemClock.uptimeMillis() internally
+        // (ideally we'd pass it the timestamp we got above).
         mScrollRenderer.getScrollPosition(mScrollPosition, true);
-        roundToPixelBoundary();
+        mFrameHandler.roundToPixelBoundary();
+
         // And create a new projection.
         ScreenProjection projection = new ScreenProjection(mGLViewportWidth, mGLViewportHeight, mScrollPosition);
-        if (DEBUG_FRAME_TIMING) {
-            // OS-60 OS-62: Print inter-frame time (based on time at entry to onDrawFrame(), whether we're "animating" (e.g. flinging), and the distance scrolled in metres.
-            ScreenProjection oldProjection = mVolatileProjection;
-            Log.v(CLASS_TAG, debugDiffUptimeMillis + " " + debugDiffNanoTime + " AS=" + mScrollPosition.animatingScroll + " dx=" + (projection.getCenter().getX() - oldProjection.getCenter().getX()) +
-                    " dy=" + (projection.getCenter().getY() - oldProjection.getCenter().getY()));
-        }
+
         mVolatileProjection = projection;
         float metresPerPixel = projection.getMetresPerPixel();
-        boolean animating = (mScrollPosition.animatingScroll || mScrollPosition.animatingZoom);
 
-        boolean needRedraw = mTileRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection, nowUptimeMillis, mScrollPosition);
+
+        boolean needRedraw = mTileRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection, frameTime, mScrollPosition);
         mOverlayRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, metresPerPixel);
         mCircleRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, mGLViewportWidth, mGLViewportHeight);
         mMarkerRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection);
@@ -460,20 +312,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             requestRender();
         }
 
-        // Only make a callback if the state of the map has changed.
-        if (!animating) {
-            if (lastx != mScrollPosition.x || lasty != mScrollPosition.y || lastMPP != mScrollPosition.metresPerPixel) {
-                if (mOnCameraChangeListener != null) {
-                    // Notify on the main thread
-                    mHandler.removeCallbacks(mCameraChangeRunnable);
-                    mHandler.post(mCameraChangeRunnable);
-                }
-                // TODO: put position storing code here!
-                lastx = mScrollPosition.x;
-                lasty = mScrollPosition.y;
-                lastMPP = mScrollPosition.metresPerPixel;
-            }
-        }
+        mFrameHandler.finishFrame();
     }
 
     @Override
@@ -515,9 +354,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mScrollRenderer.setWidthHeight(width, height);
     }
 
-
-
-
     // MAP CONFIGURATION
     @Override
     public void setMapConfiguration(MapConfiguration mapConfiguration) {
@@ -536,12 +372,10 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
 
 
-
-
-
     /**
      * NEW INTERFACE
      */
+    private final List<OnBoundsChangeListener> mBoundsChangeListeners = new ArrayList<>();
     private final List<OnDoubleTapListener> mDoubleTapListeners = new ArrayList<>();
     private final List<OnFlingListener> mFlingListeners = new ArrayList<>();
     private final List<OnLongPressListener> mLongPressListeners = new ArrayList<>();
@@ -549,6 +383,12 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final List<OnPinchListener> mPinchListeners = new ArrayList<>();
     private final List<OnSingleTapListener> mSingleTapListeners = new ArrayList<>();
     private final List<OnMapTouchListener> mTouchListeners = new ArrayList<>();
+    private final List<OnZoomChangeListener> mZoomChangeListeners = new ArrayList<>();
+
+    @Override
+    public void addOnBoundsChangeListener(OnBoundsChangeListener onBoundsChangeListener) {
+        mBoundsChangeListeners.add(onBoundsChangeListener);
+    }
 
     @Override
     public void addOnDoubleTapListener(OnDoubleTapListener onDoubleTapListener) {
@@ -601,8 +441,18 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     @Override
+    public void addOnZoomChangeListener(OnZoomChangeListener onZoomChangeListener) {
+        mZoomChangeListeners.add(onZoomChangeListener);
+    }
+
+    @Override
     public void removeInfoWindowAdapter() {
         mMarkerRenderer.removeInfoWindowAdapter();
+    }
+
+    @Override
+    public void removeOnBoundsChangeListener(OnBoundsChangeListener onBoundsChangeListener) {
+        mBoundsChangeListeners.remove(onBoundsChangeListener);
     }
 
     @Override
@@ -656,8 +506,17 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     @Override
+    public void removeOnZoomChangeListener(OnZoomChangeListener onZoomChangeListener) {
+        mZoomChangeListeners.remove(onZoomChangeListener);
+    }
+
+    @Override
     public void setInfoWindowAdapter(InfoWindowAdapter infoWindowAdapter) {
         mMarkerRenderer.setInfoWindowAdapter(infoWindowAdapter);
+    }
+
+    private boolean hasChangeListeners() {
+        return !mBoundsChangeListeners.isEmpty() || !mZoomChangeListeners.isEmpty();
     }
 
     private void processDoubleTap(float screenX, float screenY) {
@@ -733,6 +592,140 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private void processTwoFingerTap() {
         mScrollRenderer.onTwoFingerTap();
+    }
+
+    private void setEmulatorConfiguration() {
+        if (Utils.EMULATOR_GLES_WORKAROUNDS_ENABLED
+                && Build.FINGERPRINT.matches("generic\\/(?:google_)?sdk\\/generic\\:.*")
+                && Build.CPU_ABI.matches("armeabi(?:\\-.*)?")) {
+            // A bug in the ARM emulator causes it to fail to choose a config, possibly if the
+            // backing GL context does not support no alpha channel.
+            //
+            // 4.2 with Google APIs, ARM:
+            //  BOARD == BOOTLOADER == MANUFACTURER == SERIAL == unknown
+            //  BRAND == DEVICE == generic
+            //  CPU_ABI == armeabi-v7a
+            //  CPU_ABI2 == armeabi
+            //  DISPLAY == google_sdk-eng 4.2 JB_MR1 526865 test-keys
+            //  FINGERPRINT == generic/google_sdk/generic:4.2/JB_MR1/526865:eng/test-keys
+            //  HARDWARE == goldfish
+            //  HOST == android-mac-sl-10.mtv.corp.google.com
+            //  ID == JB_MR1
+            //  MODEL == PRODUCT == google_sdk
+            //  TAGS == test-keys
+            //  TIME == 1352427062000
+            //  TYPE == eng
+            //  USER == android-build
+
+            Log.w(CLASS_TAG, "Setting an emulator-compatible GL config; " +
+                    "this should not happen on devices!");
+            setEGLConfigChooser(8, 8, 8, 8, 8, 0);
+        }
+    }
+
+    private class FrameHandler {
+
+        private final Handler mHandler;
+        private final Runnable mMapChangeRunnable = new Runnable() {
+            public void run() {
+                ScreenProjection projection = getProjection();
+                float newZoom = projection.getMetresPerPixel();
+
+                CameraPosition position = new CameraPosition(projection.getCenter(), newZoom);
+
+                // Cache position;
+                mPositionManager.storePosition(position);
+                // TODO: move the position code
+
+                for(OnBoundsChangeListener listener : mBoundsChangeListeners) {
+                    listener.onBoundsChange(projection.getVisibleBounds());
+                }
+
+                for(OnZoomChangeListener listener : mZoomChangeListeners) {
+                    listener.onZoomChange(newZoom);
+                }
+            }
+        };
+        private final int mMinFramePeriodMillis;
+
+        private long mPreviousFrameUptimeMillis;
+        private double lastx;
+        private double lasty;
+        private float lastMPP;
+
+        public FrameHandler(Context context) {
+            mHandler = new Handler(context.getMainLooper());
+            mMinFramePeriodMillis = (int) (1000 / ((WindowManager) context
+                    .getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRefreshRate());
+        }
+
+        public long getFrameTime() {
+            long now = SystemClock.uptimeMillis();
+            long timeToSleep = mMinFramePeriodMillis - (now - mPreviousFrameUptimeMillis);
+            if (0 < timeToSleep && timeToSleep <= mMinFramePeriodMillis) {
+                SystemClock.sleep(timeToSleep);
+                now += timeToSleep;
+            }
+
+            mPreviousFrameUptimeMillis = now;
+
+            return now;
+        }
+
+        public void finishFrame() {
+            boolean animating = (mScrollPosition.animatingScroll || mScrollPosition.animatingZoom);
+
+            // Only make a callback if the state of the map has changed.
+            if (!animating) {
+                if (lastx != mScrollPosition.x || lasty != mScrollPosition.y || lastMPP != mScrollPosition.metresPerPixel) {
+                    if(hasChangeListeners()) {
+                        // Notify on the main thread
+                        mHandler.removeCallbacks(mMapChangeRunnable);
+                        mHandler.post(mMapChangeRunnable);
+                    }
+                    // TODO: put position storing code here!
+                    lastx = mScrollPosition.x;
+                    lasty = mScrollPosition.y;
+                    lastMPP = mScrollPosition.metresPerPixel;
+                }
+            }
+        }
+
+        public void roundToPixelBoundary() {
+            // OS-56: A better pixel-aligned-drawing algorithm.
+            float originalMPP = mScrollPosition.metresPerPixel;
+            Layer layer = mTileRenderer.mapLayerForMPP(originalMPP);
+            float originalSizeScreenPx = layer.getTileSizeInMetres() / originalMPP;
+            float roundedSizeScreenPx = (float) Math.ceil(originalSizeScreenPx);
+            float roundedMPP = layer.getTileSizeInMetres() / roundedSizeScreenPx;
+            if (mTileRenderer.mapLayerForMPP(roundedMPP) != layer) {
+                // If rounding up would switch layer boundaries, try rounding down.
+                roundedSizeScreenPx = (float) Math.floor(originalSizeScreenPx);
+                roundedMPP = layer.getTileSizeInMetres() / roundedSizeScreenPx;
+                // If that breaks too, we're in trouble.
+                if (roundedSizeScreenPx < 1 || mTileRenderer.mapLayerForMPP(roundedMPP) != layer) {
+                    assert false : "This shouldn't happen!";
+                    return;
+                }
+            }
+
+            double tileOriginX = Math.floor(mScrollPosition.x / layer.getTileSizeInMetres()) * layer.getTileSizeInMetres();
+            double tileOriginY = Math.floor(mScrollPosition.y / layer.getTileSizeInMetres()) * layer.getTileSizeInMetres();
+
+            // OS-57: Fudge the rounding by half a pixel if the screen width is odd.
+            double halfPixelX = (mGLViewportWidth % 2 == 0 ? 0 : 0.5);
+            double halfPixelY = (mGLViewportHeight % 2 == 0 ? 0 : 0.5);
+            double roundedOffsetPxX = Math.rint((mScrollPosition.x - tileOriginX) / roundedMPP - halfPixelX) + halfPixelX;
+            double roundedOffsetPxY = Math.rint((mScrollPosition.y - tileOriginY) / roundedMPP - halfPixelY) + halfPixelY;
+
+            mScrollPosition.metresPerPixel = roundedMPP;
+            mScrollPosition.x = tileOriginX + roundedOffsetPxX * roundedMPP;
+            mScrollPosition.y = tileOriginY + roundedOffsetPxY * roundedMPP;
+
+            // TODO: tchan: Check that it's rounded correctly, to within about 1e-4 of a pixel boundary. Something like this.
+            //assert Math.abs(Math.IEEEremainder((float)(tileRect.left-mapCenterX/mapTileSize)*screenTileSize, 1)) < 1.0e-4f;
+            //assert Math.abs(Math.IEEEremainder((float)(tileRect.top-mapCenterY/mapTileSize)*screenTileSize, 1)) < 1.0e-4f;
+        }
     }
 
     private class PositionManager {

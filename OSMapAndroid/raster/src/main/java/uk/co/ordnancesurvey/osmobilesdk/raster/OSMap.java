@@ -24,6 +24,7 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 import android.view.View;
 
+import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 
@@ -37,20 +38,6 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
  */
 public interface OSMap {
 
-    /**
-     * Defines signatures for methods that are called when the camera changes position.
-     */
-    interface OnCameraChangeListener {
-        /**
-         * Called after the camera position has changed. During an animation, this listener may not be notified of intermediate camera positions.
-         * It is always called for the final position in the animation.
-         * <p/>
-         * This is called on the main thread.
-         *
-         * @param position The CameraPosition at the end of the last camera change.
-         */
-        public void onCameraChange(CameraPosition position);
-    }
 
     /**
      * Adds a marker to this map.
@@ -109,13 +96,6 @@ public interface OSMap {
     public void moveCamera(CameraPosition camera, boolean animated);
 
     /**
-     * Sets a callback that's invoked when the camera changes.
-     *
-     * @param listener The callback that's invoked when the camera changes. To unset the callback, use null.
-     */
-    public void setOnCameraChangeListener(OnCameraChangeListener listener);
-
-    /**
      * Set the {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration} for the current view
      *
      * @param mapConfiguration
@@ -162,6 +142,24 @@ public interface OSMap {
          * @return A custom info-window for marker, or null to use the default info-window frame with custom contents.
          */
         View getInfoWindow(Marker marker);
+    }
+
+    /**
+     * Callback interface for when the visible bounds of the map is  changed. This can be
+     * triggered from a user gesture or a programmatic map change.
+     * <p/>
+     * Listeners will be invoked on the main thread.
+     */
+    public interface OnBoundsChangeListener {
+        /**
+         * Called when the visible bounds of the map is changed.
+         * Implementations of this method are always invoked on the main thread.
+         * NOTE: During an animation, this listener may not be notified of intermediate values.
+         * It is always called for the final value in the animation.
+         *
+         * @param boundingBox The new visible bounds of the map.
+         */
+        void onBoundsChange(BoundingBox boundingBox);
     }
 
     /**
@@ -330,6 +328,32 @@ public interface OSMap {
     }
 
     /**
+     * Callback interface for when the zoom level of the map is changed. This can be triggered from
+     * a user gesture or a programmatic map change.
+     * <p/>
+     * Listeners will be invoked on the main thread.
+     */
+    public interface OnZoomChangeListener {
+        /**
+         * Called when the zoom level of the map is changed.
+         * Implementations of this method are always invoked on the main thread.
+         * NOTE: During an animation, this listener may not be notified of intermediate values.
+         * It is always called for the final value in the animation.
+         *
+         * @param newZoom The new zoom level of the map.
+         */
+        void onZoomChange(float newZoom);
+    }
+
+    /**
+     * Sets a callback object for when the map visible bounds is changed. Note that there can be
+     * multiple callbacks added. Each callback will receive the touch event.
+     *
+     * @param onBoundsChangeListener The callback that will be invoked on a visible bounds change
+     */
+    public void addOnBoundsChangeListener(OnBoundsChangeListener onBoundsChangeListener);
+
+    /**
      * Sets a callback object for when the Map is double tapped. Note that there can be multiple
      * callbacks added. Each callback will receive the touch event.
      *
@@ -411,9 +435,25 @@ public interface OSMap {
     public void addOnSingleTapListener(OnSingleTapListener onSingleTapListener);
 
     /**
+     * Sets a callback object for when the zoom level is changed.
+     * Note that there can be multiple callbacks added.
+     * Each callback will receive the single tap event.
+     *
+     * @param onZoomChangeListener The callback that will be invoked on a map zoom change
+     */
+    public void addOnZoomChangeListener(OnZoomChangeListener onZoomChangeListener);
+
+    /**
      * Removes the custom adapter for the rendering of contents of info windows.
      */
     public void removeInfoWindowAdapter();
+
+    /**
+     * Removes a callback object for when the Map visible bounds is changed.
+     *
+     * @param onBoundsChangeListener The callback that will be removed
+     */
+    public void removeOnBoundsChangeListener(OnBoundsChangeListener onBoundsChangeListener);
 
     /**
      * Removes a callback object for when the Map is double tapped.
@@ -484,6 +524,13 @@ public interface OSMap {
      * @param onSingleTapListener The callback that will be removed
      */
     public void removeOnSingleTapListener(OnSingleTapListener onSingleTapListener);
+
+    /**
+     * Removes a callback object for when the map zoom changes
+     *
+     * @param onZoomChangeListener The callback that will be removed
+     */
+    public void removeOnZoomChangeListener(OnZoomChangeListener onZoomChangeListener);
 
     /**
      * Sets a custom renderer for the contents of info windows.

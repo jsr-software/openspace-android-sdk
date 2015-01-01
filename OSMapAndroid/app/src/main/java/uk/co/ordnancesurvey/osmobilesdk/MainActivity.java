@@ -27,6 +27,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.widget.Toast;
 
+import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Circle;
 import uk.co.ordnancesurvey.osmobilesdk.raster.CircleOptions;
@@ -92,6 +93,19 @@ public class MainActivity extends Activity {
             Toast.makeText(MainActivity.this, "Marker tapped", Toast.LENGTH_SHORT).show();
         }
     };
+    private final OSMap.OnZoomChangeListener mZoomListener = new OSMap.OnZoomChangeListener() {
+        @Override
+        public void onZoomChange(float newZoom) {
+            Toast.makeText(MainActivity.this, "Zoom Changed: " + newZoom, Toast.LENGTH_SHORT).show();
+        }
+    };
+    private final OSMap.OnBoundsChangeListener mBoundsListener = new OSMap.OnBoundsChangeListener() {
+        @Override
+        public void onBoundsChange(BoundingBox boundingBox) {
+            Toast.makeText(MainActivity.this, "Bounds changed: " + boundingBox.toString(),
+                    Toast.LENGTH_SHORT).show();
+        }
+    };
 
     private MapFragment mMapFragment;
     private OSMap mMap;
@@ -122,10 +136,12 @@ public class MainActivity extends Activity {
         super.onResume();
         // Add listeners
         mMap = mMapFragment.getMap().getMap();
+        mMap.addOnBoundsChangeListener(mBoundsListener);
         mMap.addOnMapTouchListener(mTouchListener);
         mMap.addOnSingleTapListener(mSingleTapListener);
         mMap.addOnLongPressListener(mLongPressListener);
         mMap.addOnMarkerTapListener(mMarkerTapListener);
+        mMap.addOnZoomChangeListener(mZoomListener);
 
         drawDraggableMarker();
     }
@@ -134,10 +150,12 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         // Remove listeners
+        mMap.removeOnBoundsChangeListener(mBoundsListener);
         mMap.removeOnMapTouchListener(mTouchListener);
         mMap.removeOnSingleTapListener(mSingleTapListener);
         mMap.removeOnLongPressListener(mLongPressListener);
         mMap.removeOnMarkerTapListener(mMarkerTapListener);
+        mMap.removeOnZoomChangeListener(mZoomListener);
     }
 
     private Circle drawCircle(Point point) {

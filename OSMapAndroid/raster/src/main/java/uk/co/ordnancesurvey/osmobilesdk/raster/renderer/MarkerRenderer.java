@@ -51,7 +51,6 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.GLImageCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Images;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Marker;
-import uk.co.ordnancesurvey.osmobilesdk.raster.MarkerOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
 
@@ -83,9 +82,9 @@ public class MarkerRenderer extends BaseRenderer {
         mMarkerGraphic = new MarkerGraphic(imageCache);
     }
 
-    public Marker addMarker(MarkerOptions markerOptions) {
-        Bitmap icon = markerOptions.getIcon().loadBitmap(mContext);
-        Marker marker = new Marker(markerOptions, icon, mMapRenderer, this);
+    public Marker addMarker(Marker.Builder builder) {
+        Marker marker = builder.build();
+        marker.setRenderer(this);
         mMarkersLock.writeLock().lock();
         try {
             mMarkers.add(marker);
@@ -154,7 +153,7 @@ public class MarkerRenderer extends BaseRenderer {
         // account of anchors?
         BoundingBox boundingBox = projection.getExpandedVisibleBounds();
 
-        mMarkerGraphic.drawVisibleMarkers(programService, matrixHandler, boundingBox);
+        mMarkerGraphic.drawVisibleMarkers(programService, matrixHandler, boundingBox, projection);
     }
 
     public void onInfoWindowShown(Marker marker) {
@@ -201,7 +200,7 @@ public class MarkerRenderer extends BaseRenderer {
     public boolean singleTap(ScreenProjection projection, PointF screenLocation) {
         // Check for a click on an info window first.
         if (mExpandedMarker != null) {
-            if (mExpandedMarker.isClickOnInfoWindow(screenLocation)) {
+            if (mExpandedMarker.isClickOnInfoWindow(screenLocation, projection)) {
                 emitInfoWindowTap(mExpandedMarker);
             }
         }
@@ -372,29 +371,29 @@ public class MarkerRenderer extends BaseRenderer {
             mGlImageCache = imageCache;
         }
 
-        private void drawVisibleMarkers(GLProgramService programService, GLMatrixHandler matrixHandler, BoundingBox boundingBox) {
+        private void drawVisibleMarkers(GLProgramService programService, GLMatrixHandler matrixHandler, BoundingBox boundingBox, ScreenProjection projection) {
             mMarkersLock.readLock().lock();
             Iterator<Marker> iter = mMarkers.iterator();
             Marker marker;
 
             while (iter.hasNext()) {
                 marker = iter.next();
-                drawMarker(programService, matrixHandler, marker, boundingBox);
+                drawMarker(programService, matrixHandler, marker, boundingBox, projection);
             }
 
-            drawMarker(programService, matrixHandler, mExpandedMarker, boundingBox);
+            drawMarker(programService, matrixHandler, mExpandedMarker, boundingBox, projection);
 
             mMarkersLock.readLock().unlock();
         }
 
         private void drawMarker(GLProgramService programService, GLMatrixHandler matrixHandler, Marker marker,
-                                BoundingBox boundingBox) {
+                                BoundingBox boundingBox, ScreenProjection projection) {
             if (marker != null && marker.isVisible()) {
                 Point gp = marker.getPoint();
 
                 // Skip invisible or out of visible area markers
                 if (boundingBox.contains(gp)) {
-                    marker.glDraw(programService, matrixHandler, mGlImageCache);
+                    marker.glDraw(programService, matrixHandler, mGlImageCache, projection);
                 }
             }
         }

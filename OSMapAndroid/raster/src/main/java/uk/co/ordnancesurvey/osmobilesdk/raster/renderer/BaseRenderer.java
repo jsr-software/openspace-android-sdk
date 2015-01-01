@@ -34,7 +34,7 @@ public abstract class BaseRenderer {
         mRendererListener = listener;
     }
 
-    protected void emitRenderRequest() {
+    public void emitRenderRequest() {
         if(mRendererListener != null) {
             mRendererListener.onRenderRequested();
         }

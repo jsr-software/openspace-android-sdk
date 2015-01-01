@@ -27,12 +27,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.widget.Toast;
 
-import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Circle;
 import uk.co.ordnancesurvey.osmobilesdk.raster.CircleOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Marker;
-import uk.co.ordnancesurvey.osmobilesdk.raster.MarkerOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Polygon;
 import uk.co.ordnancesurvey.osmobilesdk.raster.PolygonOptions;
@@ -82,7 +80,7 @@ public class MainActivity extends Activity {
                 @Override
                 public void run() {
                     mMap.removeCircle(circle);
-                    mMap.removePolyOverlay(polygon);
+                    mMap.removePolygon(polygon);
                 }
             }, DEMO_DELAY);
         }
@@ -91,19 +89,6 @@ public class MainActivity extends Activity {
         @Override
         public void onMarkerTap(Marker marker) {
             Toast.makeText(MainActivity.this, "Marker tapped", Toast.LENGTH_SHORT).show();
-        }
-    };
-    private final OSMap.OnZoomChangeListener mZoomListener = new OSMap.OnZoomChangeListener() {
-        @Override
-        public void onZoomChange(float newZoom) {
-            Toast.makeText(MainActivity.this, "Zoom Changed: " + newZoom, Toast.LENGTH_SHORT).show();
-        }
-    };
-    private final OSMap.OnBoundsChangeListener mBoundsListener = new OSMap.OnBoundsChangeListener() {
-        @Override
-        public void onBoundsChange(BoundingBox boundingBox) {
-            Toast.makeText(MainActivity.this, "Bounds changed: " + boundingBox.toString(),
-                    Toast.LENGTH_SHORT).show();
         }
     };
 
@@ -136,12 +121,10 @@ public class MainActivity extends Activity {
         super.onResume();
         // Add listeners
         mMap = mMapFragment.getMap().getMap();
-        mMap.addOnBoundsChangeListener(mBoundsListener);
         mMap.addOnMapTouchListener(mTouchListener);
         mMap.addOnSingleTapListener(mSingleTapListener);
         mMap.addOnLongPressListener(mLongPressListener);
         mMap.addOnMarkerTapListener(mMarkerTapListener);
-        mMap.addOnZoomChangeListener(mZoomListener);
 
         drawDraggableMarker();
     }
@@ -150,12 +133,10 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         // Remove listeners
-        mMap.removeOnBoundsChangeListener(mBoundsListener);
         mMap.removeOnMapTouchListener(mTouchListener);
         mMap.removeOnSingleTapListener(mSingleTapListener);
         mMap.removeOnLongPressListener(mLongPressListener);
         mMap.removeOnMarkerTapListener(mMarkerTapListener);
-        mMap.removeOnZoomChangeListener(mZoomListener);
     }
 
     private Circle drawCircle(Point point) {
@@ -170,20 +151,20 @@ public class MainActivity extends Activity {
     }
 
     private void drawDraggableMarker() {
-        MarkerOptions options = new MarkerOptions()
-                .setPoint(new Point(250000,250000, Point.BNG))
-                .title("Draggable")
-                .draggable(true)
-                .snippet("Long press me to drag me");
-        mDraggableMarker = mMap.addMarker(options);
+        Marker.Builder builder = new Marker.Builder(this, new Point(250000,250000, Point.BNG))
+                .setTitle("Draggable")
+                .setSnippet("Long press me to drag me");
+
+        mDraggableMarker = mMap.addMarker(builder);
+        mDraggableMarker.setIsDraggable(true);
     }
 
     private Marker drawMarker(Point point) {
-        MarkerOptions options = new MarkerOptions()
-                .setPoint(point)
-                .title("Some title")
-                .snippet("Some snippet");
-        return mMap.addMarker(options);
+        Marker.Builder builder = new Marker.Builder(this, point)
+                .setTitle("Some title")
+                .setSnippet("Some snippet");
+
+        return mMap.addMarker(builder);
     }
 
     private Polygon drawSquare(Point point) {

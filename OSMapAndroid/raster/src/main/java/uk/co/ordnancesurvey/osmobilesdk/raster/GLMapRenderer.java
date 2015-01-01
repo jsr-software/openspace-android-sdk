@@ -30,13 +30,11 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Build;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.WindowManager;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -231,15 +229,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         requestRender();
     }
 
-    @Override
-    public Marker addMarker(MarkerOptions markerOptions) {
-        return mMarkerRenderer.addMarker(markerOptions);
-    }
 
-    @Override
-    public void removeMarker(Marker marker) {
-        mMarkerRenderer.removeMarker(marker);
-    }
+
+
 
     @Override
     public final Polyline addPolyline(PolylineOptions polylineOptions) {
@@ -249,11 +241,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     @Override
     public final Polygon addPolygon(PolygonOptions polygonOptions) {
         return mOverlayRenderer.addPolygon(polygonOptions);
-    }
-
-    @Override
-    public void removePolyOverlay(PolyOverlay polygon) {
-        mOverlayRenderer.removePolyOverlay(polygon);
     }
 
     @Override
@@ -386,6 +373,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final List<OnZoomChangeListener> mZoomChangeListeners = new ArrayList<>();
 
     @Override
+    public Marker addMarker(Marker.Builder builder) {
+        return mMarkerRenderer.addMarker(builder);
+    }
+
+    @Override
     public void addOnBoundsChangeListener(OnBoundsChangeListener onBoundsChangeListener) {
         mBoundsChangeListeners.add(onBoundsChangeListener);
     }
@@ -448,6 +440,21 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void removeInfoWindowAdapter() {
         mMarkerRenderer.removeInfoWindowAdapter();
+    }
+
+    @Override
+    public void removeMarker(Marker marker) {
+        mMarkerRenderer.removeMarker(marker);
+    }
+
+    @Override
+    public void removePolyline(Polyline polyline) {
+        mOverlayRenderer.removePolyOverlay(polyline);
+    }
+
+    @Override
+    public void removePolygon(Polygon polygon) {
+        mOverlayRenderer.removePolyOverlay(polygon);
     }
 
     @Override
@@ -572,12 +579,15 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         PointF screenLocation = new PointF(screenx, screeny);
 
         boolean handled = mMarkerRenderer.singleTap(projection, screenLocation);
-
+        Point point = projection.fromScreenLocation(screenx, screeny);
         if (!handled) {
-            Point point = projection.fromScreenLocation(screenx, screeny);
             for (OnSingleTapListener listener : mSingleTapListeners) {
                 listener.onSingleTap(point);
             }
+        } else {
+            CameraPosition position
+                    = new CameraPosition(point, projection.getMetresPerPixel());
+            moveCamera(position, true);
         }
         requestRender();
     }

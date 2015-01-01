@@ -39,23 +39,26 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 public interface OSMap {
 
 
+
+
+
+
+
     /**
-     * Adds a marker to this map.
-     * <p>The marker's icon is rendered on the map at the location Marker.position. Clicking the marker centers the camera on the marker.
-     * If Marker.title is defined, the map shows an info box with the marker's title and snippet. If the marker is draggable,
-     * long-clicking and then dragging the marker moves it.
+     * Add a circle to this map.
      *
-     * @param options A marker options object that defines how to render the marker.
-     * @return The Marker that was added to the map.
+     * @param options A circle options object that defines how to render the Circle
+     * @return The Circle object that is added to the map
      */
-    public Marker addMarker(MarkerOptions options);
-
-    public void removeMarker(Marker marker);
+    Circle addCircle(CircleOptions options);
 
     /**
-     * Removes all markers, overlays, and polylines from the map.
+     * Adds a polygon to this map.
+     *
+     * @param options A polygon options object that defines how to render the Polygon.
+     * @return The Polygon object that is added to the map.
      */
-    public void clear();
+    Polygon addPolygon(PolygonOptions options);
 
     /**
      * Adds a polyline to this map.
@@ -66,24 +69,13 @@ public interface OSMap {
     Polyline addPolyline(PolylineOptions options);
 
     /**
-     * Adds a polygon to this map.
-     *
-     * @param options A polygon options object that defines how to render the Polygon.
-     * @return The Polygon object that is added to the map.
+     * Removes all markers, overlays, and polylines from the map.
      */
-    Polygon addPolygon(PolygonOptions options);
+    public void clear();
 
-    void removePolyOverlay(PolyOverlay polyOverlay);
 
-    /**
-     * Add a circle to this map.
-     *
-     * @param options A circle options object that defines how to render the Circle
-     * @return The Circle object that is added to the map
-     */
-    Circle addCircle(CircleOptions options);
 
-    void removeCircle(Circle circle);
+
 
 
 
@@ -346,6 +338,17 @@ public interface OSMap {
     }
 
     /**
+     * Adds a marker to this map.
+     * <p>The marker's icon is rendered on the map at the location Marker.position. Clicking the marker centers the camera on the marker.
+     * If Marker.title is defined, the map shows an info box with the marker's title and snippet. If the marker is draggable,
+     * long-clicking and then dragging the marker moves it.
+     *
+     * @param builder A marker builder object that defines how to render the marker.
+     * @return The Marker that was added to the map.
+     */
+    public Marker addMarker(Marker.Builder builder);
+
+    /**
      * Sets a callback object for when the map visible bounds is changed. Note that there can be
      * multiple callbacks added. Each callback will receive the touch event.
      *
@@ -442,6 +445,30 @@ public interface OSMap {
      * @param onZoomChangeListener The callback that will be invoked on a map zoom change
      */
     public void addOnZoomChangeListener(OnZoomChangeListener onZoomChangeListener);
+
+    /**
+     * Remove a circle object from the map
+     * @param circle
+     */
+    public void removeCircle(Circle circle);
+
+    /**
+     * Remove a Marker object from the map
+     * @param marker
+     */
+    public void removeMarker(Marker marker);
+
+    /**
+     * Remove a Polyline object from the map
+     * @param polyline
+     */
+    public void removePolyline(Polyline polyline);
+
+    /**
+     * Remove a Polygon object from the map
+     * @param polygon
+     */
+    public void removePolygon(Polygon polygon);
 
     /**
      * Removes the custom adapter for the rendering of contents of info windows.

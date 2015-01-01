@@ -22,10 +22,8 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
 
-import android.graphics.PointF;
 import android.opengl.Matrix;
 
-import java.nio.FloatBuffer;
 import java.util.LinkedList;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.Circle;

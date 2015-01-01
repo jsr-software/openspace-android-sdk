@@ -180,7 +180,7 @@ public final class Marker {
             return;
         }
         // Get a view
-        View view = mMap.getInfoWindow(this);
+        View view = mMarkerRenderer.getInfoWindow(this);
 
         if (mInfoWindowHighlighted) {
             // This is holo light blue

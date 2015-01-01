@@ -31,8 +31,6 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.BuildConfig;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.BaseRenderer;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.RendererListener;
 
 public class ScrollRenderer extends BaseRenderer {
 

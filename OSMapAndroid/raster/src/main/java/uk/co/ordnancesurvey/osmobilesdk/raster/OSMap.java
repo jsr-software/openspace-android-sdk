@@ -38,41 +38,6 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 public interface OSMap {
 
     /**
-     * Methods on this provider are called when it is time to show an info window for a marker, regardless of the cause
-     * (either a user gesture or a programmatic call to {@link Marker#showInfoWindow()}. Since there is only one info window shown at
-     * any one time, this provider may choose to reuse views, or it may choose to create new views on each method invocation.
-     * <p/>
-     * When constructing an info-window, methods in this class are called in a defined order. To replace the default info-window,
-     * override {@link #getInfoWindow(Marker)} with your custom rendering. To replace just the info-window contents, inside the default info-window
-     * frame (the callout bubble), leave the default implementation of {@link #getInfoWindow(Marker)} in place and override
-     * {@link #getInfoContents(Marker)} instead.
-     */
-    interface InfoWindowAdapter {
-        /**
-         * Provides custom contents for the default info-window frame of a marker. This method is only called if
-         * {@link #getInfoWindow(Marker)} first returns null. If this method returns a view, it will be placed inside
-         * the default info-window frame. If you change this view after this method is called, those changes will not
-         * necessarily be reflected in the rendered info-window. If this method returns null, the default rendering will be used instead.
-         *
-         * @param marker The marker for which an info window is being populated.
-         * @return A custom view to display as contents in the info window for marker, or null to use the default content rendering instead.
-         */
-        public View getInfoContents(Marker marker);
-
-        /**
-         * Provides a custom info-window for a marker. If this method returns a view, it is used for the entire info-window.
-         * If you change this view after this method is called, those changes will not necessarily be reflected in the rendered
-         * info-window. If this method returns null , the default info-window frame will be used, with contents provided by
-         * {@link #getInfoContents(Marker)}.
-         *
-         * @param marker The marker for which an info window is being populated.
-         * @return A custom info-window for marker, or null to use the default info-window frame with custom contents.
-         */
-        public View getInfoWindow(Marker marker);
-    }
-
-
-    /**
      * Defines signatures for methods that are called when the camera changes position.
      */
     interface OnCameraChangeListener {
@@ -133,15 +98,7 @@ public interface OSMap {
 
     void removeCircle(Circle circle);
 
-    /**
-     * Sets a custom renderer for the contents of info windows.
-     * <p/>
-     * Like the map's event listeners, this state is not serialized with the map. If the map gets re-created
-     * (e.g., due to a configuration change), you must ensure that you call this method again in order to preserve the customization.
-     *
-     * @param adapter The adapter to use for info window contents, or null to use the default content rendering in info windows.
-     */
-    public void setInfoWindowAdapter(InfoWindowAdapter adapter);
+
 
 
     /*
@@ -166,9 +123,46 @@ public interface OSMap {
     void setMapConfiguration(MapConfiguration mapConfiguration);
 
 
+
+
+
     /**
      * NEW INTERFACE
      */
+
+    /**
+     * Methods on this provider are called when it is time to show an info window for a marker, regardless of the cause
+     * (either a user gesture or a programmatic call to {@link Marker#showInfoWindow()}. Since there is only one info window shown at
+     * any one time, this provider may choose to reuse views, or it may choose to create new views on each method invocation.
+     * <p/>
+     * When constructing an info-window, methods in this class are called in a defined order. To replace the default info-window,
+     * override {@link #getInfoWindow(Marker)} with your custom rendering. To replace just the info-window contents, inside the default info-window
+     * frame (the callout bubble), leave the default implementation of {@link #getInfoWindow(Marker)} in place and override
+     * {@link #getInfoContents(Marker)} instead.
+     */
+    public interface InfoWindowAdapter {
+        /**
+         * Provides custom contents for the default info-window frame of a marker. This method is only called if
+         * {@link #getInfoWindow(Marker)} first returns null. If this method returns a view, it will be placed inside
+         * the default info-window frame. If you change this view after this method is called, those changes will not
+         * necessarily be reflected in the rendered info-window. If this method returns null, the default rendering will be used instead.
+         *
+         * @param marker The marker for which an info window is being populated.
+         * @return A custom view to display as contents in the info window for marker, or null to use the default content rendering instead.
+         */
+        View getInfoContents(Marker marker);
+
+        /**
+         * Provides a custom info-window for a marker. If this method returns a view, it is used for the entire info-window.
+         * If you change this view after this method is called, those changes will not necessarily be reflected in the rendered
+         * info-window. If this method returns null , the default info-window frame will be used, with contents provided by
+         * {@link #getInfoContents(Marker)}.
+         *
+         * @param marker The marker for which an info window is being populated.
+         * @return A custom info-window for marker, or null to use the default info-window frame with custom contents.
+         */
+        View getInfoWindow(Marker marker);
+    }
 
     /**
      * Callback interface for when the user makes a double tap gesture on the map.
@@ -417,6 +411,11 @@ public interface OSMap {
     public void addOnSingleTapListener(OnSingleTapListener onSingleTapListener);
 
     /**
+     * Removes the custom adapter for the rendering of contents of info windows.
+     */
+    public void removeInfoWindowAdapter();
+
+    /**
      * Removes a callback object for when the Map is double tapped.
      *
      * @param onDoubleTapListener The callback that will be removed
@@ -485,4 +484,16 @@ public interface OSMap {
      * @param onSingleTapListener The callback that will be removed
      */
     public void removeOnSingleTapListener(OnSingleTapListener onSingleTapListener);
+
+    /**
+     * Sets a custom renderer for the contents of info windows.
+     * <p/>
+     * Like the map's event listeners, this state is not serialized with the map. If the map gets re-created
+     * (e.g., due to a configuration change), you must ensure that you call this method again in order to preserve the customization.
+     *
+     * @param infoWindowAdapter The adapter to use for info window contents, or null to use the default content rendering in info windows.
+     */
+    public void setInfoWindowAdapter(InfoWindowAdapter infoWindowAdapter);
+
+
 }

@@ -22,13 +22,10 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.PointF;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.NinePatchDrawable;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Build;
@@ -36,14 +33,8 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.MotionEvent;
-import android.view.View;
-import android.view.ViewConfiguration;
-import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -52,7 +43,6 @@ import java.util.List;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureDetector;
@@ -175,16 +165,15 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     };
 
-    private final ScrollRenderer.ScrollPosition mScrollState = new ScrollRenderer.ScrollPosition();
+    private final ScrollRenderer.ScrollPosition mScrollPosition = new ScrollRenderer.ScrollPosition();
 
     private MapConfiguration mMapConfiguration;
 
     // TODO: This is an icky default, but ensures that it's not null.
     // This does not actually need to be volatile, but it encourages users to read it once.
-    private volatile ScreenProjection mVolatileProjection = new ScreenProjection(320, 320, mScrollState);
+    private volatile ScreenProjection mVolatileProjection = new ScreenProjection(320, 320, mScrollPosition);
     private int mGLViewportWidth, mGLViewportHeight;
 
-    private InfoWindowAdapter mInfoWindowAdapter;
     private OnCameraChangeListener mOnCameraChangeListener;
 
     // FPS limiter
@@ -209,7 +198,9 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
 
         mMapConfiguration = mapConfiguration;
+
         mHandler = new Handler(context.getMainLooper());
+
         if (BuildConfig.DEBUG) {
             if (GLMapRenderer.class.desiredAssertionStatus()) {
                 Log.v(CLASS_TAG, "Assertions are enabled!");
@@ -228,8 +219,35 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         setEGLContextClientVersion(2);
 
-        if (Utils.EMULATOR_GLES_WORKAROUNDS_ENABLED && Build.FINGERPRINT.matches("generic\\/(?:google_)?sdk\\/generic\\:.*") && Build.CPU_ABI.matches("armeabi(?:\\-.*)?")) {
-            // A bug in the ARM emulator causes it to fail to choose a config, possibly if the backing GL context does not support no alpha channel.
+        setEmulatorConfiguration();
+
+        setRenderer(this);
+        setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+
+        mMinFramePeriodMillis = (int) (1000 / ((WindowManager) mContext
+                .getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRefreshRate());
+
+        mGLTileCache = new GLTileCache(mContext);
+        mGLImageCache = new GLImageCache();
+
+        mCircleRenderer = new CircleRenderer(this, mRendererListener);
+        mMarkerRenderer = new MarkerRenderer(mContext, this, mRendererListener, mGLImageCache);
+        mOverlayRenderer = new OverlayRenderer(this, mRendererListener);
+        mScrollRenderer = new ScrollRenderer(context, this, mRendererListener);
+        mTileRenderer = new TileRenderer(mContext, this, mGLTileCache);
+
+        mProgramService = new GLProgramService();
+        mGLMatrixHandler = new GLMatrixHandler();
+
+        mMapGestureDetector = new MapGestureDetector(context, mMapGestureListener);
+    }
+
+    private void setEmulatorConfiguration() {
+        if (Utils.EMULATOR_GLES_WORKAROUNDS_ENABLED
+                && Build.FINGERPRINT.matches("generic\\/(?:google_)?sdk\\/generic\\:.*")
+                && Build.CPU_ABI.matches("armeabi(?:\\-.*)?")) {
+            // A bug in the ARM emulator causes it to fail to choose a config, possibly if the
+            // backing GL context does not support no alpha channel.
             //
             // 4.2 with Google APIs, ARM:
             //  BOARD == BOOTLOADER == MANUFACTURER == SERIAL == unknown
@@ -247,28 +265,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             //  TYPE == eng
             //  USER == android-build
 
-            Log.w(CLASS_TAG, "Setting an emulator-compatible GL config; this should not happen on devices!");
+            Log.w(CLASS_TAG, "Setting an emulator-compatible GL config; " +
+                    "this should not happen on devices!");
             setEGLConfigChooser(8, 8, 8, 8, 8, 0);
         }
 
-        setRenderer(this);
-        setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
-
-        mMinFramePeriodMillis = (int) (1000 / ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRefreshRate());
-
-        mGLTileCache = new GLTileCache(mContext);
-        mGLImageCache = new GLImageCache();
-
-        mCircleRenderer = new CircleRenderer(this, mRendererListener);
-        mMarkerRenderer = new MarkerRenderer(mContext, this, mRendererListener, mGLImageCache);
-        mOverlayRenderer = new OverlayRenderer(this, mRendererListener);
-        mScrollRenderer = new ScrollRenderer(context, this, mRendererListener);
-        mTileRenderer = new TileRenderer(mContext, this, mGLTileCache);
-
-        mProgramService = new GLProgramService();
-        mGLMatrixHandler = new GLMatrixHandler();
-
-        mMapGestureDetector = new MapGestureDetector(context, mMapGestureListener);
     }
 
     public void setMapLayers(Layer[] layers) {
@@ -279,10 +280,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
         mScrollRenderer.setZoomScales(mpps);
         mTileRenderer.setLayers(layers);
-    }
-
-    public void setInfoWindowAdapter(InfoWindowAdapter adapter) {
-        mInfoWindowAdapter = adapter;
     }
 
     // Called on main thread, and used on main thread
@@ -367,7 +364,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private void roundToPixelBoundary() {
         // OS-56: A better pixel-aligned-drawing algorithm.
-        float originalMPP = mScrollState.metresPerPixel;
+        float originalMPP = mScrollPosition.metresPerPixel;
         Layer layer = mTileRenderer.mapLayerForMPP(originalMPP);
         float originalSizeScreenPx = layer.getTileSizeInMetres() / originalMPP;
         float roundedSizeScreenPx = (float) Math.ceil(originalSizeScreenPx);
@@ -383,22 +380,27 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
             }
         }
 
-        double tileOriginX = Math.floor(mScrollState.x / layer.getTileSizeInMetres()) * layer.getTileSizeInMetres();
-        double tileOriginY = Math.floor(mScrollState.y / layer.getTileSizeInMetres()) * layer.getTileSizeInMetres();
+        double tileOriginX = Math.floor(mScrollPosition.x / layer.getTileSizeInMetres()) * layer.getTileSizeInMetres();
+        double tileOriginY = Math.floor(mScrollPosition.y / layer.getTileSizeInMetres()) * layer.getTileSizeInMetres();
 
         // OS-57: Fudge the rounding by half a pixel if the screen width is odd.
         double halfPixelX = (mGLViewportWidth % 2 == 0 ? 0 : 0.5);
         double halfPixelY = (mGLViewportHeight % 2 == 0 ? 0 : 0.5);
-        double roundedOffsetPxX = Math.rint((mScrollState.x - tileOriginX) / roundedMPP - halfPixelX) + halfPixelX;
-        double roundedOffsetPxY = Math.rint((mScrollState.y - tileOriginY) / roundedMPP - halfPixelY) + halfPixelY;
+        double roundedOffsetPxX = Math.rint((mScrollPosition.x - tileOriginX) / roundedMPP - halfPixelX) + halfPixelX;
+        double roundedOffsetPxY = Math.rint((mScrollPosition.y - tileOriginY) / roundedMPP - halfPixelY) + halfPixelY;
 
-        mScrollState.metresPerPixel = roundedMPP;
-        mScrollState.x = tileOriginX + roundedOffsetPxX * roundedMPP;
-        mScrollState.y = tileOriginY + roundedOffsetPxY * roundedMPP;
+        mScrollPosition.metresPerPixel = roundedMPP;
+        mScrollPosition.x = tileOriginX + roundedOffsetPxX * roundedMPP;
+        mScrollPosition.y = tileOriginY + roundedOffsetPxY * roundedMPP;
 
         // TODO: tchan: Check that it's rounded correctly, to within about 1e-4 of a pixel boundary. Something like this.
         //assert Math.abs(Math.IEEEremainder((float)(tileRect.left-mapCenterX/mapTileSize)*screenTileSize, 1)) < 1.0e-4f;
         //assert Math.abs(Math.IEEEremainder((float)(tileRect.top-mapCenterY/mapTileSize)*screenTileSize, 1)) < 1.0e-4f;
+    }
+
+    public ScreenProjection getProjection() {
+        // TODO: Is this allowed to return null in the Google Maps v2 API?
+        return mVolatileProjection;
     }
 
     @Override
@@ -435,21 +437,21 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
 
         // Update the scroll position too, because it uses SystemClock.uptimeMillis() internally (ideally we'd pass it the timestamp we got above).
-        mScrollRenderer.getScrollPosition(mScrollState, true);
+        mScrollRenderer.getScrollPosition(mScrollPosition, true);
         roundToPixelBoundary();
         // And create a new projection.
-        ScreenProjection projection = new ScreenProjection(mGLViewportWidth, mGLViewportHeight, mScrollState);
+        ScreenProjection projection = new ScreenProjection(mGLViewportWidth, mGLViewportHeight, mScrollPosition);
         if (DEBUG_FRAME_TIMING) {
             // OS-60 OS-62: Print inter-frame time (based on time at entry to onDrawFrame(), whether we're "animating" (e.g. flinging), and the distance scrolled in metres.
             ScreenProjection oldProjection = mVolatileProjection;
-            Log.v(CLASS_TAG, debugDiffUptimeMillis + " " + debugDiffNanoTime + " AS=" + mScrollState.animatingScroll + " dx=" + (projection.getCenter().getX() - oldProjection.getCenter().getX()) +
+            Log.v(CLASS_TAG, debugDiffUptimeMillis + " " + debugDiffNanoTime + " AS=" + mScrollPosition.animatingScroll + " dx=" + (projection.getCenter().getX() - oldProjection.getCenter().getX()) +
                     " dy=" + (projection.getCenter().getY() - oldProjection.getCenter().getY()));
         }
         mVolatileProjection = projection;
         float metresPerPixel = projection.getMetresPerPixel();
-        boolean animating = (mScrollState.animatingScroll || mScrollState.animatingZoom);
+        boolean animating = (mScrollPosition.animatingScroll || mScrollPosition.animatingZoom);
 
-        boolean needRedraw = mTileRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection, nowUptimeMillis, mScrollState);
+        boolean needRedraw = mTileRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection, nowUptimeMillis, mScrollPosition);
         mOverlayRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, metresPerPixel);
         mCircleRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, mGLViewportWidth, mGLViewportHeight);
         mMarkerRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection);
@@ -460,123 +462,19 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
         // Only make a callback if the state of the map has changed.
         if (!animating) {
-            if (lastx != mScrollState.x || lasty != mScrollState.y || lastMPP != mScrollState.metresPerPixel) {
+            if (lastx != mScrollPosition.x || lasty != mScrollPosition.y || lastMPP != mScrollPosition.metresPerPixel) {
                 if (mOnCameraChangeListener != null) {
                     // Notify on the main thread
                     mHandler.removeCallbacks(mCameraChangeRunnable);
                     mHandler.post(mCameraChangeRunnable);
                 }
                 // TODO: put position storing code here!
-                lastx = mScrollState.x;
-                lasty = mScrollState.y;
-                lastMPP = mScrollState.metresPerPixel;
+                lastx = mScrollPosition.x;
+                lasty = mScrollPosition.y;
+                lastMPP = mScrollPosition.metresPerPixel;
             }
         }
     }
-
-    public View getInfoWindow(Marker marker) {
-        View view = null;
-        View contentView = null;
-        if (mInfoWindowAdapter != null) {
-            view = mInfoWindowAdapter.getInfoWindow(marker);
-            if (view == null) {
-                contentView = mInfoWindowAdapter.getInfoContents(marker);
-            }
-        }
-        if (view == null) {
-            view = defaultInfoWindow(marker, contentView);
-        }
-
-        // OS-80 The view might be null here (if there's nothing to display in the info window)
-        if (view != null && (view.getWidth() == 0 || view.getHeight() == 0)) {
-            // Force a layout if the width or height is 0. Should we do this all the time?
-            layoutInfoWindow(view);
-        }
-        return view;
-    }
-
-    private View defaultInfoWindow(Marker marker, View contentView) {
-        String title = marker.getTitle();
-        String snippet = marker.getSnippet();
-        if (contentView == null && title == null && snippet == null) {
-            // Can't show anything
-            return null;
-        }
-
-        Context context = getContext();
-
-        // use the default info window, with title and snippet
-        LinearLayout layout = new LinearLayout(context);
-        layout.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
-        layout.setOrientation(LinearLayout.VERTICAL);
-        NinePatchDrawable drawable = Images.getInfoBgDrawable(context.getResources());
-        viewSetBackgroundCompat(layout, drawable);
-
-        if (contentView != null) {
-            layout.addView(contentView);
-        } else {
-            // Need a background image for the marker.
-            if (title != null) {
-                TextView text = new TextView(context);
-                text.setText(title);
-                text.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-                text.setGravity(Gravity.CENTER);
-                layout.addView(text);
-            }
-
-            // Add snippet if present
-            if (snippet != null) {
-                TextView text = new TextView(context);
-                text.setText(snippet);
-                text.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-                text.setTextColor(0xffbdbdbd);
-                text.setGravity(Gravity.CENTER);
-                layout.addView(text);
-            }
-        }
-
-        layoutInfoWindow(layout);
-        return layout;
-    }
-
-    private void layoutInfoWindow(View v) {
-        measureAndLayout(v, 500, 500);
-    }
-
-    private void measureAndLayout(View v, int width, int height) {
-        // Do an unconstrained layout first, because...
-        int unconstrained = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
-        v.measure(unconstrained, unconstrained);
-
-        int measuredW = v.getMeasuredWidth();
-        int measuredH = v.getMeasuredHeight();
-        if (measuredW > width || measuredH >= height) {
-            // ... If the LinearLayout has children with unspecified LayoutParams,
-            // the LinearLayout seems to fill the space available.
-            v.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST),
-                    MeasureSpec.makeMeasureSpec(height, MeasureSpec.AT_MOST));
-            measuredW = v.getMeasuredWidth();
-            measuredH = v.getMeasuredHeight();
-        }
-
-        v.layout(0, 0, measuredW, measuredH);
-    }
-
-    @SuppressWarnings("deprecation")
-    private void viewSetBackgroundCompat(View view, Drawable bg) {
-        if (Build.VERSION.SDK_INT >= 16) {
-            viewSetBackgroundAPI16(view, bg);
-        } else {
-            // Deprecated in API level 16, but we need to support 10.
-            view.setBackgroundDrawable(bg);
-        }
-    }
-
-    @TargetApi(16)
-    private void viewSetBackgroundAPI16(View view, Drawable bg) {
-        view.setBackground(bg);
-    }
-
 
     @Override
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
@@ -618,10 +516,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
 
-    public ScreenProjection getProjection() {
-        // TODO: Is this allowed to return null in the Google Maps v2 API?
-        return mVolatileProjection;
-    }
+
 
     // MAP CONFIGURATION
     @Override
@@ -639,66 +534,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     }
 
-    private class PositionManager {
-        // POSITION CACHE
-        private static final String POSITION_EASTINGS = "position_eastings";
-        private static final String POSITION_NORTHINGS = "position_northings";
-        private static final String POSITION_ZOOM = "position_zoom";
 
-        private static final long DEFAULT_EASTINGS = 45000;
-        private static final long DEFAULT_NORTHINGS = 45000;
-        private static final long DEFAULT_ZOOM = 50000;
-
-        public void setInitialMapPosition() {
-            moveCamera(getPosition(), false);
-        }
-
-        public CameraPosition getPosition() {
-
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-            double eastings = prefs.getFloat(POSITION_EASTINGS, DEFAULT_EASTINGS);
-            double northings = prefs.getFloat(POSITION_NORTHINGS, DEFAULT_NORTHINGS);
-            float zoom = prefs.getFloat(POSITION_ZOOM, DEFAULT_ZOOM);
-
-            boolean isValidPosition = isValidPosition(eastings, northings, zoom);
-            CameraPosition position;
-            if (isValidPosition) {
-                position = new CameraPosition(new Point(eastings, northings, Point.BNG), zoom);
-            } else {
-                position = new CameraPosition(new Point(DEFAULT_EASTINGS,
-                        DEFAULT_NORTHINGS, Point.BNG), DEFAULT_ZOOM);
-            }
-
-            return position;
-        }
-
-        public void storePosition(CameraPosition position) {
-            if (position == null) {
-                return;
-            }
-
-            boolean isValidPosition = isValidPosition(position.target.getX(), position.target.getY(),
-                    position.zoom);
-            if (!isValidPosition) {
-                return;
-            }
-
-            PreferenceManager.getDefaultSharedPreferences(mContext)
-                    .edit()
-                    .putFloat(POSITION_EASTINGS, (float) position.target.getX())
-                    .putFloat(POSITION_NORTHINGS, (float) position.target.getY())
-                    .putFloat(POSITION_ZOOM, position.zoom)
-                    .commit();
-        }
-
-        private boolean isValid(double value) {
-            return !Double.isNaN(value) && !Double.isInfinite(value);
-        }
-
-        private boolean isValidPosition(double easting, double northing, float zoom) {
-            return isValid(easting) && isValid(northing) && isValid(zoom);
-        }
-    }
 
 
 
@@ -765,6 +601,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     @Override
+    public void removeInfoWindowAdapter() {
+        mMarkerRenderer.removeInfoWindowAdapter();
+    }
+
+    @Override
     public void removeOnDoubleTapListener(OnDoubleTapListener onDoubleTapListener) {
         mDoubleTapListeners.remove(onDoubleTapListener);
     }
@@ -812,6 +653,11 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     @Override
     public void removeOnSingleTapListener(OnSingleTapListener onSingleTapListener) {
         mSingleTapListeners.remove(onSingleTapListener);
+    }
+
+    @Override
+    public void setInfoWindowAdapter(InfoWindowAdapter infoWindowAdapter) {
+        mMarkerRenderer.setInfoWindowAdapter(infoWindowAdapter);
     }
 
     private void processDoubleTap(float screenX, float screenY) {
@@ -887,5 +733,66 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     private void processTwoFingerTap() {
         mScrollRenderer.onTwoFingerTap();
+    }
+
+    private class PositionManager {
+        // POSITION CACHE
+        private static final String POSITION_EASTINGS = "position_eastings";
+        private static final String POSITION_NORTHINGS = "position_northings";
+        private static final String POSITION_ZOOM = "position_zoom";
+
+        private static final long DEFAULT_EASTINGS = 45000;
+        private static final long DEFAULT_NORTHINGS = 45000;
+        private static final long DEFAULT_ZOOM = 50000;
+
+        public void setInitialMapPosition() {
+            moveCamera(getPosition(), false);
+        }
+
+        public CameraPosition getPosition() {
+
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+            double eastings = prefs.getFloat(POSITION_EASTINGS, DEFAULT_EASTINGS);
+            double northings = prefs.getFloat(POSITION_NORTHINGS, DEFAULT_NORTHINGS);
+            float zoom = prefs.getFloat(POSITION_ZOOM, DEFAULT_ZOOM);
+
+            boolean isValidPosition = isValidPosition(eastings, northings, zoom);
+            CameraPosition position;
+            if (isValidPosition) {
+                position = new CameraPosition(new Point(eastings, northings, Point.BNG), zoom);
+            } else {
+                position = new CameraPosition(new Point(DEFAULT_EASTINGS,
+                        DEFAULT_NORTHINGS, Point.BNG), DEFAULT_ZOOM);
+            }
+
+            return position;
+        }
+
+        public void storePosition(CameraPosition position) {
+            if (position == null) {
+                return;
+            }
+
+            boolean isValidPosition = isValidPosition(position.target.getX(), position.target.getY(),
+                    position.zoom);
+            if (!isValidPosition) {
+                return;
+            }
+
+            PreferenceManager.getDefaultSharedPreferences(mContext)
+                    .edit()
+                    .putFloat(POSITION_EASTINGS, (float) position.target.getX())
+                    .putFloat(POSITION_NORTHINGS, (float) position.target.getY())
+                    .putFloat(POSITION_ZOOM, position.zoom)
+                    .commit();
+        }
+
+        private boolean isValid(double value) {
+            return !Double.isNaN(value) && !Double.isInfinite(value);
+        }
+
+        private boolean isValidPosition(double easting, double northing, float zoom) {
+            return isValid(easting) && isValid(northing) && isValid(zoom);
+        }
     }
 }

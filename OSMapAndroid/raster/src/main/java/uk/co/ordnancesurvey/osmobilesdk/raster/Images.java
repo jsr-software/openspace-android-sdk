@@ -12,7 +12,7 @@ import android.graphics.drawable.NinePatchDrawable;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 
-final class Images {
+public final class Images {
 	final static class NinePatchWrapper {
 		final Bitmap mBitmap;
 		final Rect mPadding;
@@ -131,22 +131,6 @@ final class Images {
 	}
 	public static NinePatchDrawable getInfoBgDrawable(Resources resources) {
 		return getInfoBgWrapper(null).newDrawable(resources);
-	}
-
-	private static volatile Bitmap locationArrow;
-	public static Bitmap getLocationArrow (DisplayMetrics metrics) {
-		Bitmap bmp = locationArrow;
-		int srcDensityDpi = 0;
-		int targetDensityDpi = srcDensityDpi;
-		if(metrics != null){
-			targetDensityDpi = metrics.densityDpi;
-		}
-		if (bmp != null && bmp.getDensity() == targetDensityDpi) {
-			return bmp;
-		}
-		bmp = bitmapFromUrlsafeBase64("iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAMAAAC7IEhfAAAA1VBMVEX____X19fX19fX19fX19fc3NzX19fu7u7f39_Z2dn8_Pzk5OT____X19f09PTc3Nz-_v7X19fq6urc3NzX19f5-fnX19fh4eHX19fw8PDg4ODZ2dn9_f3X19fX19fm5ubX19f19fXm5ubX19fX19fd3d3____________X19fX19fr6-v____________d3d3Y2Nj6-vrX19fX19fi4uLX19fX19fx8fH____X19fa2tr9_f3____X19fX19fo6Oj9_f3Z2dnX19f39_fn5-fe3t729vZ-lmDEAAAAR3RSTlMAG5MzCe1U_-23__z_eP_b_zz_2Jz_OfNg__C9_10k_4H__CED4fxgsX5F_1oGtN6l_0IS9p9p_7cMyfxdYyr8t8OKXbdFCREJ-SkAAADXSURBVDjL7dTJEsFAEAbgiCWWFkKCCCF2ItYgiH15_0cyEqVQNYuTiz5MzV_1Xfo_NMf958sJsEI-yOZCYZ4NRoRoiAnG4kKEaZUExGMsMCkCJFgWT6UBxCTdSRkASGfpUFYQhEyOWmL-7kCRabCgehCKtCq1kg_VMtnpFd9BSSPDqvGAUKuTXKOJSKvdQa_RJcGeiVyfswaoyiEJjsZ3x3nSnODd1PadJ8czPJwvHg5JB-wlFq7W7vNvOeoG57Y79yVZ-wMOHk9v0TrrGHj5yFfpf7p-NzfxXxFuAa7d_wAAAABJRU5ErkJggg", srcDensityDpi, targetDensityDpi, null);
-		locationArrow = bmp;
-		return bmp;
 	}
 
 	private static volatile Bitmap openspaceMarker;

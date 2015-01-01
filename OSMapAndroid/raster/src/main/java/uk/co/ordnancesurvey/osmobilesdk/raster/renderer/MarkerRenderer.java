@@ -22,12 +22,21 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.NinePatchDrawable;
+import android.os.Build;
+import android.view.Gravity;
 import android.view.MotionEvent;
+import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -40,6 +49,7 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLImageCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Images;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Marker;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MarkerOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
@@ -55,9 +65,13 @@ public class MarkerRenderer extends BaseRenderer {
 
     private final Context mContext;
     private final DragHandler mDragHandler;
+    private final InfoWindowHandler mInfoWindowHandler;
     private final MarkerGraphic mMarkerGraphic;
     private final LinkedList<Marker> mMarkers = new LinkedList<>();
     private final ReentrantReadWriteLock mMarkersLock = new ReentrantReadWriteLock();
+    private final List<OSMap.OnInfoWindowTapListener> mInfoWindowTapListeners = new ArrayList<>();
+    private final List<OSMap.OnMarkerDragListener> mMarkerDragListeners = new ArrayList<>();
+    private final List<OSMap.OnMarkerTapListener> mMarkerTapListeners = new ArrayList<>();
 
     private Marker mExpandedMarker = null;
 
@@ -65,64 +79,9 @@ public class MarkerRenderer extends BaseRenderer {
         super(mapRenderer, listener);
         mContext = context;
         mDragHandler = new DragHandler(context);
+        mInfoWindowHandler = new InfoWindowHandler();
         mMarkerGraphic = new MarkerGraphic(imageCache);
     }
-
-
-
-
-    /**
-     * OLD INFO WINDOW STUFF
-     */
-
-
-
-
-    // Callback from marker when show/hideInfoWindow is called
-    public void onInfoWindowShown(Marker marker) {
-        // if we are setting a new expanded marker, hide the old one.
-        assert !mMarkersLock.isWriteLockedByCurrentThread();
-        mMarkersLock.writeLock().lock();
-        try {
-            if (mExpandedMarker != null && mExpandedMarker != marker) {
-                // Need to hide the old one. This will cause a callback into this function
-                // with a null parameter
-                mExpandedMarker.hideInfoWindow();
-            }
-            mExpandedMarker = marker;
-        } finally {
-            mMarkersLock.writeLock().unlock();
-        }
-        emitRenderRequest();
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /**
-     * NEW INTERFACE
-     */
-    private final List<OSMap.OnInfoWindowTapListener> mInfoWindowTapListeners = new ArrayList<>();
-    private final List<OSMap.OnMarkerDragListener> mMarkerDragListeners = new ArrayList<>();
-    private final List<OSMap.OnMarkerTapListener> mMarkerTapListeners = new ArrayList<>();
 
     public Marker addMarker(MarkerOptions markerOptions) {
         Bitmap icon = markerOptions.getIcon().loadBitmap(mContext);
@@ -157,6 +116,10 @@ public class MarkerRenderer extends BaseRenderer {
         } finally {
             mMarkersLock.writeLock().unlock();
         }
+    }
+
+    public View getInfoWindow(Marker marker) {
+        return mInfoWindowHandler.getInfoWindow(marker);
     }
 
     public boolean isDragging() {
@@ -194,8 +157,16 @@ public class MarkerRenderer extends BaseRenderer {
         mMarkerGraphic.drawVisibleMarkers(programService, matrixHandler, boundingBox);
     }
 
+    public void onInfoWindowShown(Marker marker) {
+        mInfoWindowHandler.onInfoWindowShown(marker);
+    }
+
     public boolean onTouch(ScreenProjection projection, MotionEvent event) {
         return mDragHandler.onDrag(projection, event);
+    }
+
+    public void removeInfoWindowAdapter() {
+        mInfoWindowHandler.removeInfoWindowAdapter();
     }
 
     public void removeMarker(Marker marker) {
@@ -223,6 +194,10 @@ public class MarkerRenderer extends BaseRenderer {
         mMarkerTapListeners.remove(onMarkerTapListener);
     }
 
+    public void setInfoWindowAdapter(OSMap.InfoWindowAdapter infoWindowAdapter) {
+        mInfoWindowHandler.setInfoWindowAdapter(infoWindowAdapter);
+    }
+
     public boolean singleTap(ScreenProjection projection, PointF screenLocation) {
         // Check for a click on an info window first.
         if (mExpandedMarker != null) {
@@ -247,10 +222,6 @@ public class MarkerRenderer extends BaseRenderer {
 
         return handled;
     }
-
-
-
-
 
     private void emitInfoWindowTap(Marker marker) {
         for(OSMap.OnInfoWindowTapListener listener : mInfoWindowTapListeners) {
@@ -431,5 +402,135 @@ public class MarkerRenderer extends BaseRenderer {
 
     private class InfoWindowHandler {
 
+        private OSMap.InfoWindowAdapter mInfoWindowAdapter;
+
+        public View getInfoWindow(Marker marker) {
+            View view = null;
+            View contentView = null;
+            if (mInfoWindowAdapter != null) {
+                view = mInfoWindowAdapter.getInfoWindow(marker);
+                if (view == null) {
+                    contentView = mInfoWindowAdapter.getInfoContents(marker);
+                }
+            }
+            if (view == null) {
+                view = defaultInfoWindow(marker, contentView);
+            }
+
+            // OS-80 The view might be null here (if there's nothing to display in the info window)
+            if (view != null && (view.getWidth() == 0 || view.getHeight() == 0)) {
+                // Force a layout if the width or height is 0. Should we do this all the time?
+                layoutInfoWindow(view);
+            }
+            return view;
+        }
+
+        // Callback from marker when show/hideInfoWindow is called
+        public void onInfoWindowShown(Marker marker) {
+            // if we are setting a new expanded marker, hide the old one.
+            assert !mMarkersLock.isWriteLockedByCurrentThread();
+            mMarkersLock.writeLock().lock();
+            try {
+                if (mExpandedMarker != null && mExpandedMarker != marker) {
+                    // Need to hide the old one. This will cause a callback into this function
+                    // with a null parameter
+                    mExpandedMarker.hideInfoWindow();
+                }
+                mExpandedMarker = marker;
+            } finally {
+                mMarkersLock.writeLock().unlock();
+            }
+            emitRenderRequest();
+        }
+
+        private View defaultInfoWindow(Marker marker, View contentView) {
+            String title = marker.getTitle();
+            String snippet = marker.getSnippet();
+            if (contentView == null && title == null && snippet == null) {
+                // Can't show anything
+                return null;
+            }
+
+            Context context = mContext;
+
+            // use the default info window, with title and snippet
+            LinearLayout layout = new LinearLayout(context);
+            layout.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            layout.setOrientation(LinearLayout.VERTICAL);
+            NinePatchDrawable drawable = Images.getInfoBgDrawable(context.getResources());
+            viewSetBackgroundCompat(layout, drawable);
+
+            if (contentView != null) {
+                layout.addView(contentView);
+            } else {
+                // Need a background image for the marker.
+                if (title != null) {
+                    TextView text = new TextView(context);
+                    text.setText(title);
+                    text.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                    text.setGravity(Gravity.CENTER);
+                    layout.addView(text);
+                }
+
+                // Add snippet if present
+                if (snippet != null) {
+                    TextView text = new TextView(context);
+                    text.setText(snippet);
+                    text.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                    text.setTextColor(0xffbdbdbd);
+                    text.setGravity(Gravity.CENTER);
+                    layout.addView(text);
+                }
+            }
+
+            layoutInfoWindow(layout);
+            return layout;
+        }
+
+        private void layoutInfoWindow(View v) {
+            measureAndLayout(v, 500, 500);
+        }
+
+
+        @SuppressWarnings("deprecation")
+        private void viewSetBackgroundCompat(View view, Drawable bg) {
+            if (Build.VERSION.SDK_INT >= 16) {
+                viewSetBackgroundAPI16(view, bg);
+            } else {
+                // Deprecated in API level 16, but we need to support 10.
+                view.setBackgroundDrawable(bg);
+            }
+        }
+
+        @TargetApi(16)
+        private void viewSetBackgroundAPI16(View view, Drawable bg) {
+            view.setBackground(bg);
+        }
+        private void measureAndLayout(View v, int width, int height) {
+            // Do an unconstrained layout first, because...
+            int unconstrained = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+            v.measure(unconstrained, unconstrained);
+
+            int measuredW = v.getMeasuredWidth();
+            int measuredH = v.getMeasuredHeight();
+            if (measuredW > width || measuredH >= height) {
+                // ... If the LinearLayout has children with unspecified LayoutParams,
+                // the LinearLayout seems to fill the space available.
+                v.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.AT_MOST),
+                        View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.AT_MOST));
+                measuredW = v.getMeasuredWidth();
+                measuredH = v.getMeasuredHeight();
+            }
+
+            v.layout(0, 0, measuredW, measuredH);
+        }
+
+        public void removeInfoWindowAdapter() {
+            mInfoWindowAdapter = null;
+        }
+
+        public void setInfoWindowAdapter(OSMap.InfoWindowAdapter infoWindowAdapter) {
+            mInfoWindowAdapter = infoWindowAdapter;
+        }
     }
 }

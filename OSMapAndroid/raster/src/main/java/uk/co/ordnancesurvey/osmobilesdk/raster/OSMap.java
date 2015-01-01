@@ -28,7 +28,7 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 
 /**
- * This is the main class of the Google Maps Android API and is the entry point for all methods related to the map. You cannot
+ * This is the main class of the Raster map module of the OS Mobile SDK and is the entry point for all methods related to the map. You cannot
  * instantiate an {@link OSMap} object directly, rather, you must obtain one from the {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapView#getMap()} method on a
  * {@link .MapFragment} or {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapView} that you have added to your application.
  * <p/>
@@ -57,7 +57,7 @@ public interface OSMap {
          * @param marker The marker for which an info window is being populated.
          * @return A custom view to display as contents in the info window for marker, or null to use the default content rendering instead.
          */
-        public abstract View getInfoContents(Marker marker);
+        public View getInfoContents(Marker marker);
 
         /**
          * Provides a custom info-window for a marker. If this method returns a view, it is used for the entire info-window.
@@ -68,61 +68,9 @@ public interface OSMap {
          * @param marker The marker for which an info window is being populated.
          * @return A custom info-window for marker, or null to use the default info-window frame with custom contents.
          */
-        public abstract View getInfoWindow(Marker marker);
+        public View getInfoWindow(Marker marker);
     }
 
-    /**
-     * Defines signatures for methods that are called when a marker is clicked or tapped.
-     */
-    interface OnMarkerClickListener {
-        /**
-         * Called when a marker has been clicked or tapped.
-         *
-         * @param marker The marker that was clicked.
-         * @return true if the listener has consumed the event (i.e., the default behavior should not occur),
-         * false otherwise (i.e., the default behavior should occur). The default behavior is for the camera to move to the map and an info window to appear.
-         */
-        public abstract boolean onMarkerClick(Marker marker);
-    }
-
-    /**
-     * Callback interface for drag events on markers.
-     */
-    interface OnMarkerDragListener {
-        /**
-         * Called repeatedly while a marker is being dragged. The marker's location can be accessed via {@link Marker#getPoint()}.
-         *
-         * @param marker The marker being dragged
-         */
-        public abstract void onMarkerDrag(Marker marker);
-
-        /**
-         * Called when a marker has finished beign dragged. The marker's location can be accessed via {@link Marker#getPoint()}.
-         *
-         * @param marker The marker being dragged
-         */
-        public abstract void onMarkerDragEnd(Marker marker);
-
-        /**
-         * Called when a marker starts being dragged. The marker's location can be accessed via {@link Marker#getPoint()}; this position may
-         * be different to the position prior to the start of the drag because the marker is popped up above the touch point.
-         *
-         * @param marker The marker being dragged
-         */
-        public abstract void onMarkerDragStart(Marker marker);
-    }
-
-    /**
-     * Callback interface for click/tap events on a marker's info window.
-     */
-    interface OnInfoWindowClickListener {
-        /**
-         * Called when the marker's info window is clicked.
-         *
-         * @param marker The marker of the info window that was clicked.
-         */
-        public abstract void onInfoWindowClick(Marker marker);
-    }
 
     /**
      * Defines signatures for methods that are called when the camera changes position.
@@ -136,7 +84,7 @@ public interface OSMap {
          *
          * @param position The CameraPosition at the end of the last camera change.
          */
-        public abstract void onCameraChange(CameraPosition position);
+        public void onCameraChange(CameraPosition position);
     }
 
     /**
@@ -195,26 +143,6 @@ public interface OSMap {
      */
     public void setInfoWindowAdapter(InfoWindowAdapter adapter);
 
-    /**
-     * Sets a callback that's invoked when a marker info window is clicked.
-     *
-     * @param listener The callback that's invoked when a marker info window is clicked. To unset the callback, use null.
-     */
-    public void setOnInfoWindowClickListener(OnInfoWindowClickListener listener);
-
-    /**
-     * Sets a callback that's invoked when a marker is clicked.
-     *
-     * @param listener The callback that's invoked when a marker is clicked. To unset the callback, use null.
-     */
-    public void setOnMarkerClickListener(OnMarkerClickListener listener);
-
-    /**
-     * Sets a callback that's invoked when a marker is dragged.
-     *
-     * @param listener The callback that's invoked on marker drag events. To unset the callback, use null.
-     */
-    public void setOnMarkerDragListener(OnMarkerDragListener listener);
 
     /*
      * Repositions the camera. The move may be animated.
@@ -275,6 +203,20 @@ public interface OSMap {
     }
 
     /**
+     * Callback interface for tap events on a marker's info window.
+     * <p/>
+     * Listeners will be invoked on the main thread.
+     */
+    public interface OnInfoWindowTapListener {
+        /**
+         * Called when the marker's info window is tapped.
+         *
+         * @param marker The marker of the info window that was tapped.
+         */
+        void onInfoWindowTap(Marker marker);
+    }
+
+    /**
      * Callback interface for when the user makes a long press gesture on the map.
      * <p/>
      * Listeners will be invoked on the main thread.
@@ -306,6 +248,50 @@ public interface OSMap {
     }
 
     /**
+     * Callback interface for drag events on markers.
+     * <p/>
+     * Listeners will be invoked on the main thread.
+     */
+    public interface OnMarkerDragListener {
+        /**
+         * Called repeatedly while a marker is being dragged. The marker's location can be accessed via {@link Marker#getPoint()}.
+         *
+         * @param marker The marker being dragged
+         */
+        void onMarkerDrag(Marker marker);
+
+        /**
+         * Called when a marker has finished being dragged. The marker's location can be accessed via {@link Marker#getPoint()}.
+         *
+         * @param marker The marker being dragged
+         */
+        void onMarkerDragEnd(Marker marker);
+
+        /**
+         * Called when a marker starts being dragged. The marker's location can be accessed via {@link Marker#getPoint()};
+         * this position may be different to the position prior to the start of the drag because the marker is popped up above the touch point.
+         *
+         * @param marker The marker being dragged
+         */
+        void onMarkerDragStart(Marker marker);
+    }
+
+    /**
+     * Callback interface for when the user taps a marker on the map.
+     * <p/>
+     * Listeners will be invoked on the main thread.
+     */
+    public interface OnMarkerTapListener {
+        /**
+         * Called when the user taps a marker on the map.
+         * Implementations of this method are always invoked on the main thread.
+         *
+         * @param marker The marker that was tapped.
+         */
+        void onMarkerTap(Marker marker);
+    }
+
+    /**
      * Callback interface for when the user makes a pan gesture on the map.
      * <p/>
      * Listeners will be invoked on the main thread.
@@ -330,7 +316,6 @@ public interface OSMap {
         /**
          * Called when the user makes a pinch in or pinch out on the map.
          * Implementations of this method are always invoked on the main thread.
-         *
          */
         void onPinch();
     }
@@ -367,6 +352,14 @@ public interface OSMap {
     public void addOnFlingListener(OnFlingListener onFlingListener);
 
     /**
+     * Sets a callback that's invoked when a marker info window is tapped. Note that there can be multiple
+     * callbacks added. Each callback will receive the touch event.
+     *
+     * @param onInfoWindowTapListener The callback that's invoked when a marker info window is tapped.
+     */
+    public void addOnInfoWindowTapListener(OnInfoWindowTapListener onInfoWindowTapListener);
+
+    /**
      * Sets a callback object for when the Map is touched. Note that there can be multiple callbacks
      * added. Each callback will receive the touch event.
      *
@@ -381,6 +374,22 @@ public interface OSMap {
      * @param onMapTouchListener The callback that will be invoked on a Map touch event
      */
     public void addOnMapTouchListener(OnMapTouchListener onMapTouchListener);
+
+    /**
+     * Sets a callback object for when a {@link .Marker} is dragged.
+     * Note that there can be multiple callbacks added. Each callback will receive the events.
+     *
+     * @param onMarkerDragListener The callback that will be invoked on a Marker drag event
+     */
+    public void addOnMarkerDragListener(OnMarkerDragListener onMarkerDragListener);
+
+    /**
+     * Sets a callback object for when a {@link .Marker} is tapped.
+     * Note that there can be multiple callbacks added. Each callback will receive the event.
+     *
+     * @param onMarkerTapListener The callback that will be invoked on a Marker tap event
+     */
+    public void addOnMarkerTapListener(OnMarkerTapListener onMarkerTapListener);
 
     /**
      * Sets a callback object for when the Map is panned. Note that there can be multiple
@@ -422,6 +431,13 @@ public interface OSMap {
     public void removeOnFlingListener(OnFlingListener onFlingListener);
 
     /**
+     * Removes a callback object for when the Map's info window is tapped.
+     *
+     * @param onInfoWindowTapListener The callback that will be removed
+     */
+    public void removeOnInfoWindowTapListener(OnInfoWindowTapListener onInfoWindowTapListener);
+
+    /**
      * Removes a callback object for when the Map is long pressed.
      *
      * @param onLongPressListener The callback that will be removed
@@ -434,6 +450,20 @@ public interface OSMap {
      * @param onMapTouchListener The callback that will be removed
      */
     public void removeOnMapTouchListener(OnMapTouchListener onMapTouchListener);
+
+    /**
+     * Removes a callback object for when a {@link .Marker} is dragged.
+     *
+     * @param onMarkerDragListener The callback that will be removed
+     */
+    public void removeOnMarkerDragListener(OnMarkerDragListener onMarkerDragListener);
+
+    /**
+     * Removes a callback object for when a {@link .Marker} is tapped.
+     *
+     * @param onMarkerTapListener The callback that will be removed
+     */
+    public void removeOnMarkerTapListener(OnMarkerTapListener onMarkerTapListener);
 
     /**
      * Removes a callback object for when the Map is panned.

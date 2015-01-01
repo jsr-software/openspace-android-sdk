@@ -22,6 +22,8 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.SystemClock;
 import android.util.Log;
@@ -50,7 +52,11 @@ public final class GLTileCache {
     private int statFailedReuseCount;
     private long statLastPrinted;
 
-    public GLTileCache(int memorySoftLimitBytes) {
+    public GLTileCache(Context context) {
+        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        int memoryClass = activityManager.getMemoryClass();
+        int memorySoftLimitBytes = memoryClass * (1048576 / 4);
+
         mMemorySoftLimit = memorySoftLimitBytes;
 
         float loadFactor = 0.75f;

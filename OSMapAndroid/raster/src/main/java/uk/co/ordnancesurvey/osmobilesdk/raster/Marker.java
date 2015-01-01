@@ -285,19 +285,7 @@ public final class Marker {
         }
     }
 
-    PointF getScreenLocation(ScreenProjection projection, PointF screenLocationOut) {
-        projection.toScreenLocation(mPoint, screenLocationOut);
 
-        // U and V are in the range 0..1 where 0,0 is the top left. Since we draw the marker from the bottom left,
-        // convert V' = 1 - V.
-        int height = mIconBitmap.getHeight();
-        int width = mIconBitmap.getWidth();
-
-        screenLocationOut.x -= width * mAnchorU;
-        screenLocationOut.y -= height * mAnchorV;
-
-        return screenLocationOut;
-    }
 
     public boolean isClickOnInfoWindow(PointF clickLocation) {
         PointF temp = new PointF();
@@ -386,5 +374,19 @@ public final class Marker {
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             Utils.throwIfErrors();
         }
+    }
+
+    private PointF getScreenLocation(ScreenProjection projection, PointF screenLocationOut) {
+        projection.toScreenLocation(mPoint, screenLocationOut);
+
+        // U and V are in the range 0..1 where 0,0 is the top left. Since we draw the marker from the bottom left,
+        // convert V' = 1 - V.
+        int height = mIconBitmap.getHeight();
+        int width = mIconBitmap.getWidth();
+
+        screenLocationOut.x -= width * mAnchorU;
+        screenLocationOut.y -= height * mAnchorV;
+
+        return screenLocationOut;
     }
 }

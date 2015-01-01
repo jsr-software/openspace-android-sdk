@@ -86,6 +86,12 @@ public class MainActivity extends Activity {
             }, DEMO_DELAY);
         }
     };
+    private final OSMap.OnMarkerTapListener mMarkerTapListener = new OSMap.OnMarkerTapListener() {
+        @Override
+        public void onMarkerTap(Marker marker) {
+            Toast.makeText(MainActivity.this, "Marker tapped", Toast.LENGTH_SHORT).show();
+        }
+    };
 
     private MapFragment mMapFragment;
     private OSMap mMap;
@@ -119,17 +125,9 @@ public class MainActivity extends Activity {
         mMap.addOnMapTouchListener(mTouchListener);
         mMap.addOnSingleTapListener(mSingleTapListener);
         mMap.addOnLongPressListener(mLongPressListener);
+        mMap.addOnMarkerTapListener(mMarkerTapListener);
 
         drawDraggableMarker();
-    }
-
-    private void drawDraggableMarker() {
-        MarkerOptions options = new MarkerOptions()
-                .setPoint(new Point(250000,250000, Point.BNG))
-                .title("Some title")
-                .draggable(true)
-                .snippet("Some snippet");
-        mDraggableMarker = mMap.addMarker(options);
     }
 
     @Override
@@ -139,6 +137,7 @@ public class MainActivity extends Activity {
         mMap.removeOnMapTouchListener(mTouchListener);
         mMap.removeOnSingleTapListener(mSingleTapListener);
         mMap.removeOnLongPressListener(mLongPressListener);
+        mMap.removeOnMarkerTapListener(mMarkerTapListener);
     }
 
     private Circle drawCircle(Point point) {
@@ -150,6 +149,15 @@ public class MainActivity extends Activity {
                 .strokeWidth(STROKE_WIDTH);
 
         return mMap.addCircle(options);
+    }
+
+    private void drawDraggableMarker() {
+        MarkerOptions options = new MarkerOptions()
+                .setPoint(new Point(250000,250000, Point.BNG))
+                .title("Draggable")
+                .draggable(true)
+                .snippet("Long press me to drag me");
+        mDraggableMarker = mMap.addMarker(options);
     }
 
     private Marker drawMarker(Point point) {

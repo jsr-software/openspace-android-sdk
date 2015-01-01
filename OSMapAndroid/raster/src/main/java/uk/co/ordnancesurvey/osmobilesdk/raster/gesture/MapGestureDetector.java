@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.gesture;
 
 import android.content.Context;
 import android.view.GestureDetector;
@@ -28,8 +28,6 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewConfiguration;
-
-import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
 
 public class MapGestureDetector extends GestureDetector.SimpleOnGestureListener
         implements ScaleGestureDetector.OnScaleGestureListener, View.OnTouchListener {
@@ -49,7 +47,6 @@ public class MapGestureDetector extends GestureDetector.SimpleOnGestureListener
     private float mPrevScaleFocusY;
 
     private boolean mScaleStarted;
-    private boolean mIsDragging;
 
     public MapGestureDetector(Context context, MapGestureListener mapGestureListener) {
         mGestureDetector = new GestureDetector(context, this);
@@ -66,43 +63,40 @@ public class MapGestureDetector extends GestureDetector.SimpleOnGestureListener
 
     @Override
     public boolean onTouch(View v, MotionEvent e) {
-        if (!isDraggingItem()) {
-            boolean consumedGestureEvent = mGestureDetector.onTouchEvent(e);
+        boolean consumedGestureEvent = mGestureDetector.onTouchEvent(e);
 
-            mCurrentEventCalledOnScaleBegin = false;
-            if (mConsumingScaleEvents) {
-                mConsumingScaleEvents = mScaleGestureDetector.onTouchEvent(e);
-            }
-
-            int action = e.getActionMasked();
-            boolean actionIsSecondaryDown = (action == MotionEvent.ACTION_POINTER_DOWN);
-            boolean actionIsFinalUp = (action == MotionEvent.ACTION_UP);
-            assert !actionIsFinalUp || e.getPointerCount() == 1 : "actionIsFinalUp should imply only one pointer";
-
-            if (actionIsSecondaryDown && e.getPointerCount() == 2) {
-                // OS-44: On some Android versions, ScaleGestureDetector already applies touch slop.
-                // We detect this by the lack of an onScaleBegin() callback on a secondary touch down.
-                // On such a device, set mTwoFingerTapPossible here and clear it on onScaleBegin().
-                boolean gotScaleBegin = mCurrentEventCalledOnScaleBegin;
-                mScaleAlreadyHasTouchSlop = !gotScaleBegin;
-                if (!gotScaleBegin) {
-                    mTwoFingerTapPossible = true;
-                }
-            }
-
-            boolean twoFingerTap = !isDraggingItem() && mTwoFingerTapPossible && actionIsFinalUp && e.getEventTime() - e.getDownTime() < ViewConfiguration.getDoubleTapTimeout();
-            //Log.v(TAG, String.format(Locale.ENGLISH, "%d isd=%b ifg=%b ttp=%b ifu=%b tt=%b", action, actionIsSecondaryDown, mIgnoreFurtherGestures, mTwoFingerTapPossible, actionIsFinalUp, twoFingerTap));
-            if (twoFingerTap) {
-                // TODO: This should cancel other gestures (e.g. double tap).
-                mTwoFingerTapPossible = false;
-                if (mMapGestureListener != null) {
-                    mMapGestureListener.onTwoFingerTap();
-                }
-            }
-
-            return mConsumingScaleEvents || consumedGestureEvent || twoFingerTap;
+        mCurrentEventCalledOnScaleBegin = false;
+        if (mConsumingScaleEvents) {
+            mConsumingScaleEvents = mScaleGestureDetector.onTouchEvent(e);
         }
-        return false;
+
+        int action = e.getActionMasked();
+        boolean actionIsSecondaryDown = (action == MotionEvent.ACTION_POINTER_DOWN);
+        boolean actionIsFinalUp = (action == MotionEvent.ACTION_UP);
+        assert !actionIsFinalUp || e.getPointerCount() == 1 : "actionIsFinalUp should imply only one pointer";
+
+        if (actionIsSecondaryDown && e.getPointerCount() == 2) {
+            // OS-44: On some Android versions, ScaleGestureDetector already applies touch slop.
+            // We detect this by the lack of an onScaleBegin() callback on a secondary touch down.
+            // On such a device, set mTwoFingerTapPossible here and clear it on onScaleBegin().
+            boolean gotScaleBegin = mCurrentEventCalledOnScaleBegin;
+            mScaleAlreadyHasTouchSlop = !gotScaleBegin;
+            if (!gotScaleBegin) {
+                mTwoFingerTapPossible = true;
+            }
+        }
+
+        boolean twoFingerTap = mTwoFingerTapPossible && actionIsFinalUp && e.getEventTime() - e.getDownTime() < ViewConfiguration.getDoubleTapTimeout();
+        //Log.v(TAG, String.format(Locale.ENGLISH, "%d isd=%b ifg=%b ttp=%b ifu=%b tt=%b", action, actionIsSecondaryDown, mIgnoreFurtherGestures, mTwoFingerTapPossible, actionIsFinalUp, twoFingerTap));
+        if (twoFingerTap) {
+            // TODO: This should cancel other gestures (e.g. double tap).
+            mTwoFingerTapPossible = false;
+            if (mMapGestureListener != null) {
+                mMapGestureListener.onTwoFingerTap();
+            }
+        }
+
+        return mConsumingScaleEvents || consumedGestureEvent || twoFingerTap;
     }
 
     @Override
@@ -211,13 +205,5 @@ public class MapGestureDetector extends GestureDetector.SimpleOnGestureListener
         if (mMapGestureListener != null) {
             mMapGestureListener.onLongPress(event.getX(), event.getY());
         }
-    }
-
-    public void setDragging(boolean dragging) {
-        mIsDragging = dragging;
-    }
-
-    private boolean isDraggingItem() {
-        return mIsDragging;
     }
 }

@@ -26,9 +26,13 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.graphics.RectF;
+import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
@@ -38,90 +42,41 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.GLImageCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Marker;
 import uk.co.ordnancesurvey.osmobilesdk.raster.MarkerOptions;
+import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
 
+/**
+ * The Marker Renderer class encapsulates all aspects of marker rendering, including info windows
+ * and drag actions.
+ */
 public class MarkerRenderer extends BaseRenderer {
 
-    public interface MarkerRendererListener extends RendererListener {
-        void onInfoWindowClick(Marker marker);
+    private static final int MARKER_DRAG_OFFSET = 70;
 
-        boolean onMarkerClick(Marker marker);
-
-        void onMarkerDrag(Marker marker);
-
-        void onMarkerDragEnd(Marker marker);
-
-        void onMarkerDragStart(Marker marker);
-    }
-
-    private interface MarkerDrawRunnable {
-        // Return true if iteration should stop.
-        boolean run(GLProgramService programService, GLMatrixHandler matrixHandler, Marker marker, GLImageCache glImageCache);
-    }
-
-    private interface MarkerClickRunnable {
-        // Return true if iteration should stop.
-       boolean run(Marker marker);
-    }
-
+    private final Context mContext;
+    private final DragHandler mDragHandler;
+    private final MarkerGraphic mMarkerGraphic;
     private final LinkedList<Marker> mMarkers = new LinkedList<>();
     private final ReentrantReadWriteLock mMarkersLock = new ReentrantReadWriteLock();
-    private final Context mContext;
-    private final MarkerDrawRunnable mDrawMarkerRunnable = new MarkerDrawRunnable() {
-        @Override
-        public boolean run(GLProgramService programService, GLMatrixHandler matrixHandler, Marker marker, GLImageCache glImageCache) {
-            marker.glDraw(programService, matrixHandler, glImageCache);
-            return false;
-        }
-    };
-    private final MarkerRendererListener mMarkerRendererListener;
 
     private Marker mExpandedMarker = null;
 
-    public MarkerRenderer(Context context, GLMapRenderer mapRenderer, MarkerRendererListener listener) {
+    public MarkerRenderer(Context context, GLMapRenderer mapRenderer, RendererListener listener, GLImageCache imageCache) {
         super(mapRenderer, listener);
         mContext = context;
-        mMarkerRendererListener = listener;
+        mDragHandler = new DragHandler(context);
+        mMarkerGraphic = new MarkerGraphic(imageCache);
     }
 
-    public Marker addMarker(MarkerOptions markerOptions) {
-        Bitmap icon = markerOptions.getIcon().loadBitmap(mContext);
-        Marker marker = new Marker(markerOptions, icon, mMapRenderer, this);
-        mMarkersLock.writeLock().lock();
-        try {
-            mMarkers.add(marker);
-        } finally {
-            mMarkersLock.writeLock().unlock();
-        }
-        emitRenderRequest();
-        return marker;
-    }
 
-    public void clear() {
-        mMarkersLock.writeLock().lock();
-        try {
-            mMarkers.clear();
-            mExpandedMarker = null;
-        } finally {
-            mMarkersLock.writeLock().unlock();
-        }
-    }
 
-    public void onDrag(ScreenProjection projection, float screenx, float screeny, Marker marker) {
-        emitMarkerDrag(marker);
-        updateMarkerPosition(projection, marker, screenx, screeny);
-    }
 
-    public void onDragEnded(ScreenProjection projection, float screenx, float screeny, Marker marker) {
-        emitMarkerDragEnd(marker);
-        updateMarkerPosition(projection, marker, screenx, screeny);
-    }
+    /**
+     * OLD INFO WINDOW STUFF
+     */
 
-    public void onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, ScreenProjection projection, GLImageCache glImageCache) {
-        programService.setActiveProgram(GLProgramService.GLProgramType.SHADER);
 
-        drawMarkers(programService, matrixHandler, projection, glImageCache);
-    }
+
 
     // Callback from marker when show/hideInfoWindow is called
     public void onInfoWindowShown(Marker marker) {
@@ -141,6 +96,108 @@ public class MarkerRenderer extends BaseRenderer {
         emitRenderRequest();
     }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /**
+     * NEW INTERFACE
+     */
+    private final List<OSMap.OnInfoWindowTapListener> mInfoWindowTapListeners = new ArrayList<>();
+    private final List<OSMap.OnMarkerDragListener> mMarkerDragListeners = new ArrayList<>();
+    private final List<OSMap.OnMarkerTapListener> mMarkerTapListeners = new ArrayList<>();
+
+    public Marker addMarker(MarkerOptions markerOptions) {
+        Bitmap icon = markerOptions.getIcon().loadBitmap(mContext);
+        Marker marker = new Marker(markerOptions, icon, mMapRenderer, this);
+        mMarkersLock.writeLock().lock();
+        try {
+            mMarkers.add(marker);
+        } finally {
+            mMarkersLock.writeLock().unlock();
+        }
+        emitRenderRequest();
+        return marker;
+    }
+
+    public void addOnInfoWindowTapListener(OSMap.OnInfoWindowTapListener onInfoWindowTapListener) {
+        mInfoWindowTapListeners.add(onInfoWindowTapListener);
+    }
+
+    public void addOnMarkerDragListener(OSMap.OnMarkerDragListener onMarkerDragListener) {
+        mMarkerDragListeners.add(onMarkerDragListener);
+    }
+
+    public void addOnMarkerTapListener(OSMap.OnMarkerTapListener onMarkerTapListener) {
+        mMarkerTapListeners.add(onMarkerTapListener);
+    }
+
+    public void clear() {
+        mMarkersLock.writeLock().lock();
+        try {
+            mMarkers.clear();
+            mExpandedMarker = null;
+        } finally {
+            mMarkersLock.writeLock().unlock();
+        }
+    }
+
+    public boolean isDragging() {
+        return mDragHandler.isDragging();
+    }
+
+    public Marker longPress(ScreenProjection projection, PointF screenLocation) {
+        Marker marker = findMarker(projection, screenLocation, true);
+        if (marker == null) {
+            return null;
+        }
+
+        Point point = projection.fromScreenLocation(screenLocation.x, screenLocation.y);
+        Point offSetPoint = projection.fromScreenLocation(screenLocation.x, screenLocation.y - MARKER_DRAG_OFFSET);
+        // Check offSetPoint as well, because we don't want to lift a marker out of bounds.
+        if (!BngUtil.isInBngBounds(point) || !BngUtil.isInBngBounds(offSetPoint)) {
+            return null;
+        }
+
+        mDragHandler.startDrag(projection, marker, screenLocation.x, screenLocation.y);
+
+        return marker;
+    }
+
+    public void onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, ScreenProjection projection) {
+        programService.setActiveProgram(GLProgramService.GLProgramType.SHADER);
+
+        // Draw from the bottom up, so that top most marker is fully visible even if overlapped
+        // Look at more markers than are nominally visible, in case their bitmap covers the relevant area.
+        // We extend to four times the actual screen area.
+        // TODO can we do something more intelligent than this... like remember the maximum bitmap size for markers, plus take
+        // account of anchors?
+        BoundingBox boundingBox = projection.getExpandedVisibleBounds();
+
+        mMarkerGraphic.drawVisibleMarkers(programService, matrixHandler, boundingBox);
+    }
+
+    public boolean onTouch(ScreenProjection projection, MotionEvent event) {
+        return mDragHandler.onDrag(projection, event);
+    }
+
     public void removeMarker(Marker marker) {
         mMarkersLock.writeLock().lock();
         try {
@@ -154,200 +211,225 @@ public class MarkerRenderer extends BaseRenderer {
         emitRenderRequest();
     }
 
-    public Marker longPress(ScreenProjection projection, PointF screenLocation) {
-        // TODO do we need to handle stacked markers where one marker declines the touch?
-        Marker marker = findDraggableMarker(projection, screenLocation);
-        if (marker == null) {
-            return null;
-        }
+    public void removeOnInfoWindowTapListener(OSMap.OnInfoWindowTapListener onInfoWindowTapListener) {
+        mInfoWindowTapListeners.remove(onInfoWindowTapListener);
+    }
 
-        emitMarkerDragStart(marker);
+    public void removeOnMarkerDragListener(OSMap.OnMarkerDragListener onMarkerDragListener) {
+        mMarkerDragListeners.remove(onMarkerDragListener);
+    }
 
-        // Set position up a bit, so we can see the marker.
-        updateMarkerPosition(projection, marker, screenLocation.x, screenLocation.y);
-        // TODO scroll map up if necessary
-        return marker;
+    public void removeOnMarkerTapListener(OSMap.OnMarkerTapListener onMarkerTapListener) {
+        mMarkerTapListeners.remove(onMarkerTapListener);
     }
 
     public boolean singleTap(ScreenProjection projection, PointF screenLocation) {
         // Check for a click on an info window first.
         if (mExpandedMarker != null) {
             if (mExpandedMarker.isClickOnInfoWindow(screenLocation)) {
-                emitInfoWindowClick(mExpandedMarker);
+                emitInfoWindowTap(mExpandedMarker);
             }
         }
 
         boolean handled = false;
 
-        // TODO do we need to handle stacked markers where one marker declines the touch?
-        Marker marker = findMarker(projection, screenLocation);
+        Marker marker = findMarker(projection, screenLocation, false);
         if (marker != null) {
-            handled = emitMarkerClick(marker);
-            if (!handled) {
-                if (marker == mExpandedMarker) {
-                    marker.hideInfoWindow();
-                } else {
-                    marker.showInfoWindow();
-                }
-                // TODO move map to ensure visible
-                handled = true;
+            if (marker == mExpandedMarker) {
+                marker.hideInfoWindow();
+            } else {
+                marker.showInfoWindow();
             }
+            emitTap(marker);
+
+            handled = true;
         }
 
         return handled;
     }
 
-    private void drawMarkers(GLProgramService programService, GLMatrixHandler matrixHandler, final ScreenProjection projection, GLImageCache glImageCache) {
-        // Draw from the bottom up, so that top most marker is fully visible even if overlapped
-        iterateVisibleMarkers(programService, matrixHandler, projection, glImageCache);
+
+
+
+
+    private void emitInfoWindowTap(Marker marker) {
+        for(OSMap.OnInfoWindowTapListener listener : mInfoWindowTapListeners) {
+            listener.onInfoWindowTap(marker);
+        }
     }
 
-    private Marker findMarker(final ScreenProjection projection, final PointF screenLocation, final boolean draggableOnly) {
+    private void emitTap(Marker marker) {
+        for(OSMap.OnMarkerTapListener listener : mMarkerTapListeners) {
+            listener.onMarkerTap(marker);
+        }
+    }
+
+    // TODO do we need to handle stacked markers where one marker declines the touch?
+    private Marker findMarker(ScreenProjection projection, PointF screenLocation, boolean draggableOnly) {
         final PointF tempPoint = new PointF();
         final RectF tempRect = new RectF();
-        MarkerClickRunnable clickRunnable = new MarkerClickRunnable() {
-            @Override
-            public boolean run(Marker marker) {
-                return (!draggableOnly || marker.isDraggable()) && marker.containsPoint(projection, screenLocation, tempPoint, tempRect);
-            }
-        };
-        // Iterate from the top-down, since we're looking to capture a click.
-        return iterateMarkersForClick(clickRunnable, projection);
-    }
+        final BoundingBox boundingBox = projection.getExpandedVisibleBounds();
 
-    private Marker findMarker(ScreenProjection projection, PointF screenLocation) {
-        return findMarker(projection, screenLocation, false);
-    }
-
-    private Marker findDraggableMarker(ScreenProjection projection, PointF screenLocation) {
-        return findMarker(projection, screenLocation, true);
-    }
-
-    private Marker iterateMarkersForClick(MarkerClickRunnable runnable, ScreenProjection projection) {
-        Marker ret;
-        BoundingBox boundingBox = projection.getExpandedVisibleBounds();
-
+        Marker ret = null;
         mMarkersLock.readLock().lock();
 
         Iterator<Marker> iter = mMarkers.descendingIterator();
-        ret = processMarkerForClick(runnable, mExpandedMarker, boundingBox);
-        Marker marker;
+
+        if(mExpandedMarker != null) {
+            ret = processMarker(projection, mExpandedMarker, boundingBox, screenLocation, tempPoint, tempRect, draggableOnly);
+        }
 
         while (ret == null && iter.hasNext()) {
-            marker = iter.next();
-            // processMarker returns non-null if iteration should stop.
-            ret = processMarkerForClick(runnable, marker, boundingBox);
+            Marker marker = iter.next();
+            if (marker != null) {
+                ret = processMarker(projection, marker, boundingBox, screenLocation, tempPoint, tempRect, draggableOnly);
+            }
         }
 
-        if (ret == null) {
-            ret = processMarkerForClick(runnable, mExpandedMarker, boundingBox);
+        if (ret == null && mExpandedMarker != null) {
+            ret = processMarker(projection, mExpandedMarker, boundingBox, screenLocation, tempPoint, tempRect, draggableOnly);
         }
-
         mMarkersLock.readLock().unlock();
         return ret;
     }
 
-    private Marker iterateVisibleMarkers(GLProgramService programService, GLMatrixHandler matrixHandler, ScreenProjection projection, GLImageCache glImageCache) {
-        Marker ret = null;
-        // Look at more markers than are nominally visible, in case their bitmap covers the relevant area.
-        // We extend to four times the actual screen area.
-        // TODO can we do something more intelligent than this... like remember the maximum bitmap size for markers, plus take
-        // account of anchors?
-        BoundingBox boundingBox = projection.getExpandedVisibleBounds();
-
-        mMarkersLock.readLock().lock();
-        Iterator<Marker> iter = mMarkers.iterator();
-        Marker marker;
-
-        while (ret == null && iter.hasNext()) {
-            marker = iter.next();
-            // processMarker returns non-null if iteration should stop.
-            ret = processMarker(programService, matrixHandler, marker, boundingBox, glImageCache);
-        }
-
-        if (ret == null) {
-            ret = processMarker(programService, matrixHandler, mExpandedMarker, boundingBox, glImageCache);
-        }
-
-        mMarkersLock.readLock().unlock();
-        return ret;
-    }
-
-    private Marker processMarker(GLProgramService programService, GLMatrixHandler matrixHandler, Marker marker,
-                                     BoundingBox boundingBox, GLImageCache glImageCache) {
-        // Check bounds
-        if (marker == null) {
-            return null;
-        }
-
+    private Marker processMarker(ScreenProjection projection, Marker marker, BoundingBox boundingBox,
+                                 PointF screenLocation, PointF tempPoint, RectF tempRect, boolean onlyDraggable) {
         Point gp = marker.getPoint();
 
-        // Skip invisible or out of visible area markers
         if (!marker.isVisible() || !boundingBox.contains(gp)) {
             return null;
         }
 
-        if (mDrawMarkerRunnable.run(programService, matrixHandler, marker, glImageCache)) {
-            return marker;
+        boolean markerValid = marker.containsPoint(projection, screenLocation, tempPoint, tempRect);
+
+        if(onlyDraggable) {
+            markerValid = marker.isDraggable() && markerValid;
         }
 
+        if (markerValid) {
+            return marker;
+        }
         return null;
     }
 
-    private Marker processMarkerForClick(MarkerClickRunnable runnable, Marker marker, BoundingBox boundingBox) {
-        if (marker == null) {
-            return null;
+    private class DragHandler {
+
+        private final float mTouchSlopSq;
+
+        private Marker mDraggingMarker;
+
+        private float mDragInitialX;
+        private float mDragInitialY;
+
+        private boolean mDragStarted;
+
+        public DragHandler(Context context) {
+            float touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+            mTouchSlopSq = touchSlop * touchSlop;
         }
 
-        Point gp = marker.getPoint();
-
-        // Skip invisible or out of visible area markers
-        if (!marker.isVisible() || !boundingBox.contains(gp)) {
-            return null;
+        public boolean isDragging() {
+            return mDraggingMarker != null;
         }
 
-        if (runnable.run(marker)) {
-            return marker;
+        public boolean onDrag(ScreenProjection projection, MotionEvent event) {
+            int action = event.getActionMasked();
+
+            switch (action) {
+                case MotionEvent.ACTION_UP: {
+                    endDrag(projection, event);
+                    break;
+                }
+                case MotionEvent.ACTION_CANCEL: {
+                    endDrag(projection, event);
+                    break;
+                }
+                default: {
+                    if (mDragStarted) {
+                        for(OSMap.OnMarkerDragListener listener : mMarkerDragListeners) {
+                            listener.onMarkerDrag(mDraggingMarker);
+                        }
+                        updateMarkerPosition(projection, mDraggingMarker, event.getX(), event.getY());
+                    } else {
+                        float dx = event.getX() - mDragInitialX;
+                        float dy = event.getY() - mDragInitialY;
+                        if (dx * dx + dy * dy > mTouchSlopSq) {
+                            mDragStarted = true;
+                        }
+                    }
+                }
+            }
+            return true;
         }
 
-        return null;
+        public void startDrag(ScreenProjection projection, Marker marker, float screenX, float screenY) {
+            mDraggingMarker = marker;
+            mDragStarted = false;
+            mDragInitialX = screenX;
+            mDragInitialY = screenY;
+            emitDragStart(marker);
+            updateMarkerPosition(projection, marker, screenX, screenY);
+        }
+
+        private void emitDragStart(Marker marker) {
+            for(OSMap.OnMarkerDragListener listener : mMarkerDragListeners) {
+                listener.onMarkerDragStart(marker);
+            }
+        }
+
+        private void endDrag(ScreenProjection projection, MotionEvent event) {
+            for(OSMap.OnMarkerDragListener listener : mMarkerDragListeners) {
+                listener.onMarkerDragEnd(mDraggingMarker);
+            }
+            updateMarkerPosition(projection, mDraggingMarker, event.getX(), event.getY());
+            mDraggingMarker = null;
+        }
+
+        private void updateMarkerPosition(ScreenProjection projection, Marker marker, float x, float y) {
+            Point unclamped = projection.fromScreenLocation(x, y);
+            Point clamped = BngUtil.clampToBngBounds(unclamped);
+            marker.setPoint(clamped);
+        }
     }
 
-    private void updateMarkerPosition(ScreenProjection projection, Marker marker, float x, float y) {
-        Point unclamped = projection.fromScreenLocation(x, y);
-        Point clamped = BngUtil.clampToBngBounds(unclamped);
-        marker.setPoint(clamped);
-    }
+    private class MarkerGraphic {
 
-    private void emitInfoWindowClick(Marker marker) {
-        if (mMarkerRendererListener != null) {
-            mMarkerRendererListener.onInfoWindowClick(marker);
+        private final GLImageCache mGlImageCache;
+
+        public MarkerGraphic(GLImageCache imageCache) {
+            mGlImageCache = imageCache;
+        }
+
+        private void drawVisibleMarkers(GLProgramService programService, GLMatrixHandler matrixHandler, BoundingBox boundingBox) {
+            mMarkersLock.readLock().lock();
+            Iterator<Marker> iter = mMarkers.iterator();
+            Marker marker;
+
+            while (iter.hasNext()) {
+                marker = iter.next();
+                drawMarker(programService, matrixHandler, marker, boundingBox);
+            }
+
+            drawMarker(programService, matrixHandler, mExpandedMarker, boundingBox);
+
+            mMarkersLock.readLock().unlock();
+        }
+
+        private void drawMarker(GLProgramService programService, GLMatrixHandler matrixHandler, Marker marker,
+                                BoundingBox boundingBox) {
+            if (marker != null && marker.isVisible()) {
+                Point gp = marker.getPoint();
+
+                // Skip invisible or out of visible area markers
+                if (boundingBox.contains(gp)) {
+                    marker.glDraw(programService, matrixHandler, mGlImageCache);
+                }
+            }
         }
     }
 
-    private boolean emitMarkerClick(Marker marker) {
-        if (mMarkerRendererListener != null) {
-            return mMarkerRendererListener.onMarkerClick(marker);
-        }
-        return false;
-    }
-
-    private void emitMarkerDrag(Marker marker) {
-        if (mMarkerRendererListener != null) {
-            mMarkerRendererListener.onMarkerDrag(marker);
-        }
-    }
-
-    private void emitMarkerDragEnd(Marker marker) {
-        if (mMarkerRendererListener != null) {
-            mMarkerRendererListener.onMarkerDragEnd(marker);
-        }
-    }
-
-    private void emitMarkerDragStart(Marker marker) {
-        if (mMarkerRendererListener != null) {
-            mMarkerRendererListener.onMarkerDragStart(marker);
-        }
+    private class InfoWindowHandler {
 
     }
 }

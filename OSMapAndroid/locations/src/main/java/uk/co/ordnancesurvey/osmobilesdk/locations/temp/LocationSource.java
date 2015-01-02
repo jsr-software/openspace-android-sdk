@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.locations;
+package uk.co.ordnancesurvey.osmobilesdk.locations.temp;
 
 import android.location.Location;
 

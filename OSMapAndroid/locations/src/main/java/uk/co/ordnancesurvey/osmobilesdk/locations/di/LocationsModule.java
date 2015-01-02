@@ -12,17 +12,12 @@ import uk.co.ordnancesurvey.osmobilesdk.locations.AzimuthServiceImpl;
 import uk.co.ordnancesurvey.osmobilesdk.locations.LocationService;
 import uk.co.ordnancesurvey.osmobilesdk.locations.LocationServiceImpl;
 
+/**
+ * Note that this library module requires a Context to be provided by the client Dagger module
+ * to compile.
+ */
 @dagger.Module( library=true, complete = false)
 public class LocationsModule {
-//    private final Context mApplicationContext;
-//
-//    public LocationsModule(Context applicationContext) {
-//        mApplicationContext = applicationContext;
-//    }
-//    public LocationsModule() {
-//
-//    }
-
 
     @Provides @Singleton
     LocationService provideLocationService(Context context) {

@@ -29,10 +29,10 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
  */
 public interface MapProjection {
 
-	/**
-	 * Get the default Map Projection
-	 */
-	public MapProjection getDefault();
+//	/**
+//	 * Get the default Map Projection
+//	 */
+//	public MapProjection getDefault();
 
 	/**
 	 * Converts a WGS84 latitude/longitude to the corresponding BNG Point.

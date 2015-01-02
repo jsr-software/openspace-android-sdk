@@ -333,9 +333,8 @@ print "t/m", T2[0,3],T2[1,3],T2[2,3]
 		return m;
 	}
 
-    @Override
-    public MapProjection getDefault() {
-        return this;
+    public static MapProjection getDefault() {
+        return new BasicMapProjection();
     }
 
     /**

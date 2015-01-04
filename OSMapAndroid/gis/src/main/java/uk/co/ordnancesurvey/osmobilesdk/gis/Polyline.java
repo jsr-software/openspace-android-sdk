@@ -15,7 +15,7 @@ public class Polyline {
      * http://resources.esri.com/help/9.3/arcgisengine/dotnet/570ae98c-5e4a-495b-9894-a16e45fee5ff.htm
      */
     public Polyline() {
-        mPaths = new ArrayList<Multipoint>();
+        mPaths = new ArrayList<>();
     }
 
     /**

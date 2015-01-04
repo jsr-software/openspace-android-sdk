@@ -70,12 +70,9 @@ import static android.opengl.GLES20.glViewport;
 
 /**
  * There are three coordinate systems (at least) in use here.
- * <p/>
  * DisplayCoordinates are internal to this SDK, and have the origin at the centre of the screen, with x/y increasing towards the top-right. Units are pixels. Markers are rendered
  * in DisplayCoordinates.
- * <p/>
  * ScreenCoordinates are standard android, i.e. origin top-left, x/y increases towards the bottom-right. We use these as little as possible.
- * <p/>
  * Tiles are rendered in tile coordinates, which have the origin at the bottom left of the grid (not the screen). The units are tiles (i.e. a tile always has dimensions 1x1) and the
  * actual size of a tile is set up by modifying the projection transform.
  */

@@ -12,7 +12,7 @@ public class Multipoint {
      * An ordered collection of points.  Sometimes synonymous with 'path'
      */
     public Multipoint() {
-        mPoints = new ArrayList<Point>();
+        mPoints = new ArrayList<>();
     }
 
     public Multipoint(List<Point> points) {

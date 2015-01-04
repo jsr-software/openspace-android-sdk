@@ -48,9 +48,7 @@ import static android.opengl.GLES20.glVertexAttribPointer;
  * An icon placed at a particular point on the map's surface. A marker icon is drawn oriented against
  * the device's screen rather than the map's surface; i.e., it will not necessarily change orientation
  * due to map rotations, tilting, or zooming.
- * <p/>
  * A marker has the following properties:
- * <p/>
  * <b>Anchor</b>
  * <br>The point on the image that will be placed at the LatLng position of the marker.
  * This defaults to 50% from the left of the image and at the bottom of the image.
@@ -72,7 +70,6 @@ import static android.opengl.GLES20.glVertexAttribPointer;
  * <p><b>Visibility</b>
  * <br>By default, the marker is visible. To make the marker invisible, set this property to false.
  * You can change this value at any time.
- * <p/>
  * <b>Example</b>
  * <pre>
  * <code>
@@ -298,7 +295,6 @@ public class Marker {
 
     /**
      * Hides the info window if it is shown from this marker.
-     * <p/>
      * This method has no effect if this marker is not visible.
      */
     public void hideInfoWindow() {
@@ -353,6 +349,7 @@ public class Marker {
 
     /**
      * Sets the draggability of the marker. When a marker is draggable, it can be moved by the user by long pressing on the marker.
+     * @param draggable true if overlay is draggable, false otherwise
      */
     public void setIsDraggable(boolean draggable) {
         mIsDraggable = draggable;
@@ -361,6 +358,7 @@ public class Marker {
     /**
      * Sets the visibility of this marker. If set to false and an info window is currently showing
      * for this marker, this will hide the info window.
+     * @param visible true if overlay is visible, false otherwise
      */
     public void setIsVisible(boolean visible) {
         mIsVisible = visible;
@@ -378,6 +376,7 @@ public class Marker {
 
     /**
      * Sets the snippet of the marker.
+     * @param snippet the snippet text to display in an info window
      */
     public void setSnippet(String snippet) {
         mSnippet = snippet;
@@ -386,6 +385,7 @@ public class Marker {
 
     /**
      * Sets the title of the marker.
+     * @param title the title text to display in an info window
      */
     public void setTitle(String title) {
         mTitle = title;

@@ -52,7 +52,7 @@ abstract class ShapeOverlay {
 	/**
 	 * Sets the zIndex.
 	 * Overlays (such as shapes) with higher zIndices are drawn above those with lower indices.
-	 * @param zIndex
+	 * @param zIndex the z index of the overlay
 	 */
 	public void setZIndex(float zIndex) {
 		mZIndex = zIndex;

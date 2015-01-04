@@ -23,7 +23,7 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 /**
- * Options for a {@link Shape}
+ * Options for a {@link uk.co.ordnancesurvey.osmobilesdk.raster.ShapeOverlay}
  */
 abstract class ShapeOptions {
 	private int mFillColor = 0xff000000;

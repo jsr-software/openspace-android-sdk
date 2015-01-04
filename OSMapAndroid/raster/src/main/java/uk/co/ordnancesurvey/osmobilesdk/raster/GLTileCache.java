@@ -145,7 +145,7 @@ public final class GLTileCache {
     /**
      * Fetches a tile from the cache.
      *
-     * @param tile
+     * @param tile the {@link uk.co.ordnancesurvey.osmobilesdk.raster.MapTile} to bind a texture for
      * @return The texture ID of the cached tile, or 0.
      */
     public int bindTextureForTile(MapTile tile) {
@@ -164,8 +164,8 @@ public final class GLTileCache {
     /**
      * Uploads a bitmap to a texture and adds it to the cache.
      *
-     * @param tile
-     * @param bitmap
+     * @param tile the {@link uk.co.ordnancesurvey.osmobilesdk.raster.MapTile} to cache a texture for
+     * @param bitmap the texture to cache
      * @return The texture ID of the newly-uploaded texture.
      */
     public int putTextureForTile(MapTile tile, Bitmap bitmap) {

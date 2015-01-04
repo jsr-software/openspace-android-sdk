@@ -25,7 +25,8 @@ package uk.co.ordnancesurvey.osmobilesdk.raster.layers;
 import java.io.Serializable;
 
 /**
- * A {@link .BaseMap} is a container for a client side determined array of {@link .Layer} objects
+ * A {@link uk.co.ordnancesurvey.osmobilesdk.raster.layers.Basemap} is a container for a client
+ * side determined array of {@link uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer} objects
  */
 public abstract class Basemap implements Serializable {
     private final String mBasemapName;

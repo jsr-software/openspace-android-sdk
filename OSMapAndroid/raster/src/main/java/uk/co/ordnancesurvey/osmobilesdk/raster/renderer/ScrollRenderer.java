@@ -368,10 +368,9 @@ public class ScrollRenderer extends BaseRenderer {
     }
 
 
-    /**
-     *
-     * NEW STUFF
-     */
+
+
+    // NEW INTERFACE
     public void onFling(float velocityX, float velocityY) {
         scrollMap(0, 0, 1, 0, 0, -velocityX, -velocityY);
     }

@@ -25,7 +25,8 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 
 /**
- * Encapsulates the conversion between a {@link .Point} in WGS84 to a {@link Point} in BNG.
+ * Encapsulates the conversion between a {@link uk.co.ordnancesurvey.osmobilesdk.gis.Point}
+ * in WGS84 to a {@link uk.co.ordnancesurvey.osmobilesdk.gis.Point} in BNG.
  */
 public interface MapProjection {
 
@@ -42,7 +43,7 @@ public interface MapProjection {
 	public abstract Point toBng(Point point);
 
     /**
-     * Converts a BNG {@link .Point} to the corresponding WGS84 Point.
+     * Converts a BNG {@link uk.co.ordnancesurvey.osmobilesdk.gis.Point} to the corresponding WGS84 Point.
      * @param point - the Point using BNG projection
      * @return newly created Point
      */

@@ -31,8 +31,7 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 /**
  * This is the main class of the Raster map module of the OS Mobile SDK and is the entry point for all methods related to the map. You cannot
  * instantiate an {@link OSMap} object directly, rather, you must obtain one from the {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapView#getMap()} method on a
- * {@link .MapFragment} or {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapView} that you have added to your application.
- * <p/>
+ * {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapFragment} or {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapView} that you have added to your application.
  * <b>Note:</b> Similar to a android.view.View View object, an {@link OSMap} can only be read and modified from the main thread.
  * Calling {@link OSMap} methods from another thread may result in an exception.
  */
@@ -90,7 +89,7 @@ public interface OSMap {
     /**
      * Set the {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration} for the current view
      *
-     * @param mapConfiguration
+     * @param mapConfiguration the new {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration}
      */
     void setMapConfiguration(MapConfiguration mapConfiguration);
 
@@ -106,7 +105,6 @@ public interface OSMap {
      * Methods on this provider are called when it is time to show an info window for a marker, regardless of the cause
      * (either a user gesture or a programmatic call to {@link Marker#showInfoWindow()}. Since there is only one info window shown at
      * any one time, this provider may choose to reuse views, or it may choose to create new views on each method invocation.
-     * <p/>
      * When constructing an info-window, methods in this class are called in a defined order. To replace the default info-window,
      * override {@link #getInfoWindow(Marker)} with your custom rendering. To replace just the info-window contents, inside the default info-window
      * frame (the callout bubble), leave the default implementation of {@link #getInfoWindow(Marker)} in place and override
@@ -139,7 +137,6 @@ public interface OSMap {
     /**
      * Callback interface for when the visible bounds of the map is  changed. This can be
      * triggered from a user gesture or a programmatic map change.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnBoundsChangeListener {
@@ -156,7 +153,6 @@ public interface OSMap {
 
     /**
      * Callback interface for when the user makes a double tap gesture on the map.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnDoubleTapListener {
@@ -172,7 +168,6 @@ public interface OSMap {
 
     /**
      * Callback interface for when the user makes a fling gesture on the map.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnFlingListener {
@@ -188,7 +183,6 @@ public interface OSMap {
 
     /**
      * Callback interface for tap events on a marker's info window.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnInfoWindowTapListener {
@@ -202,7 +196,6 @@ public interface OSMap {
 
     /**
      * Callback interface for when the user makes a long press gesture on the map.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnLongPressListener {
@@ -218,7 +211,6 @@ public interface OSMap {
 
     /**
      * Callback interface for when the user touches on the map.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnMapTouchListener {
@@ -233,7 +225,6 @@ public interface OSMap {
 
     /**
      * Callback interface for drag events on markers.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnMarkerDragListener {
@@ -262,7 +253,6 @@ public interface OSMap {
 
     /**
      * Callback interface for when the user taps a marker on the map.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnMarkerTapListener {
@@ -277,7 +267,6 @@ public interface OSMap {
 
     /**
      * Callback interface for when the user makes a pan gesture on the map.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnPanListener {
@@ -293,7 +282,6 @@ public interface OSMap {
 
     /**
      * Callback interface for when the user makes a pinch in or pinch out gesture on the map.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnPinchListener {
@@ -306,7 +294,6 @@ public interface OSMap {
 
     /**
      * Callback interface for when the user makes a single tap on the map.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnSingleTapListener {
@@ -322,7 +309,6 @@ public interface OSMap {
     /**
      * Callback interface for when the zoom level of the map is changed. This can be triggered from
      * a user gesture or a programmatic map change.
-     * <p/>
      * Listeners will be invoked on the main thread.
      */
     public interface OnZoomChangeListener {
@@ -397,7 +383,7 @@ public interface OSMap {
     public void addOnMapTouchListener(OnMapTouchListener onMapTouchListener);
 
     /**
-     * Sets a callback object for when a {@link .Marker} is dragged.
+     * Sets a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.Marker} is dragged.
      * Note that there can be multiple callbacks added. Each callback will receive the events.
      *
      * @param onMarkerDragListener The callback that will be invoked on a Marker drag event
@@ -405,7 +391,7 @@ public interface OSMap {
     public void addOnMarkerDragListener(OnMarkerDragListener onMarkerDragListener);
 
     /**
-     * Sets a callback object for when a {@link .Marker} is tapped.
+     * Sets a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.Marker} is tapped.
      * Note that there can be multiple callbacks added. Each callback will receive the event.
      *
      * @param onMarkerTapListener The callback that will be invoked on a Marker tap event
@@ -448,25 +434,25 @@ public interface OSMap {
 
     /**
      * Remove a circle object from the map
-     * @param circle
+     * @param circle the circle to remove
      */
     public void removeCircle(Circle circle);
 
     /**
      * Remove a Marker object from the map
-     * @param marker
+     * @param marker the marker to remove
      */
     public void removeMarker(Marker marker);
 
     /**
      * Remove a Polyline object from the map
-     * @param polyline
+     * @param polyline the polyline to remove
      */
     public void removePolyline(Polyline polyline);
 
     /**
      * Remove a Polygon object from the map
-     * @param polygon
+     * @param polygon the polygon to remove
      */
     public void removePolygon(Polygon polygon);
 
@@ -518,14 +504,14 @@ public interface OSMap {
     public void removeOnMapTouchListener(OnMapTouchListener onMapTouchListener);
 
     /**
-     * Removes a callback object for when a {@link .Marker} is dragged.
+     * Removes a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.Marker} is dragged.
      *
      * @param onMarkerDragListener The callback that will be removed
      */
     public void removeOnMarkerDragListener(OnMarkerDragListener onMarkerDragListener);
 
     /**
-     * Removes a callback object for when a {@link .Marker} is tapped.
+     * Removes a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.Marker} is tapped.
      *
      * @param onMarkerTapListener The callback that will be removed
      */
@@ -561,7 +547,6 @@ public interface OSMap {
 
     /**
      * Sets a custom renderer for the contents of info windows.
-     * <p/>
      * Like the map's event listeners, this state is not serialized with the map. If the map gets re-created
      * (e.g., due to a configuration change), you must ensure that you call this method again in order to preserve the customization.
      *

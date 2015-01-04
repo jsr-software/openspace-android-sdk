@@ -31,8 +31,8 @@ public interface LayerSource {
      *
      * <b>Implementations must be thread-safe.</b>
      *
-     * @param tile
-     * @return
+     * @param tile the {@link uk.co.ordnancesurvey.osmobilesdk.raster.MapTile} to get data for
+     * @return the data as a byte array
      */
     public byte[] getTileData(MapTile tile);
 }

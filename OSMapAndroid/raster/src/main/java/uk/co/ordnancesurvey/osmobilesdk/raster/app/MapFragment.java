@@ -40,18 +40,14 @@ import android.view.ViewGroup;
  * android:layout_width="match_parent"
  * android:layout_height="match_parent"/&gt;
  * </code>
- * <p/>
  * An {@link uk.co.ordnancesurvey.osmobilesdk.raster.OSMap} can only be acquired using {@link #getMap()} when the underlying maps system is loaded and the underlying
  * view in the fragment exists. This class automatically initializes the maps system and the view. If an {@link uk.co.ordnancesurvey.osmobilesdk.raster.OSMap}
  * is not available, {@link #getMap()} will return null.
- * <p/>
  * A view can be removed when the MapFragment's {@link #onDestroyView()} method is called. When this happens the MapFragment
  * is no longer valid until the view is recreated again later when MapFragment's onCreateView(LayoutInflater, ViewGroup, Bundle)
  * method is called.
- * <p/>
  * Any objects obtained from the {@link uk.co.ordnancesurvey.osmobilesdk.raster.OSMap} are associated with the view. It's important to not hold on to objects
  * (e.g. {@link uk.co.ordnancesurvey.osmobilesdk.raster.Marker}) beyond the view's life. Otherwise it will cause a memory leak as the view cannot be released.
- * <p/>
  * Use this class only if you are targeting API 11 and above. Otherwise, use SupportMapFragment.
  */
 @TargetApi(14)
@@ -98,8 +94,6 @@ public class MapFragment extends Fragment {
 
     /**
      * Gets the underlying {@link uk.co.ordnancesurvey.osmobilesdk.raster.OSMap} that is tied to the view wrapped by this fragment.
-     * <p/>
-     *
      * @return Returns the OSMap. Null if the view of the fragment is not yet ready.
      * This can happen if the fragment lifecyle have not gone through onCreateView(LayoutInflater, ViewGroup, Bundle) yet.
      */

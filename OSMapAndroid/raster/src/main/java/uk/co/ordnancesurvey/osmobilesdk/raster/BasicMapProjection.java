@@ -348,7 +348,8 @@ print "t/m", T2[0,3],T2[1,3],T2[2,3]
     }
 
     /**
-     * Converts a BNG {@link .Point} to the corresponding WGS84 Point.
+     * Converts a BNG {@link uk.co.ordnancesurvey.osmobilesdk.gis.Point} to the corresponding
+     * WGS84 Point.
      * @param point - the Point using BNG projection
      * @return newly created Point
      */

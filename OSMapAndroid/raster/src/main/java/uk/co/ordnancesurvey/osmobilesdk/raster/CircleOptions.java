@@ -31,7 +31,7 @@ public final class CircleOptions extends ShapeOptions {
 	/**
 	 * Sets the zIndex.
 	 * Overlays (such as circles) with higher zIndices are drawn above those with lower indices.
-	 * @param zIndex
+	 * @param zIndex the z index of the overlay
 	 * @return this CircleOptions object
 	 */
 	public CircleOptions zIndex(float zIndex)

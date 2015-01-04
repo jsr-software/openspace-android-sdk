@@ -86,6 +86,7 @@ public final class MapView extends FrameLayout {
     /**
      * Must be forwarded from the containing Activity/Fragment.
      * Saving/restoring instance state is not supported yet.
+     * @param savedInstanceState saved bundle
      */
     public final void onCreate(Bundle savedInstanceState) {
     }
@@ -120,6 +121,7 @@ public final class MapView extends FrameLayout {
     /**
      * Must be forwarded from the containing Activity/Fragment.
      * Saving/restoring instance state is not supported yet.
+     * @param outState outgoing bundle
      */
     public final void onSaveInstanceState(Bundle outState) {
     }

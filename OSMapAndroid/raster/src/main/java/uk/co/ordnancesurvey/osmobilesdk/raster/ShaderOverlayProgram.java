@@ -25,9 +25,9 @@ package uk.co.ordnancesurvey.osmobilesdk.raster;
 import static android.opengl.GLES20.*;
 
 public class ShaderOverlayProgram extends GLProgram {
-	final int uniformMVP;
-	final int uniformColor;
-	final int attribVCoord;
+	public final int uniformMVP;
+	public final int uniformColor;
+	public final int attribVCoord;
 
 	public ShaderOverlayProgram()
 	{		

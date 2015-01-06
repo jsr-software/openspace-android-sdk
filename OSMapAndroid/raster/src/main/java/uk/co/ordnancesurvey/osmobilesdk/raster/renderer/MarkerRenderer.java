@@ -24,7 +24,6 @@ package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
 
 import android.annotation.TargetApi;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
@@ -50,7 +49,7 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLImageCache;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Images;
-import uk.co.ordnancesurvey.osmobilesdk.raster.Marker;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
 

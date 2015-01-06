@@ -22,28 +22,10 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
-public final class Polyline extends PolyOverlay {
-	public Polyline(PolylineOptions options, GLMapRenderer map)
-	{
-		super(options, map, false);		
-	}
-	
-	
-	public void setColor(int color) {
-		super.setStrokeColor(color);
-	}
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.PolyAnnotation;
 
-	public void setWidth(float width) {
-		super.setStrokeWidth(width);
-	}
-
-	public int getColor() {
-		return super.getStrokeColor();
-	}
-
-	public float getWidth() {
-		return super.getStrokeWidth();
-	}
-	
-	
+public final class Polyline extends PolyAnnotation {
+    public Polyline(PolylineOptions options) {
+        super(options, false);
+    }
 }

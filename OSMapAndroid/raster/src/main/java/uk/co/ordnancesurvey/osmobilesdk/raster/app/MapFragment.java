@@ -47,7 +47,7 @@ import android.view.ViewGroup;
  * is no longer valid until the view is recreated again later when MapFragment's onCreateView(LayoutInflater, ViewGroup, Bundle)
  * method is called.
  * Any objects obtained from the {@link uk.co.ordnancesurvey.osmobilesdk.raster.OSMap} are associated with the view. It's important to not hold on to objects
- * (e.g. {@link uk.co.ordnancesurvey.osmobilesdk.raster.Marker}) beyond the view's life. Otherwise it will cause a memory leak as the view cannot be released.
+ * (e.g. {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker}) beyond the view's life. Otherwise it will cause a memory leak as the view cannot be released.
  * Use this class only if you are targeting API 11 and above. Otherwise, use SupportMapFragment.
  */
 @TargetApi(14)

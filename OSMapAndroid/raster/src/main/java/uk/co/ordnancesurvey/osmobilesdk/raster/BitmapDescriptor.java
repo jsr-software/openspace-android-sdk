@@ -40,9 +40,9 @@ public final class BitmapDescriptor {
 	private final Type mType;
 
 	private final Bitmap mBitmap;
-	final float mTintR;
-	final float mTintG;
-	final float mTintB;
+	public final float mTintR;
+	public final float mTintG;
+	public final float mTintB;
 
 	private final String mPathString;
 	private final int mResourceId;

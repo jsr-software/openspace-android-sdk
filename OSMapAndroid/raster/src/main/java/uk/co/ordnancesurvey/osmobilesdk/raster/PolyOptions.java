@@ -28,7 +28,7 @@ import java.util.List;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 
-abstract class PolyOptions extends ShapeOptions {
+public abstract class PolyOptions extends ShapeOptions {
 	ArrayList<Point> mPoints = new ArrayList<Point>();
 	boolean mPixelCoordinates;
 	
@@ -37,7 +37,7 @@ abstract class PolyOptions extends ShapeOptions {
 		return Collections.unmodifiableList(mPoints);
 	}
 		
-	boolean getPixelCoordinates()
+	public boolean getPixelCoordinates()
 	{
 		return mPixelCoordinates;
 	}

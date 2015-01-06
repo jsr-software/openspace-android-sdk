@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.annotations;
 
 import static android.opengl.GLES20.*;
 
@@ -29,6 +29,12 @@ import java.nio.FloatBuffer;
 import android.graphics.PointF;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.CircleOptions;
+import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderCircleProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.ShapeAnnotation;
 
 /**
  * A circle in the OS National Grid projection.
@@ -49,71 +55,72 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
  * other properties. The default is true, i.e., visible.
  * <p>Methods that modify a Polygon must be called on the main thread. If not, an IllegalStateException may be thrown at runtime.
  */
-public final class Circle extends ShapeOverlay {
+public final class Circle extends ShapeAnnotation {
 	private Point mCenter;
 	private double mRadius;
 
-	public Circle(CircleOptions options, GLMapRenderer map) {
-		super(options, map);
-
+	public Circle(CircleOptions options) {
 		mCenter = options.getCenter();
 		mRadius = options.getRadius();
+        mStrokeColor = options.getStrokeColor();
+        mStrokeWidth = options.getStrokeWidth();
+        mFillColor = options.getFillColor();
 	}
 
+    /**
+     * Returns the center as a {@link Point}
+     *
+     * @return The geographic center as a {@link Point}.
+     */
+    public Point getCenterPoint() {
+        return mCenter;
+    }
 
-	/**
-	 * Returns the center as a {@link Point}
-	 * @return The geographic center as a {@link Point}.
-	 */
-	public Point getCenter() {
-		return mCenter;
-	}
+    /**
+     * Returns the circle's radius, in meters.
+     *
+     * @return The radius in meters.
+     */
+    public double getRadius() {
+        return mRadius;
+    }
 
-	/**
-	 * Sets the center using a {@link Point}.
-	 * <p>
-	 * The center must not be null, as there is no default value.
-	 * @param center	The geographic center of the circle, specified as a {@link Point}.
-	 */
-	public void setCenter(Point center) {
-		if(mCenter == null || mCenter.getX() != center.getX() || mCenter.getY() != center.getY())
-		{
-			requestRender();
-		}
-		mCenter = center;
-	}
+    /**
+     * Sets the center using a {@link Point}.
+     * <p/>
+     * The center must not be null, as there is no default value.
+     *
+     * @param center The geographic center of the circle, specified as a {@link Point}.
+     */
+    public void setCenterPoint(Point center) {
+        if (mCenter == null || mCenter.getX() != center.getX() || mCenter.getY() != center.getY()) {
+            requestRender();
+        }
+        mCenter = center;
+    }
 
-	/**
-	 * Returns the circle's radius, in meters.
-	 * @return The radius in meters.
-	 */
-	public double getRadius() {
-		return mRadius;
-	}
-
-	/**
-	 * Sets the radius in meters.
-	 * <p>
-	 * The radius must be zero or greater.
-	 * @param radius	The radius, in meters.
-	 */
-	public void setRadius(double radius) {
-		if(radius != mRadius)
-		{
-			requestRender();
-		}
-		mRadius = radius;
-	}
+    /**
+     * Sets the radius in meters.
+     * <p/>
+     * The radius must be zero or greater.
+     *
+     * @param radius The radius, in meters.
+     */
+    public void setRadius(double radius) {
+        if (radius != mRadius) {
+            requestRender();
+        }
+        mRadius = radius;
+    }
 
 
-	public void glDraw(PointF tempPoint, FloatBuffer tempFloatBuffer, ShaderCircleProgram program) {
-		GLMapRenderer map = getMap();
-		if (map == null)
+	public void glDraw(ScreenProjection projection, PointF tempPoint, FloatBuffer tempFloatBuffer, ShaderCircleProgram program) {
+		if (mBaseRenderer == null)
 		{
 			return;
 		}
 
-		Point center = getCenter();
+		Point center = mCenter;
 		if(center == null)
 		{
 			return;
@@ -126,7 +133,6 @@ public final class Circle extends ShapeOverlay {
 		Utils.setUniformPremultipliedColorARGB(program.uniformFillColor, fillColor);
 		Utils.setUniformPremultipliedColorARGB(program.uniformStrokeColor, strokeColor);
 
-		ScreenProjection projection = map.getProjection();
 		PointF displayCenter = projection.displayPointFromPoint(center, tempPoint);
 		float mpp = projection.getMetresPerPixel();
 		float displayRadius = (float)radius/mpp;

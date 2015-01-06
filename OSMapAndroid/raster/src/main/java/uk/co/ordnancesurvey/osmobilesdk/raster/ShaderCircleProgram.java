@@ -26,10 +26,10 @@ import static android.opengl.GLES20.*;
 
 public class ShaderCircleProgram extends GLProgram {
 	public final int uniformMVP;
-	final int uniformFillColor;
-	final int uniformStrokeColor;
-	final int uniformCenterRadius;
-	final int attribVCoord;
+	public final int uniformFillColor;
+	public final int uniformStrokeColor;
+	public final int uniformCenterRadius;
+	public final int attribVCoord;
 
 	public ShaderCircleProgram()
 	{

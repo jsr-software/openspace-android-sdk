@@ -43,6 +43,8 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Circle;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureDetector;
 import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
@@ -226,10 +228,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         requestRender();
     }
 
-
-
-
-
     @Override
     public final Polyline addPolyline(PolylineOptions polylineOptions) {
         return mOverlayRenderer.addPolyline(polylineOptions);
@@ -288,8 +286,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
 
         boolean needRedraw = mTileRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection, frameTime, mScrollPosition);
-        mOverlayRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, metresPerPixel);
-        mCircleRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, mGLViewportWidth, mGLViewportHeight);
+        mOverlayRenderer.onDrawFrame(projection, mProgramService, mGLMatrixHandler, metresPerPixel);
+        mCircleRenderer.onDrawFrame(projection, mProgramService, mGLMatrixHandler, mGLViewportWidth, mGLViewportHeight);
         mMarkerRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection);
 
         if (needRedraw) {

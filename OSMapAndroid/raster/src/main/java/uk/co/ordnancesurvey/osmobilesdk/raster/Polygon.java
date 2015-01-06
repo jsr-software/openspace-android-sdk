@@ -22,45 +22,17 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.PolyAnnotation;
+
 import static android.opengl.GLES20.*;
 
-public final class Polygon extends PolyOverlay {
-	public Polygon(PolygonOptions options, GLMapRenderer map) {
-		super(options, map, true);
+public final class Polygon extends PolyAnnotation {
+	public Polygon(PolygonOptions options) {
+		super(options, true);
 	}
 
 	@Override
-	public void setStrokeColor(int color) {
-		super.setStrokeColor(color);
-	}
-
-	@Override
-	public void setStrokeWidth(float width) {
-		super.setStrokeWidth(width);
-	}
-
-	@Override
-	public void setFillColor(int fillColor) {
-		super.setFillColor(fillColor);
-	}
-
-	@Override
-	public int getStrokeColor() {
-		return super.getStrokeColor();
-	}
-
-	@Override
-	public float getStrokeWidth() {
-		return super.getStrokeWidth();
-	}
-
-	@Override
-	public int getFillColor() {
-		return super.getFillColor();
-	}
-
-	@Override
-	void glDrawPoints(int shaderOverlayUniformColor, PolyPoints points, float metresPerPixel, int shaderOverlayAttribVCoord) {
+    protected void glDrawPoints(int shaderOverlayUniformColor, PolyPoints points, float metresPerPixel, int shaderOverlayAttribVCoord) {
 		int fillColor = getFillColor();
 		Utils.setUniformPremultipliedColorARGB(shaderOverlayUniformColor, fillColor);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, points.mVertexCount);

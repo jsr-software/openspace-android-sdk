@@ -79,11 +79,11 @@ public final class GLImageCache {
 	* It becomes invalid when the GL context is lost.
 	* The texture may also be deleted on any future call to bindTextureForBitmap() if the bitmap becomes unreachable.
 	*/
-	final static class ImageTexture extends WeakReference<Bitmap> {
+	public final static class ImageTexture extends WeakReference<Bitmap> {
 		final int textureId;
-		final int width;
-		final int height;
-		final FloatBuffer vertexCoords;
+		public final int width;
+		public final int height;
+		public final FloatBuffer vertexCoords;
 		public ImageTexture(Bitmap bmp, ReferenceQueue<Bitmap> queue) {
 			super(bmp, queue);
 			// TODO: Is this really the right place?

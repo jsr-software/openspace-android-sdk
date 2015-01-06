@@ -94,7 +94,7 @@ public final class ScreenProjection {
         return mCentre;
     }
 
-    PointF displayPointFromPoint(Point gp, PointF displayPointOut) {
+    public PointF displayPointFromPoint(Point gp, PointF displayPointOut) {
         double mapCenterX = mCentre.getX();
         double mapCenterY = mCentre.getY();
         float metresPerPixel = mMetresPerPixel;

@@ -23,9 +23,9 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
 /**
- * Options for a {@link uk.co.ordnancesurvey.osmobilesdk.raster.ShapeOverlay}
+ * Options for a {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.ShapeAnnotation}
  */
-abstract class ShapeOptions {
+public abstract class ShapeOptions {
 	private int mFillColor = 0xff000000;
 	private int mStrokeColor = 0xff000000;
 	private float mStrokeWidth = 10;
@@ -53,7 +53,7 @@ abstract class ShapeOptions {
 	 * Returns the stroke color.
 	 * @return The color in ARGB format.
 	 */
-	int getStrokeColor() {
+    public int getStrokeColor() {
 		return mStrokeColor;
 	}
 
@@ -61,7 +61,7 @@ abstract class ShapeOptions {
 	 * Returns the stroke width.
 	 * @return The width in screen pixels.
 	 */
-	float getStrokeWidth() {
+    public float getStrokeWidth() {
 		return mStrokeWidth;
 	}
 
@@ -70,7 +70,7 @@ abstract class ShapeOptions {
 	 * Returns the fill color
 	 * @return The  color in ARGB format.
 	 */
-	int getFillColor() {
+    public int getFillColor() {
 		return mFillColor;
 	}
 

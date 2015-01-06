@@ -26,7 +26,8 @@ import android.opengl.Matrix;
 
 import java.util.LinkedList;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.Circle;
+import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Circle;
 import uk.co.ordnancesurvey.osmobilesdk.raster.CircleOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderCircleProgram;
@@ -43,7 +44,8 @@ public class CircleRenderer extends BaseRenderer {
     }
 
     public Circle addCircle(CircleOptions circleOptions) {
-        Circle circle = new Circle(circleOptions, mMapRenderer);
+        Circle circle = new Circle(circleOptions);
+        circle.setBaseRenderer(this);
         synchronized (mCircleOverlays) {
             mCircleOverlays.add(circle);
         }
@@ -57,7 +59,7 @@ public class CircleRenderer extends BaseRenderer {
         }
     }
 
-    public void onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, int viewportWidth, int viewportHeight) {
+    public void onDrawFrame(ScreenProjection projection, GLProgramService programService, GLMatrixHandler matrixHandler, int viewportWidth, int viewportHeight) {
         programService.setActiveProgram(GLProgramService.GLProgramType.CIRCLE);
         ShaderCircleProgram program = programService.getShaderCircleProgram();
 
@@ -70,7 +72,7 @@ public class CircleRenderer extends BaseRenderer {
         Utils.throwIfErrors();
         synchronized (mCircleOverlays) {
             for (Circle circle : mCircleOverlays) {
-                circle.glDraw(matrixHandler.getTempPoint(), matrixHandler.getTempBuffer(), program);
+                circle.glDraw(projection, matrixHandler.getTempPoint(), matrixHandler.getTempBuffer(), program);
             }
         }
         Utils.throwIfErrors();

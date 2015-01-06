@@ -26,6 +26,8 @@ import android.view.View;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Circle;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 
 /**
@@ -103,17 +105,17 @@ public interface OSMap {
 
     /**
      * Methods on this provider are called when it is time to show an info window for a marker, regardless of the cause
-     * (either a user gesture or a programmatic call to {@link Marker#showInfoWindow()}. Since there is only one info window shown at
+     * (either a user gesture or a programmatic call to {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker#showInfoWindow()}. Since there is only one info window shown at
      * any one time, this provider may choose to reuse views, or it may choose to create new views on each method invocation.
      * When constructing an info-window, methods in this class are called in a defined order. To replace the default info-window,
-     * override {@link #getInfoWindow(Marker)} with your custom rendering. To replace just the info-window contents, inside the default info-window
-     * frame (the callout bubble), leave the default implementation of {@link #getInfoWindow(Marker)} in place and override
-     * {@link #getInfoContents(Marker)} instead.
+     * override {@link #getInfoWindow(uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker)} with your custom rendering. To replace just the info-window contents, inside the default info-window
+     * frame (the callout bubble), leave the default implementation of {@link #getInfoWindow(uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker)} in place and override
+     * {@link #getInfoContents(uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker)} instead.
      */
     public interface InfoWindowAdapter {
         /**
          * Provides custom contents for the default info-window frame of a marker. This method is only called if
-         * {@link #getInfoWindow(Marker)} first returns null. If this method returns a view, it will be placed inside
+         * {@link #getInfoWindow(uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker)} first returns null. If this method returns a view, it will be placed inside
          * the default info-window frame. If you change this view after this method is called, those changes will not
          * necessarily be reflected in the rendered info-window. If this method returns null, the default rendering will be used instead.
          *
@@ -383,7 +385,7 @@ public interface OSMap {
     public void addOnMapTouchListener(OnMapTouchListener onMapTouchListener);
 
     /**
-     * Sets a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.Marker} is dragged.
+     * Sets a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker} is dragged.
      * Note that there can be multiple callbacks added. Each callback will receive the events.
      *
      * @param onMarkerDragListener The callback that will be invoked on a Marker drag event
@@ -391,7 +393,7 @@ public interface OSMap {
     public void addOnMarkerDragListener(OnMarkerDragListener onMarkerDragListener);
 
     /**
-     * Sets a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.Marker} is tapped.
+     * Sets a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker} is tapped.
      * Note that there can be multiple callbacks added. Each callback will receive the event.
      *
      * @param onMarkerTapListener The callback that will be invoked on a Marker tap event
@@ -504,14 +506,14 @@ public interface OSMap {
     public void removeOnMapTouchListener(OnMapTouchListener onMapTouchListener);
 
     /**
-     * Removes a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.Marker} is dragged.
+     * Removes a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker} is dragged.
      *
      * @param onMarkerDragListener The callback that will be removed
      */
     public void removeOnMarkerDragListener(OnMarkerDragListener onMarkerDragListener);
 
     /**
-     * Removes a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.Marker} is tapped.
+     * Removes a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker} is tapped.
      *
      * @param onMarkerTapListener The callback that will be removed
      */

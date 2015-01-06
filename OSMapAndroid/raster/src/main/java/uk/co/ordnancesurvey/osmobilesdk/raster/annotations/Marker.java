@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.annotations;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -31,7 +31,12 @@ import android.opengl.Matrix;
 import android.view.View;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.BaseRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BitmapDescriptor;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BitmapDescriptorFactory;
+import uk.co.ordnancesurvey.osmobilesdk.raster.GLImageCache;
+import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMatrixHandler;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLProgramService;
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.MarkerRenderer;
@@ -84,7 +89,7 @@ import static android.opengl.GLES20.glVertexAttribPointer;
  * <b>Developer Guide</b>
  * <p>For more information, read the Markers developer guide.
  */
-public class Marker {
+public class Marker extends Annotation {
 
     public static class Builder {
 
@@ -154,7 +159,7 @@ public class Marker {
         }
     }
 
-    private static final float ZERO_COMPARISON = 0.001f;
+
 
     private final Bitmap mIconBitmap;
     private final float mAnchorU;
@@ -164,8 +169,6 @@ public class Marker {
     private final float mIconTintB;
 
     private boolean mIsDraggable = false;
-    private boolean mIsVisible = true;
-    private float mBearing = 0;
     private Point mPoint;
     private String mSnippet;
     private String mTitle;
@@ -332,21 +335,6 @@ public class Marker {
         return mIsDraggable;
     }
 
-    public boolean isVisible() {
-        return mIsVisible;
-    }
-
-    /**
-     * Sets the bearing of the ground overlay (the direction that the vertical axis of the marker points) in degrees
-     * clockwise from north. The rotation is performed about the anchor point.
-     *
-     * @param bearing bearing in degrees clockwise from north
-     */
-    public void setBearing(float bearing) {
-        mBearing = bearing;
-        requestRender();
-    }
-
     /**
      * Sets the draggability of the marker. When a marker is draggable, it can be moved by the user by long pressing on the marker.
      * @param draggable true if overlay is draggable, false otherwise
@@ -356,21 +344,16 @@ public class Marker {
     }
 
     /**
-     * Sets the visibility of this marker. If set to false and an info window is currently showing
-     * for this marker, this will hide the info window.
-     * @param visible true if overlay is visible, false otherwise
+     * Sets the {@link uk.co.ordnancesurvey.osmobilesdk.gis.Point} that the marker is anchored on.
+     * @param point the new anchor point.
      */
-    public void setIsVisible(boolean visible) {
-        mIsVisible = visible;
-        requestRender();
-    }
-
     public void setPoint(Point point) {
         mPoint = point;
         requestRender();
     }
 
     public void setRenderer(MarkerRenderer markerRenderer) {
+        super.setBaseRenderer(markerRenderer);
         mMarkerRenderer = markerRenderer;
     }
 
@@ -437,12 +420,6 @@ public class Marker {
         screenLocationOut.y -= height * mAnchorV;
 
         return screenLocationOut;
-    }
-
-    private void requestRender() {
-        if (mMarkerRenderer != null) {
-            mMarkerRenderer.emitRenderRequest();
-        }
     }
 
     private void setInfoWindowHighlighted(boolean highlighted) {

@@ -45,6 +45,8 @@ import javax.microedition.khronos.opengles.GL10;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Circle;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polygon;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polyline;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureDetector;
 import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
@@ -221,34 +223,6 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     @Override
-    public void clear() {
-        mCircleRenderer.clear();
-        mMarkerRenderer.clear();
-        mOverlayRenderer.clear();
-        requestRender();
-    }
-
-    @Override
-    public final Polyline addPolyline(PolylineOptions polylineOptions) {
-        return mOverlayRenderer.addPolyline(polylineOptions);
-    }
-
-    @Override
-    public final Polygon addPolygon(PolygonOptions polygonOptions) {
-        return mOverlayRenderer.addPolygon(polygonOptions);
-    }
-
-    @Override
-    public final Circle addCircle(CircleOptions circleOptions) {
-        return mCircleRenderer.addCircle(circleOptions);
-    }
-
-    @Override
-    public void removeCircle(Circle circle) {
-        mCircleRenderer.removeCircle(circle);
-    }
-
-    @Override
     public void tileReadyAsyncCallback(final MapTile tile, final Bitmap bmp) {
         queueEvent(new Runnable() {
             public void run() {
@@ -368,8 +342,23 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     private final List<OnZoomChangeListener> mZoomChangeListeners = new ArrayList<>();
 
     @Override
+    public final Circle addCircle(Circle.Builder circleBuilder) {
+        return mCircleRenderer.addCircle(circleBuilder);
+    }
+
+    @Override
     public Marker addMarker(Marker.Builder builder) {
         return mMarkerRenderer.addMarker(builder);
+    }
+
+    @Override
+    public Polygon addPolygon(Polygon.Builder builder) {
+        return mOverlayRenderer.addPolygon(builder);
+    }
+
+    @Override
+    public Polyline addPolyline(Polyline.Builder builder) {
+        return mOverlayRenderer.addPolyline(builder);
     }
 
     @Override
@@ -433,8 +422,21 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     @Override
+    public void clear() {
+        mCircleRenderer.clear();
+        mMarkerRenderer.clear();
+        mOverlayRenderer.clear();
+        requestRender();
+    }
+
+    @Override
     public void removeInfoWindowAdapter() {
         mMarkerRenderer.removeInfoWindowAdapter();
+    }
+
+    @Override
+    public void removeCircle(Circle circle) {
+        mCircleRenderer.removeCircle(circle);
     }
 
     @Override

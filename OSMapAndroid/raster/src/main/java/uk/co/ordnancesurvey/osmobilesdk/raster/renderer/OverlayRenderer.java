@@ -5,10 +5,8 @@ import java.util.LinkedList;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.PolyAnnotation;
-import uk.co.ordnancesurvey.osmobilesdk.raster.Polygon;
-import uk.co.ordnancesurvey.osmobilesdk.raster.PolygonOptions;
-import uk.co.ordnancesurvey.osmobilesdk.raster.Polyline;
-import uk.co.ordnancesurvey.osmobilesdk.raster.PolylineOptions;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polygon;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polyline;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 
 import static android.opengl.GLES20.GL_BLEND;
@@ -22,8 +20,8 @@ public class OverlayRenderer extends BaseRenderer {
         super(mapRenderer, listener);
     }
 
-    public Polygon addPolygon(PolygonOptions polygonOptions) {
-        Polygon polygon = new Polygon(polygonOptions);
+    public Polygon addPolygon(Polygon.Builder builder) {
+        Polygon polygon = builder.build();
         polygon.setBaseRenderer(this);
         synchronized (mPolyAnnotations) {
             mPolyAnnotations.add(polygon);
@@ -32,8 +30,8 @@ public class OverlayRenderer extends BaseRenderer {
         return polygon;
     }
 
-    public Polyline addPolyline(PolylineOptions polylineOptions) {
-        Polyline polyline = new Polyline(polylineOptions);
+    public Polyline addPolyline(Polyline.Builder builder) {
+        Polyline polyline = builder.build();
         polyline.setBaseRenderer(this);
         synchronized (mPolyAnnotations) {
             mPolyAnnotations.add(polyline);

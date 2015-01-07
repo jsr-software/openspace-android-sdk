@@ -20,23 +20,65 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.annotations;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.PolyAnnotation;
+import java.util.List;
+
+import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 
 import static android.opengl.GLES20.*;
 
-public final class Polygon extends PolyAnnotation {
-	public Polygon(PolygonOptions options) {
-		super(options, true);
-	}
+public class Polygon extends PolyAnnotation {
+
+    public static class Builder {
+        private int mFillColor = 0xff000000;
+        private int mStrokeColor = 0xff000000;
+        private float mStrokeWidth = 10;
+        private volatile PolyPoints mPoints;
+        private boolean mClosed = true;
+
+        public Polygon build() {
+            return new Polygon(this);
+        }
+
+        public Builder setFillColor(int fillColor) {
+            mFillColor = fillColor;
+            return this;
+        }
+
+        public Builder setPoints(List<Point> points) {
+            mPoints = new PolyPoints(points);
+            return this;
+        }
+
+        public Builder setStrokeColor(int strokeColor) {
+            mStrokeColor = strokeColor;
+            return this;
+        }
+
+        public Builder setStrokeWidth(float strokeWidth) {
+            mStrokeWidth = strokeWidth;
+            return this;
+        }
+    }
+
+    private Polygon(Builder builder) {
+        mPoints = builder.mPoints;
+        mClosed = builder.mClosed;
+        mStrokeWidth = builder.mStrokeWidth;
+        mStrokeColor = builder.mStrokeColor;
+        mFillColor = builder.mFillColor;
+    }
 
 	@Override
-    protected void glDrawPoints(int shaderOverlayUniformColor, PolyPoints points, float metresPerPixel, int shaderOverlayAttribVCoord) {
+    protected void glDrawPoints(int shaderOverlayUniformColor, PolyPoints points,
+                                float metresPerPixel, int shaderOverlayAttribVCoord) {
 		int fillColor = getFillColor();
 		Utils.setUniformPremultipliedColorARGB(shaderOverlayUniformColor, fillColor);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, points.mVertexCount);
 		
-		super.glDrawPoints(shaderOverlayUniformColor, points, metresPerPixel, shaderOverlayAttribVCoord);
+		super.glDrawPoints(shaderOverlayUniformColor, points, metresPerPixel,
+                shaderOverlayAttribVCoord);
 	}
 }

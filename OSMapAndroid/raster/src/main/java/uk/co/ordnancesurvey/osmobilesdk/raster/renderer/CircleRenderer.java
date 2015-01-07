@@ -28,7 +28,6 @@ import java.util.LinkedList;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Circle;
-import uk.co.ordnancesurvey.osmobilesdk.raster.CircleOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderCircleProgram;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
@@ -43,8 +42,8 @@ public class CircleRenderer extends BaseRenderer {
         super(mapRenderer, rendererListener);
     }
 
-    public Circle addCircle(CircleOptions circleOptions) {
-        Circle circle = new Circle(circleOptions);
+    public Circle addCircle(Circle.Builder circleBuilder) {
+        Circle circle = circleBuilder.build();
         circle.setBaseRenderer(this);
         synchronized (mCircleOverlays) {
             mCircleOverlays.add(circle);

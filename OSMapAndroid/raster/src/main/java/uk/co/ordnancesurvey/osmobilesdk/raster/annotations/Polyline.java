@@ -20,70 +20,51 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.annotations;
+
+import java.util.List;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 
-public final class PolylineOptions extends PolyOptions {
-	public PolylineOptions add(Point gp)
-	{
-		mPoints.add(gp);
-		return this;
-	}
+public final class Polyline extends PolyAnnotation {
 
-	public PolylineOptions add(Point... points)
-	{
-		for(Point gp : points)
-		{
-			mPoints.add(gp);
-		}
-		return this;
-	}
+    public static class Builder {
+        private int mFillColor = 0xff000000;
+        private int mStrokeColor = 0xff000000;
+        private float mStrokeWidth = 10;
+        private volatile PolyPoints mPoints;
+        private boolean mClosed = false;
 
-	public PolylineOptions addAll(Iterable<Point> points)
-	{
-		for (Point gp : points)
-		{
-			mPoints.add(gp);
-		}
-		return this;
-	}
-	
-	public PolylineOptions color(int color)
-	{
-		setStrokeColor(color);
-		return this;
-	}
+        public Polyline build() {
+            return new Polyline(this);
+        }
 
-	public PolylineOptions width(float width)
-	{
-		setStrokeWidth(width);
-		return this;
-	}
-	
-	public PolylineOptions zIndex(float zIndex)
-	{
-		setZIndex(zIndex);
-		return this;
-	}
-	
-	public PolylineOptions visible(boolean visible)
-	{
-		setVisible(visible);
-		return this;
-	}
+        public Builder setFillColor(int fillColor) {
+            mFillColor = fillColor;
+            return this;
+        }
 
-	public int getColor() {
-		return super.getStrokeColor();
-	}
+        public Builder setPoints(List<Point> points) {
+            mPoints = new PolyPoints(points);
+            return this;
+        }
 
-	public float getWidth() {
-		return super.getStrokeWidth();
-	}
-	
-	PolylineOptions pixelCoordinates(boolean pixelCoordinates)
-	{
-		mPixelCoordinates = pixelCoordinates;
-		return this;
-	}
+        public Builder setStrokeColor(int strokeColor) {
+            mStrokeColor = strokeColor;
+            return this;
+        }
+
+        public Builder setStrokeWidth(float strokeWidth) {
+            mStrokeWidth = strokeWidth;
+            return this;
+        }
+    }
+
+    private Polyline(Builder builder) {
+        mPoints = builder.mPoints;
+        mClosed = builder.mClosed;
+        mStrokeWidth = builder.mStrokeWidth;
+        mStrokeColor = builder.mStrokeColor;
+        mFillColor = builder.mFillColor;
+    }
 }

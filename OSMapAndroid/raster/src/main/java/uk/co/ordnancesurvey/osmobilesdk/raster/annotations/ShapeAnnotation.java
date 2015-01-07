@@ -22,16 +22,11 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster.annotations;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.ShapeOptions;
-
 public abstract class ShapeAnnotation extends Annotation {
 
+    protected int mFillColor;
     protected int mStrokeColor;
     protected float mStrokeWidth;
-    protected int mFillColor;
-
-    protected ShapeAnnotation() {
-    }
 
     /**
      * Returns the fill color of this Shape.

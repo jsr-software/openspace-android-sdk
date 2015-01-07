@@ -32,7 +32,6 @@ import java.util.List;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
-import uk.co.ordnancesurvey.osmobilesdk.raster.PolyOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderOverlayProgram;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
@@ -48,19 +47,8 @@ import static android.opengl.GLES20.glVertexAttribPointer;
 
 public abstract class PolyAnnotation extends ShapeAnnotation {
 
-    private volatile PolyPoints mPoints;
-    private final boolean mClosed;
-    private final boolean mPixelCoordinates;
-
-    protected PolyAnnotation(PolyOptions options, boolean closed) {
-        mClosed = closed;
-        mPoints = new PolyPoints(options.getPoints());
-        mPixelCoordinates = options.getPixelCoordinates();
-        calculatePolygonForLine(options.getPoints());
-        mStrokeColor = options.getStrokeColor();
-        mStrokeWidth = options.getStrokeWidth();
-        mFillColor = options.getFillColor();
-    }
+    protected volatile PolyPoints mPoints;
+    protected boolean mClosed;
 
     public final void glDraw(ScreenProjection projection, GLMatrixHandler matrixHandler,
                              float metresPerPixel, ShaderOverlayProgram program) {
@@ -186,9 +174,6 @@ public abstract class PolyAnnotation extends ShapeAnnotation {
         // Offset to triangles.
         int toff = numPoints * 2;
         float lineWidthM = getStrokeWidth() / 2;
-        if (!mPixelCoordinates) {
-            lineWidthM *= metresPerPixel;
-        }
 
         polyData.rewind();
         // Write an additional pair of points for a closed line.
@@ -326,9 +311,7 @@ public abstract class PolyAnnotation extends ShapeAnnotation {
         Matrix.scaleM(mvpTempMatrix, 0, orthoMatrix, 0, 1 / metresPerPixel, -1 / metresPerPixel, 1);
         Matrix.translateM(mvpTempMatrix, 0, tx, ty, 0);
         Utils.throwIfErrors();
-        if (mPixelCoordinates) {
-            Matrix.scaleM(mvpTempMatrix, 0, orthoMatrix, 0, metresPerPixel, metresPerPixel, 1);
-        }
+
         if (mBearing != ZERO_COMPARISON) {
             // mRotation is clockwise, so change the sign because rotateM is counter clockwise.
             Matrix.rotateM(mvpTempMatrix, 0, -mBearing, 0, 0, 1);

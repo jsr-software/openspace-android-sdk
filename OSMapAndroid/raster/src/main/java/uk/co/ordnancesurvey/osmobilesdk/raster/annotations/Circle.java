@@ -22,23 +22,24 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster.annotations;
 
-import static android.opengl.GLES20.*;
+import android.graphics.PointF;
 
 import java.nio.FloatBuffer;
 
-import android.graphics.PointF;
-
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
-import uk.co.ordnancesurvey.osmobilesdk.raster.CircleOptions;
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
 import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderCircleProgram;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
-import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.ShapeAnnotation;
+
+import static android.opengl.GLES20.GL_FLOAT;
+import static android.opengl.GLES20.GL_TRIANGLE_STRIP;
+import static android.opengl.GLES20.glDrawArrays;
+import static android.opengl.GLES20.glUniform4f;
+import static android.opengl.GLES20.glVertexAttribPointer;
 
 /**
  * A circle in the OS National Grid projection.
- * <p>
+ * <p/>
  * A circle has the following properties.
  * <p><b>Center</b>
  * <br>The center of the Circle is specified as a {@link Point}.
@@ -51,21 +52,104 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.ShapeAnnotation;
  * <p><b>Fill Color</b>
  * <br>The color of the circle fill in ARGB format, the same format used by android.graphics.Color. The default value is transparent (0x00000000).
  * <p><b>Visibility</b>
- * <br>Indicates if the circle is visible or invisible, i.e., whether it is drawn on the map. An invisible polygon is not drawn, but retains all of its 
+ * <br>Indicates if the circle is visible or invisible, i.e., whether it is drawn on the map. An invisible polygon is not drawn, but retains all of its
  * other properties. The default is true, i.e., visible.
  * <p>Methods that modify a Polygon must be called on the main thread. If not, an IllegalStateException may be thrown at runtime.
  */
-public final class Circle extends ShapeAnnotation {
-	private Point mCenter;
-	private double mRadius;
+public class Circle extends ShapeAnnotation {
 
-	public Circle(CircleOptions options) {
-		mCenter = options.getCenter();
-		mRadius = options.getRadius();
-        mStrokeColor = options.getStrokeColor();
-        mStrokeWidth = options.getStrokeWidth();
-        mFillColor = options.getFillColor();
-	}
+    public static class Builder {
+
+        private final Point mCenter;
+
+        private double mRadius = 10;
+        private int mFillColor = 0xff000000;
+        private int mStrokeColor = 0xff000000;
+        private float mStrokeWidth = 10;
+
+        public Builder(Point center) {
+            mCenter = center;
+        }
+
+        public Circle build() {
+            return new Circle(this);
+        }
+
+        public Builder setFillColor(int fillColor) {
+            mFillColor = fillColor;
+            return this;
+        }
+
+        public Builder setRadius(double radius) {
+            mRadius = radius;
+            return this;
+        }
+
+        public Builder setStrokeColor(int strokeColor) {
+            mStrokeColor = strokeColor;
+            return this;
+        }
+
+        public Builder setStrokeWidth(float strokeWidth) {
+            mStrokeWidth = strokeWidth;
+            return this;
+        }
+    }
+
+    private Point mCenter;
+    private double mRadius;
+
+    private Circle(Builder builder) {
+        mCenter = builder.mCenter;
+        mRadius = builder.mRadius;
+        mStrokeWidth = builder.mStrokeWidth;
+        mStrokeColor = builder.mStrokeColor;
+        mFillColor = builder.mFillColor;
+    }
+
+    public void glDraw(ScreenProjection projection, PointF tempPoint, FloatBuffer tempFloatBuffer,
+                       ShaderCircleProgram program) {
+        if (mBaseRenderer == null) {
+            return;
+        }
+
+        Point center = mCenter;
+        if (center == null) {
+            return;
+        }
+        double radius = getRadius();
+        int fillColor = getFillColor();
+        int strokeColor = getStrokeColor();
+        float strokeWidth = getStrokeWidth();
+
+        Utils.setUniformPremultipliedColorARGB(program.uniformFillColor, fillColor);
+        Utils.setUniformPremultipliedColorARGB(program.uniformStrokeColor, strokeColor);
+
+        PointF displayCenter = projection.displayPointFromPoint(center, tempPoint);
+        float mpp = projection.getMetresPerPixel();
+        float displayRadius = (float) radius / mpp;
+        float innerRadius = displayRadius - strokeWidth / 2;
+        float outerRadius = displayRadius + strokeWidth / 2;
+
+        // Expand by an extra half-pixel to account for any AA.
+        float expandby = outerRadius + 0.5f;
+
+        tempFloatBuffer.position(0);
+        tempFloatBuffer.put(displayCenter.x - expandby).put(displayCenter.y - expandby);
+        tempFloatBuffer.put(displayCenter.x + expandby).put(displayCenter.y - expandby);
+        tempFloatBuffer.put(displayCenter.x - expandby).put(displayCenter.y + expandby);
+        tempFloatBuffer.put(displayCenter.x + expandby).put(displayCenter.y + expandby);
+        tempFloatBuffer.position(0);
+
+        glVertexAttribPointer(program.attribVCoord, 2, GL_FLOAT, false, 0, tempFloatBuffer);
+
+        // TODO: We need to use a different shader for large radii.
+        glUniform4f(program.uniformCenterRadius, displayCenter.x, displayCenter.y, innerRadius,
+                outerRadius);
+
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        Utils.throwIfErrors();
+    }
 
     /**
      * Returns the center as a {@link Point}
@@ -112,50 +196,4 @@ public final class Circle extends ShapeAnnotation {
         }
         mRadius = radius;
     }
-
-
-	public void glDraw(ScreenProjection projection, PointF tempPoint, FloatBuffer tempFloatBuffer, ShaderCircleProgram program) {
-		if (mBaseRenderer == null)
-		{
-			return;
-		}
-
-		Point center = mCenter;
-		if(center == null)
-		{
-			return;
-		}
-		double radius = getRadius();
-		int fillColor = getFillColor();
-		int strokeColor = getStrokeColor();
-		float strokeWidth = getStrokeWidth();
-
-		Utils.setUniformPremultipliedColorARGB(program.uniformFillColor, fillColor);
-		Utils.setUniformPremultipliedColorARGB(program.uniformStrokeColor, strokeColor);
-
-		PointF displayCenter = projection.displayPointFromPoint(center, tempPoint);
-		float mpp = projection.getMetresPerPixel();
-		float displayRadius = (float)radius/mpp;
-		float innerRadius = displayRadius-strokeWidth/2;
-		float outerRadius = displayRadius+strokeWidth/2;
-
-		// Expand by an extra half-pixel to account for any AA.
-		float expandby = outerRadius+0.5f;
-
-		tempFloatBuffer.position(0);
-		tempFloatBuffer.put(displayCenter.x-expandby).put(displayCenter.y-expandby);
-		tempFloatBuffer.put(displayCenter.x+expandby).put(displayCenter.y-expandby);
-		tempFloatBuffer.put(displayCenter.x-expandby).put(displayCenter.y+expandby);
-		tempFloatBuffer.put(displayCenter.x+expandby).put(displayCenter.y+expandby);
-		tempFloatBuffer.position(0);
-
-		glVertexAttribPointer(program.attribVCoord, 2, GL_FLOAT, false, 0, tempFloatBuffer);
-
-		// TODO: We need to use a different shader for large radii.
-		glUniform4f(program.uniformCenterRadius, displayCenter.x, displayCenter.y, innerRadius, outerRadius);
-
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-		Utils.throwIfErrors();
-	}
-
 }

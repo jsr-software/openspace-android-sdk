@@ -2,7 +2,7 @@ package uk.co.ordnancesurvey.osmobilesdk.raster.annotations;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.BaseRenderer;
 
-public class Annotation {
+public abstract class Annotation {
 
     protected static final float ZERO_COMPARISON = 0.001f;
 

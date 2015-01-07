@@ -28,6 +28,8 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Circle;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polygon;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polyline;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 
 /**
@@ -38,47 +40,6 @@ import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
  * Calling {@link OSMap} methods from another thread may result in an exception.
  */
 public interface OSMap {
-
-
-
-
-
-
-
-    /**
-     * Add a circle to this map.
-     *
-     * @param options A circle options object that defines how to render the Circle
-     * @return The Circle object that is added to the map
-     */
-    Circle addCircle(CircleOptions options);
-
-    /**
-     * Adds a polygon to this map.
-     *
-     * @param options A polygon options object that defines how to render the Polygon.
-     * @return The Polygon object that is added to the map.
-     */
-    Polygon addPolygon(PolygonOptions options);
-
-    /**
-     * Adds a polyline to this map.
-     *
-     * @param options A polyline options object that defines how to render the Polyline.
-     * @return The Polyline object that was added to the map.
-     */
-    Polyline addPolyline(PolylineOptions options);
-
-    /**
-     * Removes all markers, overlays, and polylines from the map.
-     */
-    public void clear();
-
-
-
-
-
-
 
 
     /*
@@ -94,9 +55,6 @@ public interface OSMap {
      * @param mapConfiguration the new {@link uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration}
      */
     void setMapConfiguration(MapConfiguration mapConfiguration);
-
-
-
 
 
     /**
@@ -326,15 +284,44 @@ public interface OSMap {
     }
 
     /**
+     * Add a circle to this map.
+     *
+     * @param circleBuilder A
+     *                      {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Circle.Builder} object that
+     *                      defines how to render the Circle
+     * @return The Circle object that is added to the map
+     */
+    Circle addCircle(Circle.Builder circleBuilder);
+
+    /**
      * Adds a marker to this map.
-     * <p>The marker's icon is rendered on the map at the location Marker.position. Clicking the marker centers the camera on the marker.
-     * If Marker.title is defined, the map shows an info box with the marker's title and snippet. If the marker is draggable,
-     * long-clicking and then dragging the marker moves it.
+     * <p>The marker's icon is rendered on the map at the location Marker.position. Clicking the
+     * marker centers the camera on the marker.
+     * If Marker.title is defined, the map shows an info box with the marker's title and snippet.
+     * If the marker is draggable, long-clicking and then dragging the marker moves it.
      *
      * @param builder A marker builder object that defines how to render the marker.
      * @return The Marker that was added to the map.
      */
-    public Marker addMarker(Marker.Builder builder);
+    Marker addMarker(Marker.Builder builder);
+
+    /**
+     * Adds a polygon to this map.
+     *
+     * @param builder A {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polygon.Builder}
+     *                options object that defines how to render the Polygon.
+     * @return The Polygon object that is added to the map.
+     */
+    Polygon addPolygon(Polygon.Builder builder);
+
+    /**
+     * Adds a polyline to this map.
+     *
+     * @param builder A {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polyline.Builder}
+     *                options object that defines how to render the Polyline.
+     * @return The Polyline object that was added to the map.
+     */
+    Polyline addPolyline(Polyline.Builder builder);
 
     /**
      * Sets a callback object for when the map visible bounds is changed. Note that there can be
@@ -342,7 +329,7 @@ public interface OSMap {
      *
      * @param onBoundsChangeListener The callback that will be invoked on a visible bounds change
      */
-    public void addOnBoundsChangeListener(OnBoundsChangeListener onBoundsChangeListener);
+    void addOnBoundsChangeListener(OnBoundsChangeListener onBoundsChangeListener);
 
     /**
      * Sets a callback object for when the Map is double tapped. Note that there can be multiple
@@ -350,7 +337,7 @@ public interface OSMap {
      *
      * @param onDoubleTapListener The callback that will be invoked on a Map double tap event
      */
-    public void addOnDoubleTapListener(OnDoubleTapListener onDoubleTapListener);
+    void addOnDoubleTapListener(OnDoubleTapListener onDoubleTapListener);
 
     /**
      * Sets a callback object for when the Map is flung. Note that there can be multiple
@@ -358,15 +345,15 @@ public interface OSMap {
      *
      * @param onFlingListener The callback that will be invoked on a Map fling event
      */
-    public void addOnFlingListener(OnFlingListener onFlingListener);
+    void addOnFlingListener(OnFlingListener onFlingListener);
 
     /**
-     * Sets a callback that's invoked when a marker info window is tapped. Note that there can be multiple
-     * callbacks added. Each callback will receive the touch event.
+     * Sets a callback that's invoked when a marker info window is tapped. Note that there can be
+     * multiple callbacks added. Each callback will receive the touch event.
      *
      * @param onInfoWindowTapListener The callback that's invoked when a marker info window is tapped.
      */
-    public void addOnInfoWindowTapListener(OnInfoWindowTapListener onInfoWindowTapListener);
+    void addOnInfoWindowTapListener(OnInfoWindowTapListener onInfoWindowTapListener);
 
     /**
      * Sets a callback object for when the Map is touched. Note that there can be multiple callbacks
@@ -374,7 +361,7 @@ public interface OSMap {
      *
      * @param onLongPressListener The callback that will be invoked on a Map long press event
      */
-    public void addOnLongPressListener(OnLongPressListener onLongPressListener);
+    void addOnLongPressListener(OnLongPressListener onLongPressListener);
 
     /**
      * Sets a callback object for when the Map is touched. Note that there can be multiple callbacks
@@ -382,7 +369,7 @@ public interface OSMap {
      *
      * @param onMapTouchListener The callback that will be invoked on a Map touch event
      */
-    public void addOnMapTouchListener(OnMapTouchListener onMapTouchListener);
+    void addOnMapTouchListener(OnMapTouchListener onMapTouchListener);
 
     /**
      * Sets a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker} is dragged.
@@ -390,7 +377,7 @@ public interface OSMap {
      *
      * @param onMarkerDragListener The callback that will be invoked on a Marker drag event
      */
-    public void addOnMarkerDragListener(OnMarkerDragListener onMarkerDragListener);
+    void addOnMarkerDragListener(OnMarkerDragListener onMarkerDragListener);
 
     /**
      * Sets a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker} is tapped.
@@ -398,7 +385,7 @@ public interface OSMap {
      *
      * @param onMarkerTapListener The callback that will be invoked on a Marker tap event
      */
-    public void addOnMarkerTapListener(OnMarkerTapListener onMarkerTapListener);
+    void addOnMarkerTapListener(OnMarkerTapListener onMarkerTapListener);
 
     /**
      * Sets a callback object for when the Map is panned. Note that there can be multiple
@@ -406,7 +393,7 @@ public interface OSMap {
      *
      * @param onPanListener The callback that will be invoked on a Map pan event
      */
-    public void addOnPanListener(OnPanListener onPanListener);
+    void addOnPanListener(OnPanListener onPanListener);
 
     /**
      * Sets a callback object for when the Map is pinched in or out. Note that there can be multiple
@@ -414,7 +401,7 @@ public interface OSMap {
      *
      * @param onPinchListener The callback that will be invoked on a Map pinch event
      */
-    public void addOnPinchListener(OnPinchListener onPinchListener);
+    void addOnPinchListener(OnPinchListener onPinchListener);
 
     /**
      * Sets a callback object for when the Map is single tapped.
@@ -423,7 +410,7 @@ public interface OSMap {
      *
      * @param onSingleTapListener The callback that will be invoked on a Map single tap event
      */
-    public void addOnSingleTapListener(OnSingleTapListener onSingleTapListener);
+    void addOnSingleTapListener(OnSingleTapListener onSingleTapListener);
 
     /**
      * Sets a callback object for when the zoom level is changed.
@@ -432,120 +419,129 @@ public interface OSMap {
      *
      * @param onZoomChangeListener The callback that will be invoked on a map zoom change
      */
-    public void addOnZoomChangeListener(OnZoomChangeListener onZoomChangeListener);
+    void addOnZoomChangeListener(OnZoomChangeListener onZoomChangeListener);
+
+    /**
+     * Removes all markers, overlays, and polylines from the map.
+     */
+    void clear();
 
     /**
      * Remove a circle object from the map
+     *
      * @param circle the circle to remove
      */
-    public void removeCircle(Circle circle);
+    void removeCircle(Circle circle);
 
     /**
      * Remove a Marker object from the map
+     *
      * @param marker the marker to remove
      */
-    public void removeMarker(Marker marker);
+    void removeMarker(Marker marker);
 
     /**
      * Remove a Polyline object from the map
+     *
      * @param polyline the polyline to remove
      */
-    public void removePolyline(Polyline polyline);
+    void removePolyline(Polyline polyline);
 
     /**
      * Remove a Polygon object from the map
+     *
      * @param polygon the polygon to remove
      */
-    public void removePolygon(Polygon polygon);
+    void removePolygon(Polygon polygon);
 
     /**
      * Removes the custom adapter for the rendering of contents of info windows.
      */
-    public void removeInfoWindowAdapter();
+    void removeInfoWindowAdapter();
 
     /**
      * Removes a callback object for when the Map visible bounds is changed.
      *
      * @param onBoundsChangeListener The callback that will be removed
      */
-    public void removeOnBoundsChangeListener(OnBoundsChangeListener onBoundsChangeListener);
+    void removeOnBoundsChangeListener(OnBoundsChangeListener onBoundsChangeListener);
 
     /**
      * Removes a callback object for when the Map is double tapped.
      *
      * @param onDoubleTapListener The callback that will be removed
      */
-    public void removeOnDoubleTapListener(OnDoubleTapListener onDoubleTapListener);
+    void removeOnDoubleTapListener(OnDoubleTapListener onDoubleTapListener);
 
     /**
      * Removes a callback object for when the Map is flung.
      *
      * @param onFlingListener The callback that will be removed
      */
-    public void removeOnFlingListener(OnFlingListener onFlingListener);
+    void removeOnFlingListener(OnFlingListener onFlingListener);
 
     /**
      * Removes a callback object for when the Map's info window is tapped.
      *
      * @param onInfoWindowTapListener The callback that will be removed
      */
-    public void removeOnInfoWindowTapListener(OnInfoWindowTapListener onInfoWindowTapListener);
+    void removeOnInfoWindowTapListener(OnInfoWindowTapListener onInfoWindowTapListener);
 
     /**
      * Removes a callback object for when the Map is long pressed.
      *
      * @param onLongPressListener The callback that will be removed
      */
-    public void removeOnLongPressListener(OnLongPressListener onLongPressListener);
+    void removeOnLongPressListener(OnLongPressListener onLongPressListener);
 
     /**
      * Removes a callback object for when the Map is touched.
      *
      * @param onMapTouchListener The callback that will be removed
      */
-    public void removeOnMapTouchListener(OnMapTouchListener onMapTouchListener);
+    void removeOnMapTouchListener(OnMapTouchListener onMapTouchListener);
 
     /**
      * Removes a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker} is dragged.
      *
      * @param onMarkerDragListener The callback that will be removed
      */
-    public void removeOnMarkerDragListener(OnMarkerDragListener onMarkerDragListener);
+    void removeOnMarkerDragListener(OnMarkerDragListener onMarkerDragListener);
 
     /**
      * Removes a callback object for when a {@link uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker} is tapped.
      *
      * @param onMarkerTapListener The callback that will be removed
      */
-    public void removeOnMarkerTapListener(OnMarkerTapListener onMarkerTapListener);
+    void removeOnMarkerTapListener(OnMarkerTapListener onMarkerTapListener);
 
     /**
      * Removes a callback object for when the Map is panned.
      *
      * @param onPanListener The callback that will be removed
      */
-    public void removeOnPanListener(OnPanListener onPanListener);
+    void removeOnPanListener(OnPanListener onPanListener);
 
     /**
      * Removes a callback object for when the Map is pinched in or out.
      *
      * @param onPinchListener The callback that will be removed
      */
-    public void removeOnPinchListener(OnPinchListener onPinchListener);
+    void removeOnPinchListener(OnPinchListener onPinchListener);
 
     /**
      * Removes a callback object for when the Map is single tapped.
      *
      * @param onSingleTapListener The callback that will be removed
      */
-    public void removeOnSingleTapListener(OnSingleTapListener onSingleTapListener);
+    void removeOnSingleTapListener(OnSingleTapListener onSingleTapListener);
 
     /**
      * Removes a callback object for when the map zoom changes
      *
      * @param onZoomChangeListener The callback that will be removed
      */
-    public void removeOnZoomChangeListener(OnZoomChangeListener onZoomChangeListener);
+    void removeOnZoomChangeListener(OnZoomChangeListener onZoomChangeListener);
 
     /**
      * Sets a custom renderer for the contents of info windows.
@@ -554,7 +550,5 @@ public interface OSMap {
      *
      * @param infoWindowAdapter The adapter to use for info window contents, or null to use the default content rendering in info windows.
      */
-    public void setInfoWindowAdapter(InfoWindowAdapter infoWindowAdapter);
-
-
+    void setInfoWindowAdapter(InfoWindowAdapter infoWindowAdapter);
 }

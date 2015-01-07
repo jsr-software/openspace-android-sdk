@@ -28,6 +28,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.inject.Inject;
 
 import rx.Subscriber;
@@ -35,11 +38,9 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
 import uk.co.ordnancesurvey.osmobilesdk.locations.LocationService;
 import uk.co.ordnancesurvey.osmobilesdk.raster.BasicMapProjection;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Circle;
-import uk.co.ordnancesurvey.osmobilesdk.raster.CircleOptions;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
-import uk.co.ordnancesurvey.osmobilesdk.raster.Polygon;
-import uk.co.ordnancesurvey.osmobilesdk.raster.PolygonOptions;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polygon;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapFragment;
 
@@ -116,7 +117,8 @@ public class MainActivity extends Activity {
         }
     };
 
-    @Inject LocationService mLocationService;
+    @Inject
+    LocationService mLocationService;
 
     private MapFragment mMapFragment;
     private OSMap mMap;
@@ -174,18 +176,17 @@ public class MainActivity extends Activity {
     }
 
     private Circle drawCircle(Point point) {
-        CircleOptions options = new CircleOptions()
-                .center(point)
-                .radius(CIRCLE_RADIUS)
-                .fillColor(getResources().getColor(android.R.color.white))
-                .strokeColor(getResources().getColor(android.R.color.black))
-                .strokeWidth(STROKE_WIDTH);
+        Circle.Builder builder = new Circle.Builder(point)
+                .setRadius(CIRCLE_RADIUS)
+                .setFillColor(getResources().getColor(android.R.color.white))
+                .setStrokeColor(getResources().getColor(android.R.color.black))
+                .setStrokeWidth(STROKE_WIDTH);
 
-        return mMap.addCircle(options);
+        return mMap.addCircle(builder);
     }
 
     private void drawDraggableMarker() {
-        Marker.Builder builder = new Marker.Builder(this, new Point(250000,250000, Point.BNG))
+        Marker.Builder builder = new Marker.Builder(this, new Point(250000, 250000, Point.BNG))
                 .setTitle("Draggable")
                 .setSnippet("Long press me to drag me");
 
@@ -220,15 +221,18 @@ public class MainActivity extends Activity {
         final double x = point.getX();
         final double y = point.getY();
 
-        PolygonOptions polygonOptions = new PolygonOptions()
-                .add(new Point(x - SQUARE_OFFSET, y - SQUARE_OFFSET, Point.BNG))
-                .add(new Point(x - SQUARE_OFFSET, y + SQUARE_OFFSET, Point.BNG))
-                .add(new Point(x + SQUARE_OFFSET, y + SQUARE_OFFSET, Point.BNG))
-                .add(new Point(x + SQUARE_OFFSET, y - SQUARE_OFFSET, Point.BNG))
-                .fillColor(getResources().getColor(android.R.color.white))
-                .strokeColor(getResources().getColor(android.R.color.black))
-                .strokeWidth(STROKE_WIDTH);
+        List<Point> points = new ArrayList<>();
+        points.add(new Point(x - SQUARE_OFFSET, y - SQUARE_OFFSET, Point.BNG));
+        points.add(new Point(x - SQUARE_OFFSET, y + SQUARE_OFFSET, Point.BNG));
+        points.add(new Point(x + SQUARE_OFFSET, y + SQUARE_OFFSET, Point.BNG));
+        points.add(new Point(x + SQUARE_OFFSET, y - SQUARE_OFFSET, Point.BNG));
 
-        return mMap.addPolygon(polygonOptions);
+        Polygon.Builder builder = new  Polygon.Builder()
+                .setPoints(points)
+                .setFillColor(getResources().getColor(android.R.color.white))
+                .setStrokeColor(getResources().getColor(android.R.color.black))
+                .setStrokeWidth(STROKE_WIDTH);
+
+        return mMap.addPolygon(builder);
     }
 }

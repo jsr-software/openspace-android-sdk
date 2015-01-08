@@ -32,10 +32,10 @@ import java.util.List;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderOverlayProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BasicMapProjection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders.ShaderOverlayProgram;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMatrixHandler;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.GLMatrixHandler;
 
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_LINE_STRIP;
@@ -50,7 +50,7 @@ public abstract class PolyAnnotation extends ShapeAnnotation {
     protected volatile PolyPoints mPoints;
     protected boolean mClosed;
 
-    public final void glDraw(ScreenProjection projection, GLMatrixHandler matrixHandler,
+    public final void glDraw(BasicMapProjection projection, GLMatrixHandler matrixHandler,
                              float metresPerPixel, ShaderOverlayProgram program) {
         if (mBaseRenderer == null) {
             return;
@@ -298,7 +298,7 @@ public abstract class PolyAnnotation extends ShapeAnnotation {
     }
 
     void glSetMatrix(int shaderOverlayUniformMVP, float[] orthoMatrix, float[] mvpTempMatrix,
-                     ScreenProjection projection, PolyPoints points, float metresPerPixel) {
+                     BasicMapProjection projection, PolyPoints points, float metresPerPixel) {
         BoundingBox visibleBounds = projection.getVisibleBounds();
         double topLeftX = visibleBounds.getMinX();
         double topLeftY = visibleBounds.getMaxY();

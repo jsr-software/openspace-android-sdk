@@ -11,6 +11,12 @@ import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
  */
 public interface Projection {
 
+    public Point fromScreenLocation(PointF screenLocation);
+
+    public PointF getScreenLocation(Point point);
+
+    public BoundingBox getVisibleBounds();
+
     /**
      * Converts a WGS84 latitude/longitude to the corresponding BNG Point.
      * @param point - the Point using WGS84 projection
@@ -24,11 +30,4 @@ public interface Projection {
      * @return newly created Point
      */
     public abstract Point toWGS84(Point point);
-
-
-    public BoundingBox getVisibleBounds();
-
-    public PointF getScreenLocation(Point point);
-
-    public Point fromScreenLocation(PointF screenLocation);
 }

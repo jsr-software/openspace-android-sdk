@@ -20,17 +20,17 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic;
 
 import android.opengl.Matrix;
 
 import java.util.LinkedList;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BasicMapProjection;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Circle;
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderCircleProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders.ShaderCircleProgram;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMapRenderer;
 
 import static android.opengl.GLES20.glUniformMatrix4fv;
 
@@ -58,7 +58,7 @@ public class CircleRenderer extends BaseRenderer {
         }
     }
 
-    public void onDrawFrame(ScreenProjection projection, GLProgramService programService, GLMatrixHandler matrixHandler, int viewportWidth, int viewportHeight) {
+    public void onDrawFrame(BasicMapProjection projection, GLProgramService programService, GLMatrixHandler matrixHandler, int viewportWidth, int viewportHeight) {
         programService.setActiveProgram(GLProgramService.GLProgramType.CIRCLE);
         ShaderCircleProgram program = programService.getShaderCircleProgram();
 

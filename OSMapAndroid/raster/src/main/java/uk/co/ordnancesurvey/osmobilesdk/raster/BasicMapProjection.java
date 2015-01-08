@@ -22,62 +22,144 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster;
 
+import android.graphics.PointF;
+
+import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
+import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.ScrollRenderer;
 
 import static java.lang.Math.sin;
 import static java.lang.Math.cos;
 
-public final class BasicMapProjection implements MapProjection {
+public final class BasicMapProjection implements Projection {
 
-	//private final static String TAG = "BasicMapProjection";
+    private static final double AVERAGE_GPS_ALTITUDE = 53;
+    private static final double DEG = Math.PI/180;
+    // From http://www.ordnancesurvey.co.uk/oswebsite/gps/information/coordinatesystemsinfo/guidecontents/guidea.html
+    private static final double AIRY1830_A = 6377563.396, AIRY1830_B = 6356256.910;
+    private static final double WGS84_A = 6378137.000, WGS84_B = 6356752.3141;
+    private static final double NATGRID_F0 = 0.9996012717, NATGRID_LAT0 = 49*DEG, NATGRID_LNG0 = -2*DEG, NATGRID_E0 = 400000, NATGRID_N0 = -100000;
 
-//	@Override
-//	public Point toBng(double latitude, double longitude) {
-//		double[] temp = new double[3];
-//		// Approximate average GPS altitude in the UK at a National Grid altitutde of 0.
-//		// It's somewhere between around 49 and 55, anyway.
-//		double AVERAGE_GPS_ALTITUDE = 53;
-//		getOSCoords(latitude, longitude, AVERAGE_GPS_ALTITUDE, temp);
-//		return new Point(temp[0], temp[1]);
-//	}
-//
-//	@Override
-//	public void fromPoint(Point gp, double[] out) {
-//		if (out.length < 3)
-//		{
-//			double[] temp = new double[3];
-//			fromPoint(gp,temp);
-//			out[0] = temp[0];
-//			out[1] = temp[1];
-//			return;
-//		}
-//
-//		double out2 = out[2];
-//		try {
-//			fromOSCoords(gp.x, gp.y, 0, out);
-//		} finally {
-//			out[2] = out2;
-//		}
-//	}
+    private final int mScreenWidth;
+    private final int mScreenHeight;
 
-	private static final double DEG = Math.PI/180;
-	// From http://www.ordnancesurvey.co.uk/oswebsite/gps/information/coordinatesystemsinfo/guidecontents/guidea.html
-	private static final double AIRY1830_A = 6377563.396, AIRY1830_B = 6356256.910;
-	private static final double WGS84_A = 6378137.000, WGS84_B = 6356752.3141;
-	private static final double NATGRID_F0 = 0.9996012717, NATGRID_LAT0 = 49*DEG, NATGRID_LNG0 = -2*DEG, NATGRID_E0 = 400000, NATGRID_N0 = -100000;
+    private final Point mCentre;
+    private final float mMetresPerPixel;
+    private final BoundingBox mVisibleBounds;
+
+    public BasicMapProjection(int width, int height, ScrollRenderer.ScrollPosition scrollpos) {
+        mScreenWidth = width;
+        mScreenHeight = height;
+
+        mCentre = new Point(scrollpos.x, scrollpos.y, Point.BNG);
+        mMetresPerPixel = scrollpos.metresPerPixel;
+
+        float mapWidth = mScreenWidth * mMetresPerPixel;
+        float mapHeight = mScreenHeight * mMetresPerPixel;
+
+        // Clip the rect in case the user has somehow scrolled off the map.
+        BoundingBox raw = BoundingBox.fromCentreXYWH(mCentre.getX(), mCentre.getY(),
+                mapWidth, mapHeight);
+        mVisibleBounds = BngUtil.clippedToGridBounds(raw);
+    }
+
+    @Override
+    public Point fromScreenLocation(PointF screenLocation) {
+        float metresPerPixel = mMetresPerPixel;
+        double mapx = mCentre.getX() + (screenLocation.x - mScreenWidth / 2.0f) * metresPerPixel;
+        double mapy = mCentre.getY() + (mScreenHeight / 2.0f - screenLocation.y) * metresPerPixel;
+        return new Point(mapx, mapy, Point.BNG);
+    }
+
+    @Override
+    public PointF getScreenLocation(Point point) {
+        float x = mScreenWidth / 2.0f + (float) (point.getX() - mCentre.getX()) / mMetresPerPixel;
+        float y = mScreenHeight / 2.0f - (float) (point.getY() - mCentre.getY()) / mMetresPerPixel;
+        return new PointF(x, y);
+    }
+
+    @Override
+    public BoundingBox getVisibleBounds() {
+        return mVisibleBounds;
+    }
+
+    /**
+     * Converts a WGS84 latitude/longitude to the corresponding BNG Point.
+     * @param point - the Point using WGS84 projection
+     * @return newly created Point
+     */
+    @Override
+    public Point toBng(Point point) {
+        if(point.isBng()) {
+            return point;
+        }
+
+        double[] temp = new double[3];
+
+        getOSCoords(point.getX(), point.getY(), temp);
+        return new Point(temp[0], temp[1], Point.BNG);
+    }
+
+    /**
+     * Converts a BNG {@link uk.co.ordnancesurvey.osmobilesdk.gis.Point} to the corresponding
+     * WGS84 Point.
+     * @param point - the Point using BNG projection
+     * @return newly created Point
+     */
+    @Override
+    public Point toWGS84(Point point) {
+        if(!point.isBng()) {
+            return point;
+        }
+
+        double[] temp = new double[3];
+        fromOSCoords(point.getX(), point.getY(), 0, temp);
+        return new Point(temp[0], temp[1], Point.WGS84);
+    }
+
+    public float getMetresPerPixel() {
+        return mMetresPerPixel;
+    }
+
+    public Point getCenter() {
+        return mCentre;
+    }
+
+    public PointF displayPointFromPoint(Point gp, PointF displayPointOut) {
+        double mapCenterX = mCentre.getX();
+        double mapCenterY = mCentre.getY();
+        float metresPerPixel = mMetresPerPixel;
+
+        float xPixels = (float) (gp.getX() - mapCenterX) / metresPerPixel;
+        float yPixels = (float) (gp.getY() - mapCenterY) / metresPerPixel;
+
+        displayPointOut.x = xPixels;
+        displayPointOut.y = yPixels;
+        return displayPointOut;
+    }
+
+    BoundingBox getVisibleBoundsWithScreenInsets(float insetx, float insety) {
+        float mpp = mMetresPerPixel;
+        return mVisibleBounds.inset(insetx * mpp, insety * mpp);
+    }
+
+    public BoundingBox getExpandedVisibleBounds() {
+        return getVisibleBoundsWithScreenInsets(-mScreenWidth / 2.0f, -mScreenHeight / 2.0f);
+    }
 
 	/**
 	* Converts latitude/longitude (WGS84) to easting and northing (National Grid) and height above geoid (m).
 	* Results are highly approximate (±5m).
 	* @param lat latitude (deg)
 	* @param lng longitude (deg)
-	* @param alt height above ellipsoid (m)
 	* @param eastNorthHeight Must be at least 3 elements long. On return, first 3 elements are { easting, northing, height }. Other elements are untouched.
 	*/
-	private static void getOSCoords(double lat, double lng, double alt, double[] eastNorthHeight) {
-		// Save another malloc
+	private void getOSCoords(double lat, double lng, double[] eastNorthHeight) {
+        // Approximate average GPS altitude in the UK at a National Grid altitutde of 0.
+        // It's somewhere between around 49 and 55, anyway.
 		double[] temp = eastNorthHeight;//new double[3];
-		latLngTo3D(WGS84_A, WGS84_B, lat, lng, alt, temp);
+		latLngTo3D(WGS84_A, WGS84_B, lat, lng, AVERAGE_GPS_ALTITUDE, temp);
 
 		double x = temp[0], y = temp[1], z = temp[2];
 		// from http://www.ordnancesurvey.co.uk/oswebsite/gps/information/coordinatesystemsinfo/guidecontents/guide6.html
@@ -109,7 +191,7 @@ public final class BasicMapProjection implements MapProjection {
 	/**
 	* TODO: Unchecked.
 	*/
-	private static void fromOSCoords(double e, double n, double h, double[] latLngAlt) {
+	private void fromOSCoords(double e, double n, double h, double[] latLngAlt) {
 		// Save another malloc
 		double[] temp = latLngAlt;
 		eastNorthToLatLng(AIRY1830_A, AIRY1830_B, NATGRID_N0, NATGRID_E0, NATGRID_F0, NATGRID_LAT0, NATGRID_LNG0, e, n, temp);
@@ -162,7 +244,7 @@ print "t/m", T2[0,3],T2[1,3],T2[2,3]
 	* @param h
 	* @param xyzOut Must be at least 3 elements long. On return, first 3 elements are { x, y, z }. Other elements are untouched.
 	*/
-	private static void latLngTo3D(double a, double b, double lat, double lng, double h, double[] xyzOut) {
+	private void latLngTo3D(double a, double b, double lat, double lng, double h, double[] xyzOut) {
 		// From http://www.ordnancesurvey.co.uk/oswebsite/gps/docs/convertingcoordinates3D.pdf
 		double asq = a*a;
 		double bsq = b*b;
@@ -189,7 +271,7 @@ print "t/m", T2[0,3],T2[1,3],T2[2,3]
 	* @param z
 	* @param latLngHeightOut Must be at least 3 elements long. On return, first 3 elements are { latitude, longitude, altitude }. Other elements are untouched.
 	*/
-	private static void latLngFrom3D(double a, double b, double x, double y, double z, double[] latLngHeightOut) {
+	private void latLngFrom3D(double a, double b, double x, double y, double z, double[] latLngHeightOut) {
 		// From http://www.ordnancesurvey.co.uk/oswebsite/gps/docs/convertingcoordinates3D.pdf
 		double asq = a*a;
 		double bsq = b*b;
@@ -235,7 +317,7 @@ print "t/m", T2[0,3],T2[1,3],T2[2,3]
 	* @param lng Longitude (deg).
 	* @param eastNorthOut Must be at least two elements long. On return, first two elements are { easting, northing }. Other elements are untouched.
 	*/
-	static void latLngToEastNorth(double a, double b, double n0, double e0, double f0, double lat0, double lng0, double lat, double lng, double[] eastNorthOut) {
+	private void latLngToEastNorth(double a, double b, double n0, double e0, double f0, double lat0, double lng0, double lat, double lng, double[] eastNorthOut) {
 		// From http://www.ordnancesurvey.co.uk/oswebsite/gps/docs/convertingcoordinatesEN.pdf
 		double asq = a*a;
 		double bsq = b*b;
@@ -268,7 +350,7 @@ print "t/m", T2[0,3],T2[1,3],T2[2,3]
 	/**
 	* TODO: Unchecked.
 	*/
-	static void eastNorthToLatLng(double a, double b, double n0, double e0, double f0, double lat0, double lng0, double e, double N, double[] latLngOut) {
+	private void eastNorthToLatLng(double a, double b, double n0, double e0, double f0, double lat0, double lng0, double e, double N, double[] latLngOut) {
 		// From http://www.ordnancesurvey.co.uk/oswebsite/gps/docs/convertingcoordinatesEN.pdf
 		double asq = a*a;
 		double bsq = b*b;
@@ -333,28 +415,9 @@ print "t/m", T2[0,3],T2[1,3],T2[2,3]
 		return m;
 	}
 
-    public static MapProjection getDefault() {
-        return new BasicMapProjection();
-    }
+    //public static MapProjection getDefault() {
+        //return new BasicMapProjection();
+    //}
 
-    /**
-     * Converts a WGS84 latitude/longitude to the corresponding BNG Point.
-     * @param point - the Point using WGS84 projection
-     * @return newly created Point
-     */
-    // TODO: actually fix the point
-    public Point toBng(Point point) {
-        return point;
-    }
 
-    /**
-     * Converts a BNG {@link uk.co.ordnancesurvey.osmobilesdk.gis.Point} to the corresponding
-     * WGS84 Point.
-     * @param point - the Point using BNG projection
-     * @return newly created Point
-     */
-    // TODO: actually fix the point
-    public Point toWGS84(Point point) {
-        return point;
-    }
 }

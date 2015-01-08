@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -34,10 +34,10 @@ import java.nio.FloatBuffer;
 import java.util.Arrays;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLTileCache;
-import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BasicMapProjection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.cache.GLTileCache;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.MapTile;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders.ShaderProgram;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
@@ -101,7 +101,7 @@ public class TileRenderer {
         }
     }
 
-    public boolean onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, ScreenProjection projection, long nowUptimeMillis,
+    public boolean onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, BasicMapProjection projection, long nowUptimeMillis,
                                ScrollRenderer.ScrollPosition scrollPosition) {
         //leakGPUMemory();
         // At the start of each frame, mark each tile as off-screen.
@@ -260,7 +260,7 @@ public class TileRenderer {
         return textureId;
     }
 
-    private boolean drawLayer(ShaderProgram shaderProgram, ScreenProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, GLMatrixHandler matrixHandler) {
+    private boolean drawLayer(ShaderProgram shaderProgram, BasicMapProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, GLMatrixHandler matrixHandler) {
         if (layer == null) {
             return false;
         }
@@ -382,7 +382,7 @@ public class TileRenderer {
     }
 
 
-    private boolean drawLayerWithFallbacks(ShaderProgram shaderProgram, ScreenProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, GLMatrixHandler matrixHandler) {
+    private boolean drawLayerWithFallbacks(ShaderProgram shaderProgram, BasicMapProjection projection, Layer layer, FetchQuota quota, float alpha, float depth, GLMatrixHandler matrixHandler) {
         if (layer == null) {
             return false;
         }
@@ -513,7 +513,7 @@ public class TileRenderer {
         }
 
 
-        void reset(ScreenProjection projection) {
+        void reset(BasicMapProjection projection) {
             BoundingBox visible = projection.getVisibleBounds();
             // Set to full visible area.
             maxX = visible.getMaxX();

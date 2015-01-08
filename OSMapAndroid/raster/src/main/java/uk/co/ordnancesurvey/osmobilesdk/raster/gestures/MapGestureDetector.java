@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster.gesture;
+package uk.co.ordnancesurvey.osmobilesdk.raster.gestures;
 
 import android.content.Context;
 import android.view.GestureDetector;

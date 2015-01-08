@@ -20,32 +20,37 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders;
 
-import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 
-/**
- * Encapsulates the conversion between a {@link uk.co.ordnancesurvey.osmobilesdk.gis.Point}
- * in WGS84 to a {@link uk.co.ordnancesurvey.osmobilesdk.gis.Point} in BNG.
- */
-public interface MapProjection {
+import static android.opengl.GLES20.*;
 
-//	/**
-//	 * Get the default Map Projection
-//	 */
-//	public MapProjection getDefault();
+public class ShaderCircleProgram extends GLProgram {
+    public final int uniformMVP;
+    public final int uniformFillColor;
+    public final int uniformStrokeColor;
+    public final int uniformCenterRadius;
+    public final int attribVCoord;
 
-	/**
-	 * Converts a WGS84 latitude/longitude to the corresponding BNG Point.
-	 * @param point - the Point using WGS84 projection
-	 * @return newly created Point
-	 */
-	public abstract Point toBng(Point point);
+    public ShaderCircleProgram() {
+        super(Shaders.shader_overlay_vsh, Shaders.shader_circle_fsh);
+        uniformMVP = glGetUniformLocation(program, "uMVPMatrix");
+        uniformFillColor = glGetUniformLocation(program, "uFillColor");
+        uniformStrokeColor = glGetUniformLocation(program, "uStrokeColor");
+        uniformCenterRadius = glGetUniformLocation(program, "uCenterRadius");
+        attribVCoord = glGetAttribLocation(program, "vCoord");
+        Utils.throwIfErrors();
+    }
 
-    /**
-     * Converts a BNG {@link uk.co.ordnancesurvey.osmobilesdk.gis.Point} to the corresponding WGS84 Point.
-     * @param point - the Point using BNG projection
-     * @return newly created Point
-     */
-    public abstract Point toWGS84(Point point);
+    public void use() {
+        super.use();
+        glEnableVertexAttribArray(attribVCoord);
+    }
+
+    @Override
+    public void stopUsing() {
+        glDisableVertexAttribArray(attribVCoord);
+
+    }
 }

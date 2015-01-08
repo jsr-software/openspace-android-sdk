@@ -22,7 +22,7 @@
  */
 package uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.MapTile;
 
 public interface LayerSource {
 
@@ -31,7 +31,7 @@ public interface LayerSource {
      *
      * <b>Implementations must be thread-safe.</b>
      *
-     * @param tile the {@link uk.co.ordnancesurvey.osmobilesdk.raster.MapTile} to get data for
+     * @param tile the {@link uk.co.ordnancesurvey.osmobilesdk.raster.layers.MapTile} to get data for
      * @return the data as a byte array
      */
     public byte[] getTileData(MapTile tile);

@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic;
 
 import android.annotation.TargetApi;
 import android.content.Context;
@@ -46,12 +46,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import uk.co.ordnancesurvey.osmobilesdk.gis.BngUtil;
 import uk.co.ordnancesurvey.osmobilesdk.gis.BoundingBox;
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLImageCache;
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
-import uk.co.ordnancesurvey.osmobilesdk.raster.Images;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BasicMapProjection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMapRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.cache.GLImageCache;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.images.Images;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
 
 /**
  * The Marker Renderer class encapsulates all aspects of marker rendering, including info windows
@@ -124,14 +124,15 @@ public class MarkerRenderer extends BaseRenderer {
         return mDragHandler.isDragging();
     }
 
-    public Marker longPress(ScreenProjection projection, PointF screenLocation) {
+    public Marker longPress(BasicMapProjection projection, PointF screenLocation) {
         Marker marker = findMarker(projection, screenLocation, true);
         if (marker == null) {
             return null;
         }
 
-        Point point = projection.fromScreenLocation(screenLocation.x, screenLocation.y);
-        Point offSetPoint = projection.fromScreenLocation(screenLocation.x, screenLocation.y - MARKER_DRAG_OFFSET);
+        Point point = projection.fromScreenLocation(screenLocation);
+        PointF offSetScreenLocation = new PointF(screenLocation.x, screenLocation.y - MARKER_DRAG_OFFSET);
+        Point offSetPoint = projection.fromScreenLocation(offSetScreenLocation);
         // Check offSetPoint as well, because we don't want to lift a marker out of bounds.
         if (!BngUtil.isInBngBounds(point) || !BngUtil.isInBngBounds(offSetPoint)) {
             return null;
@@ -142,7 +143,7 @@ public class MarkerRenderer extends BaseRenderer {
         return marker;
     }
 
-    public void onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, ScreenProjection projection) {
+    public void onDrawFrame(GLProgramService programService, GLMatrixHandler matrixHandler, BasicMapProjection projection) {
         programService.setActiveProgram(GLProgramService.GLProgramType.SHADER);
 
         // Draw from the bottom up, so that top most marker is fully visible even if overlapped
@@ -159,7 +160,7 @@ public class MarkerRenderer extends BaseRenderer {
         mInfoWindowHandler.onInfoWindowShown(marker);
     }
 
-    public boolean onTouch(ScreenProjection projection, MotionEvent event) {
+    public boolean onTouch(BasicMapProjection projection, MotionEvent event) {
         return mDragHandler.onDrag(projection, event);
     }
 
@@ -196,7 +197,7 @@ public class MarkerRenderer extends BaseRenderer {
         mInfoWindowHandler.setInfoWindowAdapter(infoWindowAdapter);
     }
 
-    public boolean singleTap(ScreenProjection projection, PointF screenLocation) {
+    public boolean singleTap(BasicMapProjection projection, PointF screenLocation) {
         // Check for a click on an info window first.
         if (mExpandedMarker != null) {
             if (mExpandedMarker.isClickOnInfoWindow(screenLocation, projection)) {
@@ -234,8 +235,7 @@ public class MarkerRenderer extends BaseRenderer {
     }
 
     // TODO do we need to handle stacked markers where one marker declines the touch?
-    private Marker findMarker(ScreenProjection projection, PointF screenLocation, boolean draggableOnly) {
-        final PointF tempPoint = new PointF();
+    private Marker findMarker(BasicMapProjection projection, PointF screenLocation, boolean draggableOnly) {
         final RectF tempRect = new RectF();
         final BoundingBox boundingBox = projection.getExpandedVisibleBounds();
 
@@ -245,32 +245,32 @@ public class MarkerRenderer extends BaseRenderer {
         Iterator<Marker> iter = mMarkers.descendingIterator();
 
         if(mExpandedMarker != null) {
-            ret = processMarker(projection, mExpandedMarker, boundingBox, screenLocation, tempPoint, tempRect, draggableOnly);
+            ret = processMarker(projection, mExpandedMarker, boundingBox, screenLocation, tempRect, draggableOnly);
         }
 
         while (ret == null && iter.hasNext()) {
             Marker marker = iter.next();
             if (marker != null) {
-                ret = processMarker(projection, marker, boundingBox, screenLocation, tempPoint, tempRect, draggableOnly);
+                ret = processMarker(projection, marker, boundingBox, screenLocation, tempRect, draggableOnly);
             }
         }
 
         if (ret == null && mExpandedMarker != null) {
-            ret = processMarker(projection, mExpandedMarker, boundingBox, screenLocation, tempPoint, tempRect, draggableOnly);
+            ret = processMarker(projection, mExpandedMarker, boundingBox, screenLocation, tempRect, draggableOnly);
         }
         mMarkersLock.readLock().unlock();
         return ret;
     }
 
-    private Marker processMarker(ScreenProjection projection, Marker marker, BoundingBox boundingBox,
-                                 PointF screenLocation, PointF tempPoint, RectF tempRect, boolean onlyDraggable) {
+    private Marker processMarker(BasicMapProjection projection, Marker marker, BoundingBox boundingBox,
+                                 PointF screenLocation, RectF tempRect, boolean onlyDraggable) {
         Point gp = marker.getPoint();
 
         if (!marker.isVisible() || !boundingBox.contains(gp)) {
             return null;
         }
 
-        boolean markerValid = marker.containsPoint(projection, screenLocation, tempPoint, tempRect);
+        boolean markerValid = marker.containsPoint(projection, screenLocation, tempRect);
 
         if(onlyDraggable) {
             markerValid = marker.isDraggable() && markerValid;
@@ -302,7 +302,7 @@ public class MarkerRenderer extends BaseRenderer {
             return mDraggingMarker != null;
         }
 
-        public boolean onDrag(ScreenProjection projection, MotionEvent event) {
+        public boolean onDrag(BasicMapProjection projection, MotionEvent event) {
             int action = event.getActionMasked();
 
             switch (action) {
@@ -332,7 +332,7 @@ public class MarkerRenderer extends BaseRenderer {
             return true;
         }
 
-        public void startDrag(ScreenProjection projection, Marker marker, float screenX, float screenY) {
+        public void startDrag(BasicMapProjection projection, Marker marker, float screenX, float screenY) {
             mDraggingMarker = marker;
             mDragStarted = false;
             mDragInitialX = screenX;
@@ -347,7 +347,7 @@ public class MarkerRenderer extends BaseRenderer {
             }
         }
 
-        private void endDrag(ScreenProjection projection, MotionEvent event) {
+        private void endDrag(BasicMapProjection projection, MotionEvent event) {
             for(OSMap.OnMarkerDragListener listener : mMarkerDragListeners) {
                 listener.onMarkerDragEnd(mDraggingMarker);
             }
@@ -355,8 +355,9 @@ public class MarkerRenderer extends BaseRenderer {
             mDraggingMarker = null;
         }
 
-        private void updateMarkerPosition(ScreenProjection projection, Marker marker, float x, float y) {
-            Point unclamped = projection.fromScreenLocation(x, y);
+        private void updateMarkerPosition(BasicMapProjection projection, Marker marker, float x, float y) {
+            PointF screenLocation = new PointF(x, y);
+            Point unclamped = projection.fromScreenLocation(screenLocation);
             Point clamped = BngUtil.clampToBngBounds(unclamped);
             marker.setPoint(clamped);
         }
@@ -370,7 +371,7 @@ public class MarkerRenderer extends BaseRenderer {
             mGlImageCache = imageCache;
         }
 
-        private void drawVisibleMarkers(GLProgramService programService, GLMatrixHandler matrixHandler, BoundingBox boundingBox, ScreenProjection projection) {
+        private void drawVisibleMarkers(GLProgramService programService, GLMatrixHandler matrixHandler, BoundingBox boundingBox, BasicMapProjection projection) {
             mMarkersLock.readLock().lock();
             Iterator<Marker> iter = mMarkers.iterator();
             Marker marker;
@@ -386,7 +387,7 @@ public class MarkerRenderer extends BaseRenderer {
         }
 
         private void drawMarker(GLProgramService programService, GLMatrixHandler matrixHandler, Marker marker,
-                                BoundingBox boundingBox, ScreenProjection projection) {
+                                BoundingBox boundingBox, BasicMapProjection projection) {
             if (marker != null && marker.isVisible()) {
                 Point gp = marker.getPoint();
 

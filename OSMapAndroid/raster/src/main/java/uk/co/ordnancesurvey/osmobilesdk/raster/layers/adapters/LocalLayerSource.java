@@ -32,7 +32,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.MapTile;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 
 public class LocalLayerSource implements LayerSource, Closeable {

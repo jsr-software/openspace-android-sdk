@@ -20,23 +20,51 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
+package uk.co.ordnancesurvey.osmobilesdk.raster.layers;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
+public final class MapTile {
+    public Layer layer;
+    public int x;
+    public int y;
 
-public abstract class BaseRenderer {
-
-    protected final GLMapRenderer mMapRenderer;
-    private final RendererListener mRendererListener;
-
-    protected BaseRenderer(GLMapRenderer mapRenderer, RendererListener listener) {
-        mMapRenderer = mapRenderer;
-        mRendererListener = listener;
+    public MapTile() {
     }
 
-    public void emitRenderRequest() {
-        if(mRendererListener != null) {
-            mRendererListener.onRenderRequested();
+    public MapTile(MapTile copy) {
+        x = copy.x;
+        y = copy.y;
+        layer = copy.layer;
+    }
+
+    public void set(int xx, int yy, Layer l) {
+        x = xx;
+        y = yy;
+        layer = l;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
         }
+        if (o == null) {
+            // This is expected of anything overriding Object.equals()
+            return false;
+        }
+
+        try {
+            MapTile other = (MapTile) o;
+            assert this.getClass() == o.getClass();
+            return layer == other.layer && x == other.x && y == other.y;
+        } catch (ClassCastException e) {
+            assert this.getClass() != o.getClass();
+            assert !super.equals(o) : "Object.equals() compares object identity so it should never be true here.";
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return layer.hashCode() ^ (x * 8191 + y);
     }
 }

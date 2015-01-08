@@ -1,6 +1,6 @@
 package uk.co.ordnancesurvey.osmobilesdk.raster.annotations;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.BaseRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.BaseRenderer;
 
 public abstract class Annotation {
 

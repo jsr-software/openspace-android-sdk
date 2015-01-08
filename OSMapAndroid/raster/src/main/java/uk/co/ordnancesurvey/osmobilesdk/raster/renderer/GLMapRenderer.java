@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -43,23 +43,32 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BasicMapProjection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BuildConfig;
+import uk.co.ordnancesurvey.osmobilesdk.raster.CameraPosition;
+import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Projection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Circle;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Marker;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polygon;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polyline;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
-import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureDetector;
-import uk.co.ordnancesurvey.osmobilesdk.raster.gesture.MapGestureListener;
+import uk.co.ordnancesurvey.osmobilesdk.raster.gestures.MapGestureDetector;
+import uk.co.ordnancesurvey.osmobilesdk.raster.gestures.MapGestureListener;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.MapTile;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.TileServiceDelegate;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.CircleRenderer;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMatrixHandler;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLProgramService;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.MarkerRenderer;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.OverlayRenderer;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.RendererListener;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.ScrollRenderer;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.TileRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.cache.GLImageCache;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.cache.GLTileCache;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.CircleRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.GLMatrixHandler;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.GLProgramService;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.MarkerRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.OverlayRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.RendererListener;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.ScrollRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.TileRenderer;
 
 import static android.opengl.GLES20.GL_BACK;
 import static android.opengl.GLES20.GL_CULL_FACE;
@@ -157,7 +166,7 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
 
     // TODO: This is an icky default, but ensures that it's not null.
     // This does not actually need to be volatile, but it encourages users to read it once.
-    private volatile ScreenProjection mVolatileProjection = new ScreenProjection(320, 320, mScrollPosition);
+    private volatile BasicMapProjection mVolatileProjection = new BasicMapProjection(320, 320, mScrollPosition);
     private int mGLViewportWidth, mGLViewportHeight;
 
     public GLMapRenderer(Context context, MapConfiguration mapConfiguration) {
@@ -237,8 +246,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         });
     }
 
-    public ScreenProjection getProjection() {
-        // TODO: Is this allowed to return null in the Google Maps v2 API?
+    @Override
+    public Projection getProjection() {
         return mVolatileProjection;
     }
 
@@ -252,17 +261,15 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         mScrollRenderer.getScrollPosition(mScrollPosition, true);
         mFrameHandler.roundToPixelBoundary();
 
-        // And create a new projection.
-        ScreenProjection projection = new ScreenProjection(mGLViewportWidth, mGLViewportHeight, mScrollPosition);
-
-        mVolatileProjection = projection;
-        float metresPerPixel = projection.getMetresPerPixel();
+        // And create a new projection
+        mVolatileProjection = new BasicMapProjection(mGLViewportWidth, mGLViewportHeight, mScrollPosition);;
+        float metresPerPixel = mVolatileProjection.getMetresPerPixel();
 
 
-        boolean needRedraw = mTileRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection, frameTime, mScrollPosition);
-        mOverlayRenderer.onDrawFrame(projection, mProgramService, mGLMatrixHandler, metresPerPixel);
-        mCircleRenderer.onDrawFrame(projection, mProgramService, mGLMatrixHandler, mGLViewportWidth, mGLViewportHeight);
-        mMarkerRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, projection);
+        boolean needRedraw = mTileRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, mVolatileProjection, frameTime, mScrollPosition);
+        mOverlayRenderer.onDrawFrame(mVolatileProjection, mProgramService, mGLMatrixHandler, metresPerPixel);
+        mCircleRenderer.onDrawFrame(mVolatileProjection, mProgramService, mGLMatrixHandler, mGLViewportWidth, mGLViewportHeight);
+        mMarkerRenderer.onDrawFrame(mProgramService, mGLMatrixHandler, mVolatileProjection);
 
         if (needRedraw) {
             requestRender();
@@ -527,8 +534,8 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         float scaleOffsetX = screenX - mGLViewportWidth / 2;
         float scaleOffsetY = screenY - mGLViewportHeight / 2;
         mScrollRenderer.onZoomIn(scaleOffsetX, scaleOffsetY);
-        ScreenProjection projection = mVolatileProjection;
-        Point point = projection.fromScreenLocation(screenX, screenY);
+        PointF screenLocation = new PointF(screenX, screenY);
+        Point point = mVolatileProjection.fromScreenLocation(screenLocation);
         for (OnDoubleTapListener listener : mDoubleTapListeners) {
             listener.onDoubleTap(point);
         }
@@ -542,10 +549,10 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
     }
 
     private void processLongPress(float screenX, float screenY) {
-        ScreenProjection projection = mVolatileProjection;
-        Point point = projection.fromScreenLocation(screenX, screenY);
+        PointF screenLocation = new PointF(screenX, screenY);
+        Point point = mVolatileProjection.fromScreenLocation(screenLocation);
 
-        Marker marker = mMarkerRenderer.longPress(projection, new PointF(screenX, screenY));
+        Marker marker = mMarkerRenderer.longPress(mVolatileProjection, new PointF(screenX, screenY));
         if (marker == null) {
             for (OnLongPressListener listener : mLongPressListeners) {
                 listener.onLongPress(point);
@@ -571,27 +578,26 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         }
     }
 
-    private void processSingleTap(float screenx, float screeny) {
-        ScreenProjection projection = mVolatileProjection;
-        PointF screenLocation = new PointF(screenx, screeny);
+    private void processSingleTap(float screenX, float screenY) {
+        PointF screenLocation = new PointF(screenX, screenY);
 
-        boolean handled = mMarkerRenderer.singleTap(projection, screenLocation);
-        Point point = projection.fromScreenLocation(screenx, screeny);
+        boolean handled = mMarkerRenderer.singleTap(mVolatileProjection, screenLocation);
+        Point point = mVolatileProjection.fromScreenLocation(screenLocation);
         if (!handled) {
             for (OnSingleTapListener listener : mSingleTapListeners) {
                 listener.onSingleTap(point);
             }
         } else {
             CameraPosition position
-                    = new CameraPosition(point, projection.getMetresPerPixel());
+                    = new CameraPosition(point, mVolatileProjection.getMetresPerPixel());
             moveCamera(position, true);
         }
         requestRender();
     }
 
     private void processTouch(float screenX, float screenY) {
-        ScreenProjection projection = mVolatileProjection;
-        Point point = projection.fromScreenLocation(screenX, screenY);
+        PointF screenLocation = new PointF(screenX, screenY);
+        Point point = mVolatileProjection.fromScreenLocation(screenLocation);
         for (OnMapTouchListener listener : mTouchListeners) {
             listener.onMapTouch(point);
         }
@@ -635,17 +641,14 @@ public final class GLMapRenderer extends GLSurfaceView implements GLSurfaceView.
         private final Handler mHandler;
         private final Runnable mMapChangeRunnable = new Runnable() {
             public void run() {
-                ScreenProjection projection = getProjection();
-                float newZoom = projection.getMetresPerPixel();
 
-                CameraPosition position = new CameraPosition(projection.getCenter(), newZoom);
+                float newZoom = mVolatileProjection.getMetresPerPixel();
 
-                // Cache position;
+                CameraPosition position = new CameraPosition(mVolatileProjection.getCenter(), newZoom);
                 mPositionManager.storePosition(position);
-                // TODO: move the position code
 
                 for(OnBoundsChangeListener listener : mBoundsChangeListeners) {
-                    listener.onBoundsChange(projection.getVisibleBounds());
+                    listener.onBoundsChange(mVolatileProjection.getVisibleBounds());
                 }
 
                 for(OnZoomChangeListener listener : mZoomChangeListeners) {

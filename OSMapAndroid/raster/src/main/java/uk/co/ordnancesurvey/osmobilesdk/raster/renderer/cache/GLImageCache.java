@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.cache;
 
 import static android.opengl.GLES20.*;
 
@@ -32,6 +32,9 @@ import java.util.WeakHashMap;
 
 import android.graphics.Bitmap;
 import android.util.Log;
+
+import uk.co.ordnancesurvey.osmobilesdk.raster.BuildConfig;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 
 public final class GLImageCache {
 	private final static String TAG = "GLTileCache";

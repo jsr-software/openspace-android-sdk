@@ -427,6 +427,11 @@ public interface OSMap {
     void clear();
 
     /**
+     * @return the current {@link uk.co.ordnancesurvey.osmobilesdk.raster.Projection}
+     */
+    Projection getProjection();
+
+    /**
      * Remove a circle object from the map
      *
      * @param circle the circle to remove

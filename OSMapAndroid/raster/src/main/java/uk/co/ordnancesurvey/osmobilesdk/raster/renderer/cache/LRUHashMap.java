@@ -20,39 +20,28 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.cache;
 
-import android.annotation.TargetApi;
-import android.os.AsyncTask;
-import android.os.Build;
+import java.util.LinkedHashMap;
 
-/**
-* Adds parallel AsyncTask execution which should work on API level 4 and up.
-*
-* Based on AsyncTaskExecutionHelper found at
-*   https://code.google.com/p/android/issues/detail?id=20941#c14
-*   https://gist.github.com/greenrobot/2773896
-*
-* Removed executeSerial() because between API levels 4 and 10 (Donut to Gingerbread), execute() is always parallel.
-* Anything which relies on serial execution will require more work.
-*/
-abstract class AsyncTaskExecutionHelper<Params, Progress, Result> extends AsyncTask<Params, Progress, Result> {
-	@TargetApi(11)
-	static class ExecutionHelperAPI11 {
-		public static <P> void executeParallel(AsyncTask<P, ?, ?> asyncTask, P... params) {
-			asyncTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
-		}
+@SuppressWarnings("serial")
+final class LRUHashMap<K,V> extends LinkedHashMap<K, V> {
+	public LRUHashMap(int capacity, float loadFactor) {
+		super(capacity, loadFactor, true);
 	}
-
-	public final void executeParallel(Params... params) {
-		AsyncTaskExecutionHelper.executeParallel(this, params);
+	private K mProbableEldestKey;
+	/**
+	* Returns the key most recently passed to removeEldestEntry(), which was the "eldest" key at some point in the past.
+	* There is no guarantee that this key is still "eldest" (e.g. due to subsequent get()) or that it is still in the map.
+	*
+	* @return A key hopefully suitable for LRU eviction. This key may no longer be in the map.
+	*/
+	public K getProbableEldestKey() {
+		return mProbableEldestKey;
 	}
-
-	public static <P> void executeParallel(AsyncTask<P, ?, ?> asyncTask, P... params) {
-		if (Build.VERSION.SDK_INT >= 11) {
-			ExecutionHelperAPI11.executeParallel(asyncTask, params);
-		} else {
-			asyncTask.execute(params);
-		}
+	@Override
+	protected boolean removeEldestEntry(java.util.Map.Entry<K, V> eldest) {
+		mProbableEldestKey = eldest.getKey();
+		return false;
 	}
 }

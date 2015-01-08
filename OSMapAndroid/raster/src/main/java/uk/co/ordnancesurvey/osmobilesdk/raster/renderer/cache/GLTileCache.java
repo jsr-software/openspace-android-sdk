@@ -20,7 +20,7 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.cache;
 
 import android.app.ActivityManager;
 import android.content.Context;
@@ -29,6 +29,10 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import java.util.Locale;
+
+import uk.co.ordnancesurvey.osmobilesdk.raster.BuildConfig;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.MapTile;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 
 import static android.opengl.GLES20.GL_TEXTURE_2D;
 import static android.opengl.GLES20.glBindTexture;
@@ -145,7 +149,7 @@ public final class GLTileCache {
     /**
      * Fetches a tile from the cache.
      *
-     * @param tile the {@link uk.co.ordnancesurvey.osmobilesdk.raster.MapTile} to bind a texture for
+     * @param tile the {@link uk.co.ordnancesurvey.osmobilesdk.raster.layers.MapTile} to bind a texture for
      * @return The texture ID of the cached tile, or 0.
      */
     public int bindTextureForTile(MapTile tile) {
@@ -164,7 +168,7 @@ public final class GLTileCache {
     /**
      * Uploads a bitmap to a texture and adds it to the cache.
      *
-     * @param tile the {@link uk.co.ordnancesurvey.osmobilesdk.raster.MapTile} to cache a texture for
+     * @param tile the {@link uk.co.ordnancesurvey.osmobilesdk.raster.layers.MapTile} to cache a texture for
      * @param bitmap the texture to cache
      * @return The texture ID of the newly-uploaded texture.
      */

@@ -29,7 +29,7 @@ import android.util.AttributeSet;
 import android.view.Gravity;
 import android.widget.FrameLayout;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMapRenderer;
 import uk.co.ordnancesurvey.osmobilesdk.raster.OSMap;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.LayerCatalog;
 

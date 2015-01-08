@@ -31,15 +31,15 @@ import android.opengl.Matrix;
 import android.view.View;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
-import uk.co.ordnancesurvey.osmobilesdk.raster.BitmapDescriptor;
-import uk.co.ordnancesurvey.osmobilesdk.raster.BitmapDescriptorFactory;
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLImageCache;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BasicMapProjection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.images.BitmapDescriptor;
+import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.images.BitmapDescriptorFactory;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.cache.GLImageCache;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders.ShaderProgram;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMatrixHandler;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLProgramService;
-import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.MarkerRenderer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.GLMatrixHandler;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.GLProgramService;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic.MarkerRenderer;
 
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_TRIANGLE_STRIP;
@@ -190,21 +190,21 @@ public class Marker extends Annotation {
         mTitle = builder.mTitle;
     }
 
-    public boolean containsPoint(ScreenProjection projection, PointF testPoint, PointF tempPoint, RectF tempRect) {
+    public boolean containsPoint(BasicMapProjection projection, PointF testPoint, RectF tempRect) {
         // tempPoint is used to save memory allocation - the alternative is allocating a new object
         // for every call.
-        getScreenLocation(projection, tempPoint);
+        PointF screenLocation = getScreenLocation(projection);
 
-        tempRect.left = tempPoint.x;
-        tempRect.top = tempPoint.y;
-        tempRect.right = tempPoint.x + mIconBitmap.getWidth();
-        tempRect.bottom = tempPoint.y + mIconBitmap.getHeight();
+        tempRect.left = screenLocation.x;
+        tempRect.top = screenLocation.y;
+        tempRect.right = screenLocation.x + mIconBitmap.getWidth();
+        tempRect.bottom = screenLocation.y + mIconBitmap.getHeight();
 
         return tempRect.contains(testPoint.x, testPoint.y);
     }
 
     public void glDraw(GLProgramService programService, GLMatrixHandler matrixHandler,
-                       GLImageCache imageCache, ScreenProjection projection) {
+                       GLImageCache imageCache, BasicMapProjection projection) {
         ShaderProgram shaderProgram = programService.getShaderProgram();
 
         glUniform4f(shaderProgram.uniformTintColor, mIconTintR, mIconTintG, mIconTintB, 1);
@@ -218,8 +218,7 @@ public class Marker extends Annotation {
         // Draw this texture in the correct place
         glVertexAttribPointer(shaderProgram.attribVCoord, 2, GL_FLOAT, false, 0, tex.vertexCoords);
 
-        projection.toScreenLocation(mPoint, matrixHandler.getTempPoint());
-        PointF screenLocation = matrixHandler.getTempPoint();
+        PointF screenLocation = projection.getScreenLocation(mPoint);
         final float OFFSET = 1 / 3.0f;
         float xPixels = (float) Math.rint(screenLocation.x + OFFSET);
         float yPixels = (float) Math.rint(screenLocation.y + OFFSET);
@@ -310,10 +309,8 @@ public class Marker extends Annotation {
         mMarkerRenderer.onInfoWindowShown(null);
     }
 
-    public boolean isClickOnInfoWindow(PointF tapLocation, ScreenProjection projection) {
-        PointF temp = new PointF();
-        PointF markerLocation = getScreenLocation(projection, temp);
-
+    public boolean isClickOnInfoWindow(PointF tapLocation, BasicMapProjection projection) {
+        PointF markerLocation = getScreenLocation(projection);
 
         // Edge effects don't matter; no one will notice a 1 px difference on a click.
         RectF checkRect = new RectF(markerLocation.x + mIconBitmap.getWidth() / 2 - mVolatileInfoBitmap.getWidth() / 2, markerLocation.y - mIconBitmap.getHeight() - 30, 0, 0);
@@ -408,18 +405,18 @@ public class Marker extends Annotation {
         mMarkerRenderer.onInfoWindowShown(this);
     }
 
-    private PointF getScreenLocation(ScreenProjection projection, PointF screenLocationOut) {
-        projection.toScreenLocation(mPoint, screenLocationOut);
+    private PointF getScreenLocation(BasicMapProjection projection) {
+        PointF screenLocation = projection.getScreenLocation(mPoint);
 
         // U and V are in the range 0..1 where 0,0 is the top left. Since we draw the marker from the bottom left,
         // convert V' = 1 - V.
         int height = mIconBitmap.getHeight();
         int width = mIconBitmap.getWidth();
 
-        screenLocationOut.x -= width * mAnchorU;
-        screenLocationOut.y -= height * mAnchorV;
+        screenLocation.x -= width * mAnchorU;
+        screenLocation.y -= height * mAnchorV;
 
-        return screenLocationOut;
+        return screenLocation;
     }
 
     private void setInfoWindowHighlighted(boolean highlighted) {

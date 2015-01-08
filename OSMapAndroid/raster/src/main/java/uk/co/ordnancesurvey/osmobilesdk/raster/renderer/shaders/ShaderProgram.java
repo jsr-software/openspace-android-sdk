@@ -20,38 +20,57 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders;
 
 import static android.opengl.GLES20.*;
 
-public class ShaderCircleProgram extends GLProgram {
-	public final int uniformMVP;
-	public final int uniformFillColor;
-	public final int uniformStrokeColor;
-	public final int uniformCenterRadius;
-	public final int attribVCoord;
+import java.nio.FloatBuffer;
 
-	public ShaderCircleProgram()
-	{
-		super(Shaders.shader_overlay_vsh, Shaders.shader_circle_fsh);
-		uniformMVP = glGetUniformLocation(program, "uMVPMatrix");
-		uniformFillColor = glGetUniformLocation(program, "uFillColor");
-		uniformStrokeColor = glGetUniformLocation(program, "uStrokeColor");
-		uniformCenterRadius = glGetUniformLocation(program, "uCenterRadius");
-		attribVCoord = glGetAttribLocation(program, "vCoord");
-		Utils.throwIfErrors();
+import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 
-		
-	}
-	public void use() {
-		super.use();
-		glEnableVertexAttribArray(attribVCoord);		
-	}
-	
-	@Override
+public class ShaderProgram extends GLProgram {
+    public final int uniformMVP;
+    public final int uniformTexture;
+    public final int uniformTintColor;
+    public final int attribVCoord;
+    private final int attribTextureCoord;
+    public final int attribVOffset;
+
+    private static final FloatBuffer textureVertices = Utils.directFloatBuffer(new float[]{
+            0, 1,
+            1, 1,
+            0, 0,
+            1, 0,
+    });
+
+    public ShaderProgram() {
+        super(Shaders.shader_vsh, Shaders.shader_fsh);
+        uniformMVP = glGetUniformLocation(program, "uMVPMatrix");
+        Utils.throwIfErrors();
+        uniformTintColor = glGetUniformLocation(program, "uTintColor");
+        Utils.throwIfErrors();
+        attribVCoord = glGetAttribLocation(program, "vCoord");
+        Utils.throwIfErrors();
+        attribVOffset = glGetAttribLocation(program, "vOffset");
+        Utils.throwIfErrors();
+        uniformTexture = glGetUniformLocation(program, "texture");
+        Utils.throwIfErrors();
+        attribTextureCoord = glGetAttribLocation(program, "textureCoord");
+        Utils.throwIfErrors();
+    }
+
+    public void use() {
+        super.use();
+        glEnableVertexAttribArray(attribVCoord);
+        glEnableVertexAttribArray(attribTextureCoord);
+        glVertexAttribPointer(attribTextureCoord, 2, GL_FLOAT, false, 0, textureVertices);
+    }
+
+    @Override
     public void stopUsing() {
-		glDisableVertexAttribArray(attribVCoord);
+        glDisableVertexAttribArray(attribVCoord);
+        glDisableVertexAttribArray(attribTextureCoord);
+    }
 
-	}
 
 }

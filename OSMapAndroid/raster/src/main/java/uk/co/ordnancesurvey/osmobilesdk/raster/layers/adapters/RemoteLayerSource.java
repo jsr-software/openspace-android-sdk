@@ -34,7 +34,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
+import uk.co.ordnancesurvey.osmobilesdk.raster.layers.MapTile;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
 
 public class RemoteLayerSource implements LayerSource {

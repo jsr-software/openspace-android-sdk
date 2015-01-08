@@ -20,12 +20,12 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLProgram;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderCircleProgram;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderOverlayProgram;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders.GLProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders.ShaderCircleProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders.ShaderOverlayProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders.ShaderProgram;
 
 public class GLProgramService {
 

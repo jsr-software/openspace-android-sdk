@@ -42,7 +42,6 @@ import rx.Subscriber;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
-import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 import uk.co.ordnancesurvey.osmobilesdk.raster.app.MapConfiguration;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.LayerSource;
 import uk.co.ordnancesurvey.osmobilesdk.raster.layers.adapters.LocalLayerSource;

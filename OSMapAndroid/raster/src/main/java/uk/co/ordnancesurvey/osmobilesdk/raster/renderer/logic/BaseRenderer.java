@@ -20,37 +20,23 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic;
 
-import static android.opengl.GLES20.*;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMapRenderer;
 
-public class ShaderOverlayProgram extends GLProgram {
-	public final int uniformMVP;
-	public final int uniformColor;
-	public final int attribVCoord;
+public abstract class BaseRenderer {
 
-	public ShaderOverlayProgram()
-	{		
-		super(Shaders.shader_overlay_vsh, Shaders.shader_overlay_fsh);
-		uniformMVP = glGetUniformLocation(program, "uMVPMatrix");
-		Utils.throwIfErrors();
-		uniformColor = glGetUniformLocation(program, "uColor");
-		Utils.throwIfErrors();
-		attribVCoord = glGetAttribLocation(program, "vCoord");
-		Utils.throwIfErrors();
-	}
+    protected final GLMapRenderer mMapRenderer;
+    private final RendererListener mRendererListener;
 
-	public void use()
-	{
-		super.use();
-		glEnableVertexAttribArray(attribVCoord);
-		glDisable(GL_CULL_FACE);
-	}
-	
-	@Override
-    public void stopUsing()
-	{
-		glDisableVertexAttribArray(attribVCoord);
-		glEnable(GL_CULL_FACE);
-	}
+    protected BaseRenderer(GLMapRenderer mapRenderer, RendererListener listener) {
+        mMapRenderer = mapRenderer;
+        mRendererListener = listener;
+    }
+
+    public void emitRenderRequest() {
+        if(mRendererListener != null) {
+            mRendererListener.onRenderRequested();
+        }
+    }
 }

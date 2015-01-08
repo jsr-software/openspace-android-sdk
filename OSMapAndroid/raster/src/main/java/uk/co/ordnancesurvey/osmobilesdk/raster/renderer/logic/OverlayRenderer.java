@@ -1,13 +1,13 @@
-package uk.co.ordnancesurvey.osmobilesdk.raster.renderer;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.logic;
 
 import java.util.LinkedList;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.GLMapRenderer;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BasicMapProjection;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.PolyAnnotation;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polygon;
 import uk.co.ordnancesurvey.osmobilesdk.raster.annotations.Polyline;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.GLMapRenderer;
 
 import static android.opengl.GLES20.GL_BLEND;
 import static android.opengl.GLES20.glEnable;
@@ -46,7 +46,7 @@ public class OverlayRenderer extends BaseRenderer {
         }
     }
 
-    public void onDrawFrame(ScreenProjection projection, GLProgramService programService,
+    public void onDrawFrame(BasicMapProjection projection, GLProgramService programService,
                             GLMatrixHandler matrixHandler, float metresPerPixel) {
         // Enable alpha-blending
         glEnable(GL_BLEND);

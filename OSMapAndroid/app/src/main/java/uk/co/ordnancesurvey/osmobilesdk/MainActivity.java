@@ -195,7 +195,7 @@ public class MainActivity extends Activity {
     }
 
     private void drawLocationMarker(Location location) {
-        final Point point = BasicMapProjection.getDefault()
+        final Point point = mMap.getProjection()
                 .toBng(new Point(location.getLatitude(), location.getLongitude(), Point.WGS84));
 
         if (mLocationMarker == null) {

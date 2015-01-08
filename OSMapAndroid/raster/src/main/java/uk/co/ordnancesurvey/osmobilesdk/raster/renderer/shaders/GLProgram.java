@@ -20,28 +20,25 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders;
 
-import java.util.LinkedHashMap;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 
-@SuppressWarnings("serial")
-final class LRUHashMap<K,V> extends LinkedHashMap<K, V> {
-	public LRUHashMap(int capacity, float loadFactor) {
-		super(capacity, loadFactor, true);
+import static android.opengl.GLES20.glUseProgram;
+
+public abstract class GLProgram {
+	final int program;
+	
+	GLProgram(String vsh, String fsh) {
+		program = Utils.compileProgram(vsh, fsh);
+		Utils.throwIfErrors();
 	}
-	private K mProbableEldestKey;
-	/**
-	* Returns the key most recently passed to removeEldestEntry(), which was the "eldest" key at some point in the past.
-	* There is no guarantee that this key is still "eldest" (e.g. due to subsequent get()) or that it is still in the map.
-	*
-	* @return A key hopefully suitable for LRU eviction. This key may no longer be in the map.
-	*/
-	public K getProbableEldestKey() {
-		return mProbableEldestKey;
+	
+	public void use()
+	{
+		glUseProgram(program);
+		Utils.throwIfErrors();
 	}
-	@Override
-	protected boolean removeEldestEntry(java.util.Map.Entry<K, V> eldest) {
-		mProbableEldestKey = eldest.getKey();
-		return false;
-	}
+	
+	public abstract void stopUsing();
 }

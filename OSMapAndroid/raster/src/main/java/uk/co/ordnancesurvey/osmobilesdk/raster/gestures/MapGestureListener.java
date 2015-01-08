@@ -1,4 +1,4 @@
-package uk.co.ordnancesurvey.osmobilesdk.raster.gesture;
+package uk.co.ordnancesurvey.osmobilesdk.raster.gestures;
 
 public interface MapGestureListener {
     void onDoubleTap(float screenX, float screenY);

@@ -20,53 +20,42 @@
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  *
  */
-package uk.co.ordnancesurvey.osmobilesdk.raster;
+package uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders;
 
-import uk.co.ordnancesurvey.osmobilesdk.raster.layers.Layer;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 
-public final class MapTile {
-    public Layer layer;
-    public int x;
-    public int y;
+import static android.opengl.GLES20.GL_CULL_FACE;
+import static android.opengl.GLES20.glDisable;
+import static android.opengl.GLES20.glDisableVertexAttribArray;
+import static android.opengl.GLES20.glEnable;
+import static android.opengl.GLES20.glEnableVertexAttribArray;
+import static android.opengl.GLES20.glGetAttribLocation;
+import static android.opengl.GLES20.glGetUniformLocation;
 
-    public MapTile() {
+public class ShaderOverlayProgram extends GLProgram {
+    public final int uniformMVP;
+    public final int uniformColor;
+    public final int attribVCoord;
+
+    public ShaderOverlayProgram() {
+        super(Shaders.shader_overlay_vsh, Shaders.shader_overlay_fsh);
+        uniformMVP = glGetUniformLocation(program, "uMVPMatrix");
+        Utils.throwIfErrors();
+        uniformColor = glGetUniformLocation(program, "uColor");
+        Utils.throwIfErrors();
+        attribVCoord = glGetAttribLocation(program, "vCoord");
+        Utils.throwIfErrors();
     }
 
-    public MapTile(MapTile copy) {
-        x = copy.x;
-        y = copy.y;
-        layer = copy.layer;
-    }
-
-    public void set(int xx, int yy, Layer l) {
-        x = xx;
-        y = yy;
-        layer = l;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null) {
-            // This is expected of anything overriding Object.equals()
-            return false;
-        }
-
-        try {
-            MapTile other = (MapTile) o;
-            assert this.getClass() == o.getClass();
-            return layer == other.layer && x == other.x && y == other.y;
-        } catch (ClassCastException e) {
-            assert this.getClass() != o.getClass();
-            assert !super.equals(o) : "Object.equals() compares object identity so it should never be true here.";
-            return false;
-        }
+    public void use() {
+        super.use();
+        glEnableVertexAttribArray(attribVCoord);
+        glDisable(GL_CULL_FACE);
     }
 
     @Override
-    public int hashCode() {
-        return layer.hashCode() ^ (x * 8191 + y);
+    public void stopUsing() {
+        glDisableVertexAttribArray(attribVCoord);
+        glEnable(GL_CULL_FACE);
     }
 }

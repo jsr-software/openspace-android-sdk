@@ -27,8 +27,9 @@ import android.graphics.PointF;
 import java.nio.FloatBuffer;
 
 import uk.co.ordnancesurvey.osmobilesdk.gis.Point;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ScreenProjection;
-import uk.co.ordnancesurvey.osmobilesdk.raster.ShaderCircleProgram;
+import uk.co.ordnancesurvey.osmobilesdk.raster.BasicMapProjection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.Projection;
+import uk.co.ordnancesurvey.osmobilesdk.raster.renderer.shaders.ShaderCircleProgram;
 import uk.co.ordnancesurvey.osmobilesdk.raster.Utils;
 
 import static android.opengl.GLES20.GL_FLOAT;
@@ -107,7 +108,7 @@ public class Circle extends ShapeAnnotation {
         mFillColor = builder.mFillColor;
     }
 
-    public void glDraw(ScreenProjection projection, PointF tempPoint, FloatBuffer tempFloatBuffer,
+    public void glDraw(BasicMapProjection projection, PointF tempPoint, FloatBuffer tempFloatBuffer,
                        ShaderCircleProgram program) {
         if (mBaseRenderer == null) {
             return;

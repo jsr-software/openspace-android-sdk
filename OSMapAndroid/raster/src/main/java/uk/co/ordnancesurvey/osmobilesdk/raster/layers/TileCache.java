@@ -35,7 +35,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import uk.co.ordnancesurvey.osmobilesdk.raster.BuildConfig;
-import uk.co.ordnancesurvey.osmobilesdk.raster.MapTile;
 
 public class TileCache {
 
